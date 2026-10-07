@@ -2,7 +2,10 @@ using System.Numerics;
 
 namespace Understudies.Core;
 
-/// <summary>A critic on the stage: a circle on the floor that walks to the box office and strikes it.</summary>
+/// <summary>
+/// A critic on the stage: a circle on the floor that walks to the box office and strikes it, and turns on the
+/// magician when that comes near.
+/// </summary>
 public sealed class Critic
 {
     internal Critic(int id, Vector2 position, float hitPoints)
@@ -25,10 +28,12 @@ public sealed class Critic
     /// <summary>What the critic has left. A critic on the stage has more than nothing: at nothing it falls.</summary>
     public float HitPoints { get; internal set; }
 
-    /// <summary>A cloud touched the critic a moment ago: it neither walks nor strikes.</summary>
+    /// <summary>
+    /// A cloud touched the critic a moment ago: it neither walks nor deals a blow, and does not turn on the magician.
+    /// </summary>
     public bool IsStunned => TicksStunned > 0;
 
-    internal int TicksToNextStrike { get; set; }
+    internal int TicksToNextBlow { get; set; }
 
     internal int TicksStunned { get; set; }
 }

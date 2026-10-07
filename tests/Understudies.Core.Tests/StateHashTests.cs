@@ -59,6 +59,7 @@ public class StateHashTests
     {
         yield return Case("where the magician stands", 0, t => t with { MagicianMark = t.MagicianMark + Vector2.One });
         yield return Case("the box office's hit points", 0, t => t with { BoxOfficeHitPoints = t.BoxOfficeHitPoints + 1f });
+        yield return Case("the magician's hit points", 0, t => t with { MagicianHitPoints = t.MagicianHitPoints + 1f });
 
         // The first critic has entered.
         yield return Case("the time to the next critic", 1, t => t with { CriticEntryInterval = t.CriticEntryInterval * 2f });
@@ -73,7 +74,7 @@ public class StateHashTests
         yield return Case("where a card is", 3, t => t with { ThrownCardSpeed = t.ThrownCardSpeed * 2f });
 
         // The first critic has struck once, and not twice on either cooldown.
-        yield return Case("a critic's time to its next strike", 60, t => t with { CriticStrikeCooldown = t.CriticStrikeCooldown * 2f });
+        yield return Case("a critic's time to its next blow", 60, t => t with { CriticBlowCooldown = t.CriticBlowCooldown * 2f });
     }
 
     [TestCaseSource(nameof(OneThingApart))]
