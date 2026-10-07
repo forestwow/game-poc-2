@@ -43,11 +43,13 @@ internal sealed class UnderstudiesGame : Microsoft.Xna.Framework.Game
     private static readonly Color CriticStunnedBody = new(168, 180, 212);
     private static readonly Color CriticHead = new(226, 216, 200);
     private static readonly Color ThrownCardFace = new(250, 246, 236);
+    private static readonly Color ScrapOfPaper = new(244, 238, 222);
 
     private readonly SimulationClock _clock = new();
     private readonly string? _capturePath;
     private readonly int _captureTicks;
     private Simulation _simulation;
+    private Juice _juice;
     private bool _captured;
     private KeyboardState _keysBefore;
     private GamePadState _padBefore;
@@ -59,6 +61,7 @@ internal sealed class UnderstudiesGame : Microsoft.Xna.Framework.Game
     public UnderstudiesGame(Tuning tuning, string? capturePath, int captureTicks)
     {
         _simulation = capturePath is null ? NewShow(tuning) : new Simulation(tuning, CaptureSeed);
+        _juice = new Juice(capturePath is null ? Random.Shared : new Random((int)CaptureSeed));
         _capturePath = capturePath;
         _captureTicks = captureTicks;
         _ = new GraphicsDeviceManager(this)
@@ -118,6 +121,7 @@ internal sealed class UnderstudiesGame : Microsoft.Xna.Framework.Game
         if (Pressed(Keys.R))
         {
             _simulation = NewShow(Tuning);
+            _juice = new Juice(Random.Shared);
         }
 
         // Space or the gamepad's A is one Vanish for each press. The press waits for a tick to take it: a frame may
@@ -131,13 +135,22 @@ internal sealed class UnderstudiesGame : Microsoft.Xna.Framework.Game
         _keysBefore = keys;
         _padBefore = pad;
 
-        // A closed show stands as it fell until R: its Step changes nothing.
-        Vector2 move = ReadMove(keys, pad);
-        int ticks = _clock.Advance(gameTime.ElapsedGameTime.TotalSeconds);
-        for (int i = 0; i < ticks; i++)
+        // The hit-stop: while the moment of a Vanish holds the world still, a frame's time is dropped. The clock
+        // gets none of it and no tick is run, so the frame is drawn as the one before it was.
+        double frameSeconds = gameTime.ElapsedGameTime.TotalSeconds;
+        if (!_juice.Holds((float)frameSeconds))
         {
-            _simulation.Step(new MagicianInput(move, _vanishAsked));
-            _vanishAsked = false;
+            // A closed show stands as it fell until R: its Step changes nothing. The juice goes on: what flew when
+            // the show closed still settles.
+            Vector2 move = ReadMove(keys, pad);
+            int ticks = _clock.Advance(frameSeconds);
+            for (int i = 0; i < ticks; i++)
+            {
+                Tick(new MagicianInput(move, _vanishAsked));
+                _vanishAsked = false;
+            }
+
+            _juice.Advance((float)frameSeconds);
         }
 
         base.Update(gameTime);
@@ -165,6 +178,16 @@ internal sealed class UnderstudiesGame : Microsoft.Xna.Framework.Game
             -stick.Y + Held(Keys.S, Keys.Down) - Held(Keys.W, Keys.Up));
     }
 
+    /// <summary>
+    /// One tick, and what a tick's events drive is fed them at once: the next tick starts the list afresh, and a
+    /// frame may run several.
+    /// </summary>
+    private void Tick(MagicianInput input)
+    {
+        _simulation.Step(input);
+        _juice.Feed(_simulation);
+    }
+
     /// <summary>Walks a fixed script, draws the frame it ends on and saves it as a PNG.</summary>
     private void Capture(string path)
     {
@@ -178,7 +201,7 @@ internal sealed class UnderstudiesGame : Microsoft.Xna.Framework.Game
         const int second = Simulation.TicksPerSecond;
         for (int i = 0; i < _captureTicks; i++)
         {
-            _simulation.Step(i switch
+            Tick(i switch
             {
                 < 2 * second => new MagicianInput(new Vector2(1f, 1f)),
                 < 26 * second => default,
@@ -190,6 +213,11 @@ internal sealed class UnderstudiesGame : Microsoft.Xna.Framework.Game
                 < (33 * second) + 40 => new MagicianInput(new Vector2(1f, 0f)),
                 _ => default,
             });
+
+            // Each tick is a sixtieth of a second to the juice, as in a game that runs a tick a frame: the frame
+            // shows the scraps and the flashes that would be on the screen at that moment. Nothing holds a capture
+            // still: it is counted in ticks.
+            _juice.Advance(1f / second);
         }
 
         using var frame = new RenderTarget2D(GraphicsDevice, WindowWidth, WindowHeight);
@@ -208,6 +236,11 @@ internal sealed class UnderstudiesGame : Microsoft.Xna.Framework.Game
         Viewport viewport = GraphicsDevice.Viewport;
         float scale = MathF.Min(viewport.Width / Tuning.StageSize.X, viewport.Height / Tuning.StageSize.Y);
         Vector2 corner = (new Vector2(viewport.Width, viewport.Height) - (Tuning.StageSize * scale)) / 2f;
+
+        // A shake moves the whole picture, bars and all. The wall and the floor are laid as far past the stage's
+        // edge as the stage is moved, so the strip of the window a shake uncovers is stage and not the surround.
+        corner += _juice.Shake * scale;
+        Vector2 past = Vector2.Abs(_juice.Shake);
         Matrix worldToScreen = Matrix.CreateScale(scale, scale, 1f) * Matrix.CreateTranslation(corner.X, corner.Y, 0f);
 
         GraphicsDevice.Clear(Surround);
@@ -215,8 +248,9 @@ internal sealed class UnderstudiesGame : Microsoft.Xna.Framework.Game
         // The back wall, the floor below it and what lies flat on the floor.
         _spriteBatch.Begin(transformMatrix: worldToScreen);
         var floorTopLeft = new Vector2(0f, Tuning.StageFloorTop);
-        Fill(Vector2.Zero, Tuning.StageSize with { Y = Tuning.StageFloorTop }, BackWall);
-        Fill(floorTopLeft, Tuning.StageSize - floorTopLeft, Floor);
+        var across = new Vector2(Tuning.StageSize.X + (2f * past.X), 0f);
+        Fill(-past, across with { Y = Tuning.StageFloorTop + past.Y }, BackWall);
+        Fill(floorTopLeft with { X = -past.X }, across with { Y = Tuning.StageSize.Y - Tuning.StageFloorTop + past.Y }, Floor);
         for (int i = 0; i < Tuning.StageDoors.Count; i++)
         {
             // A door is a mat as wide as the door, the half of it that is on the floor. Only the first door is open.
@@ -233,9 +267,15 @@ internal sealed class UnderstudiesGame : Microsoft.Xna.Framework.Game
             FillDisc(cloud.Position, Tuning.VanishCloudRadius, CloudPuff * (0.5f * thick));
         }
 
+        foreach (var body in _juice.Bodies)
+        {
+            // A critic that fell lies where it fell and fades away, under the feet of whoever stands there.
+            DrawFigure(Figure.Critic, body.Position, white: body.White, fallen: true, opacity: body.Opacity);
+        }
+
         _spriteBatch.End();
 
-        // What stands on the floor: the lower on the screen, the later it is drawn (DrawUpright gives the depth).
+        // What stands on the floor: the lower on the screen, the later it is drawn (Depth says how late).
         _spriteBatch.Begin(SpriteSortMode.FrontToBack, transformMatrix: worldToScreen);
 
         // The box office is drawn from halfway between the middle of its circle and the circle's front. A critic
@@ -244,28 +284,16 @@ internal sealed class UnderstudiesGame : Microsoft.Xna.Framework.Game
         Vector2 boxOfficeFeet = Tuning.BoxOfficePosition + new Vector2(0f, Tuning.BoxOfficeSize / 4f);
 
         // The batch keeps no order between equal depths, and the magician's mark is on this very line: the box
-        // office sorts a hair behind where it is drawn, so whoever stands exactly on its foot line is in front.
+        // office stands a hair behind its foot line, so whoever stands exactly on that line is in front.
         const float hair = 0.001f;
-        DrawUpright(
-            boxOfficeFeet - new Vector2(0f, hair), Tuning.BoxOfficeSize, Tuning.BoxOfficeSize, BoxOffice, lift: -hair);
+        DrawFigure(Figure.BoxOffice, boxOfficeFeet - new Vector2(0f, hair), white: _juice.BoxOfficeWhite);
         Vector2 magicianFeet = Vector2.Lerp(_simulation.MagicianPreviousPosition, _simulation.MagicianPosition, alpha);
-
-        // A fallen magician lies flat: as long on the floor as it stood tall.
-        var magicianSize = new Vector2(Tuning.MagicianRadius * 2f, MagicianHeight);
-        if (_simulation.MagicianHasFallen)
-        {
-            magicianSize = new Vector2(magicianSize.Y, magicianSize.X);
-        }
-
-        DrawUpright(magicianFeet, magicianSize.X, magicianSize.Y, Magician);
+        DrawFigure(
+            Figure.Magician, magicianFeet, white: _juice.MagicianWhite, fallen: _simulation.MagicianHasFallen);
         foreach (Critic critic in _simulation.Critics)
         {
-            // A body with a paler head on it, so that the critics of a crowd can be told apart. A stunned critic
-            // has gone pale all over.
             Vector2 feet = Vector2.Lerp(critic.PreviousPosition, critic.Position, alpha);
-            DrawUpright(
-                feet, Tuning.CriticRadius * 2f, CriticBodyHeight, critic.IsStunned ? CriticStunnedBody : CriticBody);
-            DrawUpright(feet, CriticHeadSize, CriticHeadSize, CriticHead, lift: CriticBodyHeight);
+            DrawFigure(Figure.Critic, feet, pale: critic.IsStunned, white: _juice.CriticWhite(critic.Id));
         }
 
         foreach (ThrownCard card in _simulation.ThrownCards)
@@ -273,13 +301,39 @@ internal sealed class UnderstudiesGame : Microsoft.Xna.Framework.Game
             // The card's position is the point of the floor it is over.
             Vector2 below = Vector2.Lerp(card.PreviousPosition, card.Position, alpha);
             DrawUpright(below, ThrownCardWidth, ThrownCardHeight, ThrownCardFace, lift: ThrownCardLift);
+
+            // A card thrown on this tick has not flown yet and has no way to trail along.
+            Vector2 flown = card.Position - card.PreviousPosition;
+            if (flown == Vector2.Zero)
+            {
+                continue;
+            }
+
+            // The trail: a streak from the middle of the card back along its flight, so that a card that is in the
+            // air for an eighth of a second is seen.
+            // ponytail: the streak never reaches back past the magician, who throws every card there is. When an
+            // understudy throws too, a card has to say where it was thrown from.
+            Vector2 middle = below - new Vector2(0f, ThrownCardLift + (ThrownCardHeight / 2f));
+            Vector2 back = -Vector2.Normalize(flown)
+                * MathF.Min(Juice.TrailLength, Vector2.Distance(below, magicianFeet));
+            FillTurned(
+                middle + (back / 2f),
+                new Vector2(back.Length(), Juice.TrailWidth),
+                MathF.Atan2(back.Y, back.X),
+                ThrownCardFace * Juice.TrailOpacity,
+                Depth(below));
         }
 
         _spriteBatch.End();
 
-        // Over everything: a closed show goes dark, and the box office's hit points are a bar above it, a critic's
-        // height above, clear of the heads of the critics who stand behind the box.
+        // Over everything: the scraps in the air, then a closed show goes dark, and the box office's hit points are
+        // a bar above it, a critic's height above, clear of the heads of the critics who stand behind the box.
         _spriteBatch.Begin(transformMatrix: worldToScreen);
+        foreach (var scrap in _juice.Scraps)
+        {
+            FillTurned(scrap.Middle, Juice.ScrapSize, scrap.Turn, ScrapOfPaper * scrap.Opacity);
+        }
+
         if (_simulation.ShowClosed)
         {
             Fill(Vector2.Zero, Tuning.StageSize, Color.Black * 0.6f);
@@ -320,15 +374,72 @@ internal sealed class UnderstudiesGame : Microsoft.Xna.Framework.Game
     }
 
     /// <summary>
-    /// A figure stands on its floor position and is drawn upward from there, or from <paramref name="lift"/> above
-    /// it. What stands lower on the screen is in front.
+    /// The one call that draws a figure. Whatever is asked of a figure's look is asked of this call, and nothing
+    /// outside it knows that a figure is rectangles: no flash, no body and no fade paints over a figure with a
+    /// shape of its own. When figures become sprites (T07c) the four things asked here must go on working:
+    /// <paramref name="pale"/> is a tint; <paramref name="white"/> is a white copy of the sprite drawn over it,
+    /// that thick, since a tint can only darken; <paramref name="fallen"/> is the sprite laid on its side, or a
+    /// sprite of its own; and <paramref name="opacity"/> is all that is drawn of the figure, that much see-through.
+    /// </summary>
+    /// <param name="pale">A stunned critic: it has gone pale all over.</param>
+    /// <param name="white">The flash of a figure that was hurt a moment ago: how far to white, from 0 to 1.</param>
+    /// <param name="fallen">Lying flat where <paramref name="feet"/> is, and not standing on it.</param>
+    private void DrawFigure(
+        Figure figure, Vector2 feet, bool pale = false, float white = 0f, bool fallen = false, float opacity = 1f)
+    {
+        // A fallen figure is as long on the floor as it stood tall, with its middle where its feet were.
+        float tall = figure switch
+        {
+            Figure.Magician => MagicianHeight,
+            Figure.Critic => CriticBodyHeight + CriticHeadSize,
+            _ => Tuning.BoxOfficeSize,
+        };
+
+        void Part(float width, float height, Color color, float lift = 0f)
+        {
+            color = Color.Lerp(color, Color.White, white) * opacity;
+            if (fallen)
+            {
+                // What was `lift` above the feet is as far along the floor, and every part lies on the floor.
+                Fill(
+                    new Vector2(feet.X - (tall / 2f) + lift, feet.Y - width),
+                    new Vector2(height, width),
+                    color,
+                    Depth(feet));
+            }
+            else
+            {
+                DrawUpright(feet, width, height, color, lift);
+            }
+        }
+
+        switch (figure)
+        {
+            case Figure.Magician:
+                Part(Tuning.MagicianRadius * 2f, MagicianHeight, Magician);
+                break;
+
+            // A body with a paler head on it, so that the critics of a crowd can be told apart.
+            case Figure.Critic:
+                Part(Tuning.CriticRadius * 2f, CriticBodyHeight, pale ? CriticStunnedBody : CriticBody);
+                Part(CriticHeadSize, CriticHeadSize, CriticHead, lift: CriticBodyHeight);
+                break;
+
+            case Figure.BoxOffice:
+                Part(Tuning.BoxOfficeSize, Tuning.BoxOfficeSize, BoxOffice);
+                break;
+        }
+    }
+
+    /// <summary>
+    /// What stands on a floor position is drawn upward from there, or from <paramref name="lift"/> above it. What
+    /// stands lower on the screen is in front.
     /// </summary>
     private void DrawUpright(Vector2 feet, float width, float height, Color color, float lift = 0f) =>
-        Fill(
-            new Vector2(feet.X - (width / 2f), feet.Y - lift - height),
-            new Vector2(width, height),
-            color,
-            Math.Clamp(feet.Y / Tuning.StageSize.Y, 0f, 1f));
+        Fill(new Vector2(feet.X - (width / 2f), feet.Y - lift - height), new Vector2(width, height), color, Depth(feet));
+
+    /// <summary>Where in a sorted batch what stands on <paramref name="feet"/> is drawn: the lower, the later.</summary>
+    private float Depth(Vector2 feet) => Math.Clamp(feet.Y / Tuning.StageSize.Y, 0f, 1f);
 
     /// <summary>A filled circle in world units, flat on the floor.</summary>
     private void FillDisc(Vector2 middle, float radius, Color color)
@@ -350,4 +461,17 @@ internal sealed class UnderstudiesGame : Microsoft.Xna.Framework.Game
     private void Fill(Vector2 topLeft, Vector2 size, Color color, float depth = 0f) =>
         _spriteBatch.Draw(
             _pixel, topLeft, null, color, 0f, Microsoft.Xna.Framework.Vector2.Zero, size, SpriteEffects.None, depth);
+
+    /// <summary>A filled rectangle in world units, turned about its middle by <paramref name="turn"/> radians.</summary>
+    private void FillTurned(Vector2 middle, Vector2 size, float turn, Color color, float depth = 0f) =>
+        _spriteBatch.Draw(
+            _pixel, middle, null, color, turn, new Microsoft.Xna.Framework.Vector2(0.5f), size, SpriteEffects.None, depth);
+
+    /// <summary>What <see cref="DrawFigure"/> can draw.</summary>
+    private enum Figure
+    {
+        Magician,
+        Critic,
+        BoxOffice,
+    }
 }

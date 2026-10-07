@@ -393,6 +393,7 @@ public sealed class Simulation(Tuning tuning, ulong seed)
             else
             {
                 BoxOfficeHitPoints = MathF.Max(0f, BoxOfficeHitPoints - Tuning.CriticStrikeDamage);
+                _events.Add(new TickEvent(TickEventKind.BoxOfficeStruck, critic.Position));
             }
 
             critic.TicksToNextBlow = Ticks(Tuning.CriticBlowCooldown);
