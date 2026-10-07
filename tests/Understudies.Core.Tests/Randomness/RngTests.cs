@@ -1,0 +1,62 @@
+using Understudies.Core.Randomness;
+
+namespace Understudies.Core.Tests.Randomness;
+
+public class RngTests
+{
+    [Test]
+    public void NextULong_SeedZero_MatchesTheSplitMix64ReferenceSequence()
+    {
+        var rng = new Rng(0UL);
+
+        Assert.That(rng.NextULong(), Is.EqualTo(0xE220A8397B1DCDAFUL));
+        Assert.That(rng.NextULong(), Is.EqualTo(0x6E789E6AA1B965F4UL));
+        Assert.That(rng.NextULong(), Is.EqualTo(0x06C45D188009454FUL));
+    }
+
+    [Test]
+    public void NextULong_SameSeed_SameSequence()
+    {
+        var a = new Rng(12345);
+        var b = new Rng(12345);
+
+        for (int i = 0; i < 1000; i++)
+        {
+            Assert.That(a.NextULong(), Is.EqualTo(b.NextULong()));
+        }
+    }
+
+    [TestCase(1)]
+    [TestCase(6)]
+    [TestCase(int.MaxValue)]
+    public void NextInt_ReturnsAValueBelowTheBound(int maxExclusive)
+    {
+        var rng = new Rng(7);
+
+        for (int i = 0; i < 10_000; i++)
+        {
+            Assert.That(rng.NextInt(maxExclusive), Is.InRange(0, maxExclusive - 1));
+        }
+    }
+
+    [Test]
+    public void NextInt_Six_IsRoughlyUniform()
+    {
+        var rng = new Rng(99);
+        var counts = new int[6];
+
+        for (int i = 0; i < 60_000; i++)
+        {
+            counts[rng.NextInt(6)]++;
+        }
+
+        Assert.That(counts, Has.All.InRange(9_500, 10_500));
+    }
+
+    [TestCase(0)]
+    [TestCase(-5)]
+    public void NextInt_NonPositiveBound_Throws(int maxExclusive)
+    {
+        Assert.Throws<ArgumentOutOfRangeException>(() => new Rng(1).NextInt(maxExclusive));
+    }
+}

@@ -1,0 +1,38 @@
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+The Understudies is a prototype of a short roguelite for PC: a stage magician defends a box office, and every act played leaves behind an understudy that replays the route the player ran. `docs/vision.md` is the design; `docs/plan-prototype.md` is the plan, the decisions that settle the vision's open points, and the ticket list. Read the plan before changing a rule: where the two disagree, the plan is the later decision.
+
+## Commands
+
+All commands run from the repository root. `global.json` names the .NET SDK (10.0.1xx); warnings are errors.
+
+```bash
+dotnet build Understudies.sln --configuration Release                     # CI runs this first: `dotnet test` alone never compiles the game
+dotnet test Understudies.sln --configuration Release                      # then this
+dotnet test tests/Understudies.Core.Tests --filter "FullyQualifiedName~RngTests"   # one class or test
+dotnet run --project src/Understudies.Game                                # play; Esc quits
+```
+
+## Architecture
+
+Three projects, with one-way dependencies: **Core** ← **Game** and **Core.Tests**.
+
+- `src/Understudies.Core` is the game's rules, with no reference to MonoGame. `Simulation` owns the state and advances it one tick at a time from the magician's input of that tick; everything else reads the state and the events of the last tick. The accumulator clock that turns frame time into whole ticks lives here too, where it can be tested. The same seed and inputs are meant to give the same result on every machine (a pinned state hash checks it across two, plan T19), so:
+  - positions are `System.Numerics.Vector2` in world units, and the only arithmetic is + − × ÷ and the square root: no trigonometry;
+  - randomness comes only from `Randomness/Rng` (SplitMix64), never `System.Random`;
+  - the simulation never iterates a `Dictionary` or a `HashSet` and never reads a clock;
+  - `tuning.json` is the only place a tunable number lives (the tick rate is the one constant in code), and the tests read the same file.
+- `src/Understudies.Game` is the MonoGame (DesktopGL) layer: input, drawing, sound. It holds no rules: it feeds the simulation the player's input each tick and draws what the simulation reports, with positions interpolated between the last two ticks. Everything is drawn as shapes; there is no content pipeline and no art. Inside this project `Game` means the namespace, so MonoGame's base class is written `Microsoft.Xna.Framework.Game`.
+- `tests/Understudies.Core.Tests` is NUnit: the rule tests and, later, the scripted players that guard the balance.
+
+## How the work runs
+
+- One ticket of `docs/plan-prototype.md` is one branch (`tNN-short-name`) and one small pull request into `main`, whose title starts with the ticket id (`T04: ...`). Tickets are taken in order.
+- Work in a git worktree; the owner's checkout stays on `main`.
+- Write the test first for every rule in Core. The view and the juice have no tests: they are judged by eye at the plan's stops, and by a captured frame in review.
+- Before a merge, a separate agent with a clean context reviews the pull request with the `mattpocock-skills:code-review` skill (fixed point `main`; the spec is the ticket in the plan) and the `ponytail:ponytail-review` skill. Fix or answer what it finds, wait for green CI, then merge.
+- The plan's stops are where the owner plays and judges. The loop does not wait at a stop: it announces it and goes on.
+- Build the smallest thing the ticket asks for: no abstraction, option or layer for a later ticket. Mark a deliberate shortcut that has a known ceiling with a `ponytail:` comment naming the ceiling.
+- Everything in the repository is in English. There is no study journal in this project.
