@@ -6,8 +6,11 @@ public class CriticTests
 {
     private const float Tolerance = 1e-3f;
 
-    /// <summary>The committed numbers with a magician that reaches nobody: these are the critics left to themselves.</summary>
-    private Tuning Tuning { get; } = CommittedTuning.Parse() with { ThrowRange = 0f };
+    /// <summary>
+    /// The committed numbers with a magician that reaches nobody and that no critic turns on: these are the critics
+    /// left to themselves.
+    /// </summary>
+    private Tuning Tuning { get; } = CommittedTuning.Parse() with { ThrowRange = 0f, CriticTurnRadius = 0f };
 
     [Test]
     public void Step_TheFirstTick_ACriticEntersAtTheFirstDoor()
@@ -162,7 +165,7 @@ public class CriticTests
         const int cooldown = Simulation.TicksPerSecond / 2;
         Tuning tuning = OneCritic with
         {
-            BoxOfficeHitPoints = 100f, CriticStrikeDamage = 3f, CriticStrikeCooldown = 0.5f,
+            BoxOfficeHitPoints = 100f, CriticStrikeDamage = 3f, CriticBlowCooldown = 0.5f,
         };
         var simulation = new Simulation(tuning, seed: 1);
         Assert.That(simulation.BoxOfficeHitPoints, Is.EqualTo(100f));
@@ -198,6 +201,9 @@ public class CriticTests
         RunUntil(simulation, () => simulation.BoxOfficeHitPoints < 1f);
         Assert.That(simulation.BoxOfficeHitPoints, Is.Zero);
         Assert.That(simulation.ShowClosed, Is.True);
+
+        // It is the box office that fell, and not the magician.
+        Assert.That(simulation.MagicianHasFallen, Is.False);
     }
 
     [Test]

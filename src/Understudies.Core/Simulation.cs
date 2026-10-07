@@ -60,11 +60,20 @@ public sealed class Simulation(Tuning tuning, ulong seed)
     /// <summary>What happened in the last tick, in the order it happened. The next tick starts the list afresh.</summary>
     public IReadOnlyList<TickEvent> Events => _events;
 
+    /// <summary>What the magician has left: never less than nothing.</summary>
+    public float MagicianHitPoints { get; private set; } = tuning.MagicianHitPoints;
+
+    /// <summary>The magician has nothing left.</summary>
+    public bool MagicianHasFallen => MagicianHitPoints <= 0f;
+
     /// <summary>What the box office has left: never less than nothing.</summary>
     public float BoxOfficeHitPoints { get; private set; } = tuning.BoxOfficeHitPoints;
 
-    /// <summary>The box office has nothing left. The show is over: <see cref="Step"/> changes nothing any more.</summary>
-    public bool ShowClosed => BoxOfficeHitPoints <= 0f;
+    /// <summary>
+    /// The box office has nothing left, or the magician has fallen. The show is over: <see cref="Step"/> changes
+    /// nothing any more.
+    /// </summary>
+    public bool ShowClosed => BoxOfficeHitPoints <= 0f || MagicianHasFallen;
 
     public void Step(MagicianInput input)
     {
@@ -75,7 +84,8 @@ public sealed class Simulation(Tuning tuning, ulong seed)
         }
 
         // The clouds thin before the magician can leave a new one, so a cloud has its whole time on the tick it is
-        // left. And the magician moves before the critics walk, so the cloud of a Vanish stuns on the tick of it.
+        // left. And the magician moves before the critics walk, so the cloud of a Vanish stuns on the tick of it, and
+        // a critic turns on the magician, and touches it, where this tick has put it.
         ThinTheClouds();
         MoveTheMagician(input);
 
@@ -116,6 +126,7 @@ public sealed class Simulation(Tuning tuning, ulong seed)
         AddPoint(_facing);
         hasher.AddInt(_ticksToNextVanish);
         hasher.AddInt(_ticksInvulnerable);
+        hasher.AddFloat(MagicianHitPoints);
         hasher.AddFloat(BoxOfficeHitPoints);
 
         // Each list after its length, so that where one ends and the next begins is never in doubt.
@@ -125,7 +136,7 @@ public sealed class Simulation(Tuning tuning, ulong seed)
             hasher.AddInt(critic.Id);
             AddPoint(critic.Position);
             hasher.AddFloat(critic.HitPoints);
-            hasher.AddInt(critic.TicksToNextStrike);
+            hasher.AddInt(critic.TicksToNextBlow);
             hasher.AddInt(critic.TicksStunned);
         }
 
@@ -331,31 +342,60 @@ public sealed class Simulation(Tuning tuning, ulong seed)
                 critic.TicksStunned = Ticks(Tuning.VanishStunTime);
             }
 
-            // Straight at the box office as far as where the two circles touch, and back out to there when the
-            // crowd has pushed the critic in. A stunned critic walks no step, and is put back out all the same:
-            // the others still push it.
-            Vector2 toBoxOffice = Direction(Tuning.BoxOfficePosition - critic.Position, out float distance);
-            float gap = distance - (Tuning.BoxOfficeSize / 2f) - Tuning.CriticRadius;
-            float step = critic.IsStunned ? 0f : Tuning.CriticSpeed / TicksPerSecond;
-            critic.Position += toBoxOffice * MathF.Min(gap, step);
+            // A critic nearer to the magician than the turn radius has turned on it: it walks at the magician and
+            // not at the box office. That is asked anew on every tick, so it goes back to the box office the moment
+            // the magician is out of the radius. A stunned critic does not turn.
+            Vector2 apart = MagicianPosition - critic.Position;
+            bool turned = !critic.IsStunned
+                && (apart.X * apart.X) + (apart.Y * apart.Y) < Tuning.CriticTurnRadius * Tuning.CriticTurnRadius;
 
-            // Nor does it strike, and its time to the next strike stands still.
+            // Straight at whichever it is, as far as where the two circles touch. From the box office a critic is
+            // put back out to there when the crowd has pushed it in; a stunned critic walks no step, and is put back
+            // out all the same: the others still push it. From the magician nobody is put back out: nothing blocks
+            // the magician, which walks through critics and leaves them where they stand.
+            // ponytail: a critic that has turned walks in a straight line, through the box office when that is
+            // between the two, and is not put back out of it while it is turned, so one that turns back is put out
+            // in a single tick, however deep it stood. Were the box office a wall to it, nobody could reach a
+            // magician that stands inside the box office; it becomes a wall to every critic when something keeps
+            // the magician out of it too.
+            Vector2 toTarget = Direction(
+                (turned ? MagicianPosition : Tuning.BoxOfficePosition) - critic.Position, out float distance);
+            float gap = distance - (turned ? Tuning.MagicianRadius : Tuning.BoxOfficeSize / 2f) - Tuning.CriticRadius;
+            float step = critic.IsStunned ? 0f : Tuning.CriticSpeed / TicksPerSecond;
+            float walk = MathF.Min(gap, step);
+            critic.Position += toTarget * (turned ? MathF.Max(0f, walk) : walk);
+
+            // Nor does it deal a blow, and its time to the next blow stands still.
             if (critic.IsStunned)
             {
                 continue;
             }
 
-            // A critic that touches the box office strikes it, and again a cooldown later.
-            if (critic.TicksToNextStrike > 0)
+            // A critic that touches what it walks at deals it a blow, and its next blow a cooldown later, whichever
+            // of the two that one is for: turning from one to the other never brings a blow sooner.
+            if (critic.TicksToNextBlow > 0)
             {
-                critic.TicksToNextStrike--;
+                critic.TicksToNextBlow--;
             }
 
-            if (gap <= step && critic.TicksToNextStrike == 0)
+            // While nothing hurts the magician a touch takes nothing and is no blow: the critic's stays ready.
+            // And once a blow of this tick has closed the show, the critics after it in the list deal none.
+            if (ShowClosed || gap > step || critic.TicksToNextBlow > 0 || (turned && MagicianIsInvulnerable))
+            {
+                continue;
+            }
+
+            if (turned)
+            {
+                MagicianHitPoints = MathF.Max(0f, MagicianHitPoints - Tuning.CriticTouchDamage);
+                _events.Add(new TickEvent(TickEventKind.MagicianHurt, MagicianPosition));
+            }
+            else
             {
                 BoxOfficeHitPoints = MathF.Max(0f, BoxOfficeHitPoints - Tuning.CriticStrikeDamage);
-                critic.TicksToNextStrike = Ticks(Tuning.CriticStrikeCooldown);
             }
+
+            critic.TicksToNextBlow = Ticks(Tuning.CriticBlowCooldown);
         }
     }
 

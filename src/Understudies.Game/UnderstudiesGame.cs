@@ -169,19 +169,25 @@ internal sealed class UnderstudiesGame : Microsoft.Xna.Framework.Game
     private void Capture(string path)
     {
         // Two seconds right and down, out of every critic's range, and still there while critics gather at the box
-        // office. Then two seconds back to the mark, which is at the edge of the crowd by now, and on the first tick
-        // after twenty seconds a Vanish to the left: the cloud lies on the crowd, and the magician stands where the
-        // next critics come, in range of both. The frames of the next second show the cloud, the stunned in it and
-        // the Vanish's bar part full.
+        // office: more of them than the magician's cards can fell in time. Then two seconds back to the mark, which
+        // is at the edge of the crowd by now, and three seconds still: the crowd turns on the magician and its hit
+        // points go. On the first tick after thirty-one seconds a Vanish to the left: the cloud lies on the crowd,
+        // and the frames of the next second show it, the stunned in it and the Vanish's bar part full. Two seconds
+        // later the magician walks back into them, the Vanish's six units in forty ticks, and stands there until it
+        // falls, a little before thirty-five seconds.
         const int second = Simulation.TicksPerSecond;
         for (int i = 0; i < _captureTicks; i++)
         {
             _simulation.Step(i switch
             {
                 < 2 * second => new MagicianInput(new Vector2(1f, 1f)),
-                < 18 * second => default,
-                < 20 * second => new MagicianInput(new Vector2(-1f, -1f)),
-                20 * second => new MagicianInput(new Vector2(-1f, 0f), Vanish: true),
+                < 26 * second => default,
+                < 28 * second => new MagicianInput(new Vector2(-1f, -1f)),
+                < 31 * second => default,
+                31 * second => new MagicianInput(new Vector2(-1f, 0f), Vanish: true),
+                < 33 * second => default,
+                // Forty ticks at the magician's speed are the Vanish's six units: back to where it stood.
+                < (33 * second) + 40 => new MagicianInput(new Vector2(1f, 0f)),
                 _ => default,
             });
         }
@@ -243,7 +249,15 @@ internal sealed class UnderstudiesGame : Microsoft.Xna.Framework.Game
         DrawUpright(
             boxOfficeFeet - new Vector2(0f, hair), Tuning.BoxOfficeSize, Tuning.BoxOfficeSize, BoxOffice, lift: -hair);
         Vector2 magicianFeet = Vector2.Lerp(_simulation.MagicianPreviousPosition, _simulation.MagicianPosition, alpha);
-        DrawUpright(magicianFeet, Tuning.MagicianRadius * 2f, MagicianHeight, Magician);
+
+        // A fallen magician lies flat: as long on the floor as it stood tall.
+        var magicianSize = new Vector2(Tuning.MagicianRadius * 2f, MagicianHeight);
+        if (_simulation.MagicianHasFallen)
+        {
+            magicianSize = new Vector2(magicianSize.Y, magicianSize.X);
+        }
+
+        DrawUpright(magicianFeet, magicianSize.X, magicianSize.Y, Magician);
         foreach (Critic critic in _simulation.Critics)
         {
             // A body with a paler head on it, so that the critics of a crowd can be told apart. A stunned critic
@@ -274,17 +288,35 @@ internal sealed class UnderstudiesGame : Microsoft.Xna.Framework.Game
         var bar = new Vector2(Tuning.BoxOfficeSize, 0.4f);
         Vector2 barTopLeft = boxOfficeFeet
             - new Vector2(bar.X / 2f, Tuning.BoxOfficeSize + CriticBodyHeight + CriticHeadSize + bar.Y);
-        float left = Math.Clamp(_simulation.BoxOfficeHitPoints / Tuning.BoxOfficeHitPoints, 0f, 1f);
-        Fill(barTopLeft, bar, HitPointsLost);
-        Fill(barTopLeft, bar with { X = bar.X * left }, HitPoints);
+        FillBar(barTopLeft, bar, _simulation.BoxOfficeHitPoints / Tuning.BoxOfficeHitPoints, HitPoints);
 
-        // The Vanish's bar is over the magician's head: it fills as the Vanish comes back, and a full bar is a
-        // Vanish that is ready.
-        var vanishBar = new Vector2(1.6f, 0.25f);
-        Vector2 vanishBarTopLeft = magicianFeet - new Vector2(vanishBar.X / 2f, MagicianHeight + 0.3f + vanishBar.Y);
-        Fill(vanishBarTopLeft, vanishBar, HitPointsLost);
-        Fill(vanishBarTopLeft, vanishBar with { X = vanishBar.X * (1f - _simulation.VanishCooldownLeft) }, VanishBar);
+        // The magician has two small bars, told apart by place and by colour. Its hit points are under its feet, in
+        // the colour of the box office's. The Vanish's is over its head: it fills as the Vanish comes back, and a
+        // full bar is a Vanish that is ready. A fallen magician has no Vanish to wait for.
+        var smallBar = new Vector2(1.6f, 0.25f);
+        Vector2 atTheFeet = magicianFeet - new Vector2(smallBar.X / 2f, 0f);
+        FillBar(
+            atTheFeet + new Vector2(0f, 0.3f),
+            smallBar,
+            _simulation.MagicianHitPoints / Tuning.MagicianHitPoints,
+            HitPoints);
+        if (!_simulation.MagicianHasFallen)
+        {
+            FillBar(
+                atTheFeet - new Vector2(0f, MagicianHeight + 0.3f + smallBar.Y),
+                smallBar,
+                1f - _simulation.VanishCooldownLeft,
+                VanishBar);
+        }
+
         _spriteBatch.End();
+    }
+
+    /// <summary>A bar that is <paramref name="share"/> full, from its left end.</summary>
+    private void FillBar(Vector2 topLeft, Vector2 size, float share, Color color)
+    {
+        Fill(topLeft, size, HitPointsLost);
+        Fill(topLeft, size with { X = size.X * Math.Clamp(share, 0f, 1f) }, color);
     }
 
     /// <summary>

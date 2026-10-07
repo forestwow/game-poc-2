@@ -27,6 +27,7 @@ namespace Understudies.Core;
 /// <param name="MagicianMark">Where the magician stands when the show starts.</param>
 /// <param name="MagicianSpeed">Units per second.</param>
 /// <param name="MagicianRadius">The magician is a circle on the floor.</param>
+/// <param name="MagicianHitPoints">What the magician has when the show starts.</param>
 /// <param name="VanishDistance">How far the Vanish takes the magician, when no edge of the floor is in the way.</param>
 /// <param name="VanishCooldown">Seconds from one Vanish to the next.</param>
 /// <param name="VanishInvulnerableTime">Seconds from a Vanish in which nothing hurts the magician.</param>
@@ -45,8 +46,17 @@ namespace Understudies.Core;
 /// <param name="CriticRadius">A critic is a circle on the floor.</param>
 /// <param name="CriticHitPoints">What a critic has when it enters.</param>
 /// <param name="CriticEntryInterval">Seconds from one critic entering to the next.</param>
+/// <param name="CriticTurnRadius">
+/// A critic whose centre is nearer than this to the magician's centre turns on the magician; any other walks to the
+/// box office. A critic that has not turned does not hurt the magician, so a radius of nothing leaves the magician
+/// alone.
+/// </param>
 /// <param name="CriticStrikeDamage">The hit points one strike takes off the box office.</param>
-/// <param name="CriticStrikeCooldown">Seconds from one strike of a critic to its next.</param>
+/// <param name="CriticTouchDamage">The hit points one touch takes off the magician.</param>
+/// <param name="CriticBlowCooldown">
+/// Seconds from one blow of a critic to its next, whether a blow is a strike on the box office or a touch that hurts
+/// the magician.
+/// </param>
 public sealed record Tuning(
     Vector2 StageSize,
     float StageFloorTop,
@@ -58,6 +68,7 @@ public sealed record Tuning(
     Vector2 MagicianMark,
     float MagicianSpeed,
     float MagicianRadius,
+    float MagicianHitPoints,
     float VanishDistance,
     float VanishCooldown,
     float VanishInvulnerableTime,
@@ -72,8 +83,10 @@ public sealed record Tuning(
     float CriticRadius,
     float CriticHitPoints,
     float CriticEntryInterval,
+    float CriticTurnRadius,
     float CriticStrikeDamage,
-    float CriticStrikeCooldown)
+    float CriticTouchDamage,
+    float CriticBlowCooldown)
 {
     // ponytail: the serializer reads the types by reflection; a trimmed or AOT build needs a source-generated context.
     private static readonly JsonSerializerOptions Options = new()

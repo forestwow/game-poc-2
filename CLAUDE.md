@@ -13,7 +13,7 @@ dotnet build Understudies.sln --configuration Release                     # CI r
 dotnet test Understudies.sln --configuration Release                      # then this
 dotnet test tests/Understudies.Core.Tests --filter "FullyQualifiedName~RngTests"   # one class or test
 dotnet run --project src/Understudies.Game                                # play; Esc quits
-dotnet run --project src/Understudies.Game -- --capture /tmp/frame.png --ticks 1240  # no play: a fixed script for that many ticks (the fight starts near 1100), save the frame, exit
+dotnet run --project src/Understudies.Game -- --capture /tmp/frame.png --ticks 1830  # no play: a fixed script for that many ticks (the fight starts near 1650, the Vanish is on tick 1861, the magician has fallen by 2100), save the frame, exit
 ```
 
 ## Architecture

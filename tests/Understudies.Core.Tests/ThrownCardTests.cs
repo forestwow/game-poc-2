@@ -15,9 +15,9 @@ public class ThrownCardTests
     /// <summary>
     /// One critic that stands still, with the magician in range of it. The door has no width and the critic no
     /// speed, so it enters on the first tick exactly at <see cref="Door"/> and stays there; the second critic is an
-    /// hour away. So is the second card, and a card flies one unit a tick. The stage has no back wall: its floor
-    /// starts at the top edge, where the door is, so a test can put the magician right below the door or in the
-    /// edge itself, where a wall would not let it stand.
+    /// hour away, and no critic turns on the magician. The second card is an hour away too, and a card flies one
+    /// unit a tick. The stage has no back wall: its floor starts at the top edge, where the door is, so a test
+    /// can put the magician right below the door or in the edge itself, where a wall would not let it stand.
     /// </summary>
     private Tuning Scene { get; } = CommittedTuning.Parse() with
     {
@@ -27,6 +27,7 @@ public class ThrownCardTests
         MagicianMark = Mark,
         CriticSpeed = 0f,
         CriticEntryInterval = 3600f,
+        CriticTurnRadius = 0f,
         CriticHitPoints = 3f,
         ThrowRange = 9f,
         ThrowCooldown = 3600f,

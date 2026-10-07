@@ -15,13 +15,15 @@ public class VanishTests
     private static readonly Vector2 Door = new(20f, 0f);
 
     /// <summary>
-    /// The committed numbers with a magician that throws at nobody and a Vanish of six units, ready again two
-    /// seconds later, with a quarter of a second in which nothing hurts and a cloud that is there for half a second.
+    /// The committed numbers with a magician that throws at nobody and that no critic turns on, and a Vanish of six
+    /// units, ready again two seconds later, with a quarter of a second in which nothing hurts and a cloud that is
+    /// there for half a second.
     /// </summary>
     private Tuning Scene { get; } = CommittedTuning.Parse() with
     {
         MagicianMark = Mark,
         ThrowRange = 0f,
+        CriticTurnRadius = 0f,
         VanishDistance = 6f,
         VanishCooldown = 2f,
         VanishInvulnerableTime = 0.25f,
@@ -393,7 +395,7 @@ public class VanishTests
             MagicianMark = Door + new Vector2(2f, 17.5f),
             BoxOfficeHitPoints = 100f,
             CriticStrikeDamage = 1f,
-            CriticStrikeCooldown = 0.5f,
+            CriticBlowCooldown = 0.5f,
             VanishStunTime = 0.75f,
         };
         var simulation = new Simulation(tuning, seed: 1);
@@ -468,11 +470,12 @@ public class VanishTests
     public void Step_ACrowdAtTheBoxOfficeIsStunned_NoCriticIsPushedIntoIt()
     {
         // The committed stage with a critic every second and strikes that take nothing, so the show goes on: forty
-        // critics, most of them at the side of the box office the magician's mark is on. The cloud lies on them,
-        // and those it does not reach walk on into their backs.
+        // critics, most of them at the side of the box office the magician's mark is on, and none turns on the
+        // magician. The cloud lies on them, and those it does not reach walk on into their backs.
         Tuning tuning = CommittedTuning.Parse() with
         {
             ThrowRange = 0f,
+            CriticTurnRadius = 0f,
             CriticEntryInterval = 1f,
             CriticStrikeDamage = 0f,
             VanishCloudRadius = 2.5f,

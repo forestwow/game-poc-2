@@ -13,11 +13,14 @@ public enum TickEventKind
 
     /// <summary>The magician vanished.</summary>
     Vanish,
+
+    /// <summary>A critic's touch hurt the magician.</summary>
+    MagicianHurt,
 }
 
 /// <summary>Something that happened in one tick, for the view and the sound to show.</summary>
 /// <param name="Position">
 /// Where on the floor: for a hit and for a kill, the middle of the critic's circle; for a Vanish, where the magician
-/// stood before it.
+/// stood before it; for a hurt magician, where the magician stands.
 /// </param>
 public readonly record struct TickEvent(TickEventKind Kind, Vector2 Position);
