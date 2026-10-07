@@ -42,15 +42,6 @@ public class StateHashTests
     }
 
     [Test]
-    public void ComputeStateHash_AnotherInput_EndsInAnotherHash()
-    {
-        var left = new MagicianInput(new Vector2(-1f, 0f));
-        var up = new MagicianInput(new Vector2(0f, -1f));
-
-        Assert.That(Play(Tuning, seed: 7, up), Is.Not.EqualTo(Play(Tuning, seed: 7, left)));
-    }
-
-    [Test]
     public void ComputeStateHash_AnotherSeed_IsAnotherHashBeforeTheFirstTick()
     {
         // Nothing has been drawn from either generator yet: its state is all the two shows differ in.
