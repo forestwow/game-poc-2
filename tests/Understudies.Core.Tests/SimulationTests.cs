@@ -1,0 +1,96 @@
+using System.Numerics;
+
+namespace Understudies.Core.Tests;
+
+public class SimulationTests
+{
+    private const float Tolerance = 1e-4f;
+
+    [Test]
+    public void Step_NoInput_TheMagicianStaysOnTheMark()
+    {
+        var simulation = new Simulation();
+
+        Walk(simulation, Vector2.Zero, ticks: 10);
+
+        Assert.That(simulation.MagicianPosition, Is.EqualTo(Tuning.MagicianMark));
+    }
+
+    [Test]
+    public void Step_OneSecondInAStraightLine_CoversTheMagiciansSpeed()
+    {
+        var simulation = new Simulation();
+
+        Walk(simulation, new Vector2(1f, 0f), Simulation.TicksPerSecond);
+
+        Vector2 walked = simulation.MagicianPosition - Tuning.MagicianMark;
+        Assert.That(walked.X, Is.EqualTo(Tuning.MagicianSpeed).Within(Tolerance));
+        Assert.That(walked.Y, Is.Zero);
+    }
+
+    [Test]
+    public void Step_ADiagonal_IsNoFasterThanAStraightLine()
+    {
+        var straight = new Simulation();
+        var diagonal = new Simulation();
+
+        Walk(straight, new Vector2(1f, 0f), ticks: 30);
+        Walk(diagonal, new Vector2(1f, 1f), ticks: 30);
+
+        Assert.That(
+            Vector2.Distance(diagonal.MagicianPosition, Tuning.MagicianMark),
+            Is.EqualTo(Vector2.Distance(straight.MagicianPosition, Tuning.MagicianMark)).Within(Tolerance));
+    }
+
+    [Test]
+    public void Step_AStickPushedHalfway_MovesAtHalfSpeed()
+    {
+        var simulation = new Simulation();
+
+        Walk(simulation, new Vector2(0f, 0.5f), Simulation.TicksPerSecond);
+
+        Vector2 walked = simulation.MagicianPosition - Tuning.MagicianMark;
+        Assert.That(walked.Y, Is.EqualTo(Tuning.MagicianSpeed / 2f).Within(Tolerance));
+    }
+
+    [Test]
+    public void Step_IntoTheTopLeftCorner_TheMagiciansWholeCircleStaysOnTheStage()
+    {
+        var simulation = new Simulation();
+
+        Walk(simulation, new Vector2(-1f, -1f), ticks: 10 * Simulation.TicksPerSecond);
+
+        Assert.That(simulation.MagicianPosition, Is.EqualTo(new Vector2(Tuning.MagicianRadius)));
+    }
+
+    [Test]
+    public void Step_IntoTheBottomRightCorner_TheMagiciansWholeCircleStaysOnTheStage()
+    {
+        var simulation = new Simulation();
+
+        Walk(simulation, new Vector2(1f, 1f), ticks: 10 * Simulation.TicksPerSecond);
+
+        Assert.That(simulation.MagicianPosition, Is.EqualTo(Tuning.StageSize - new Vector2(Tuning.MagicianRadius)));
+    }
+
+    [Test]
+    public void Step_KeepsThePositionBeforeTheTickForTheView()
+    {
+        var simulation = new Simulation();
+        Walk(simulation, new Vector2(1f, 0f), ticks: 3);
+        Vector2 before = simulation.MagicianPosition;
+
+        simulation.Step(new MagicianInput(new Vector2(1f, 0f)));
+
+        Assert.That(simulation.MagicianPreviousPosition, Is.EqualTo(before));
+        Assert.That(simulation.MagicianPosition, Is.Not.EqualTo(before));
+    }
+
+    private static void Walk(Simulation simulation, Vector2 move, int ticks)
+    {
+        for (int i = 0; i < ticks; i++)
+        {
+            simulation.Step(new MagicianInput(move));
+        }
+    }
+}
