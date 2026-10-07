@@ -450,6 +450,7 @@ public sealed class Simulation(Tuning tuning, ulong seed)
         {
             _thrownCards.Add(new ThrownCard(MagicianPosition, direction, Tuning.ThrowRange));
             _ticksToNextThrow = Ticks(Tuning.ThrowCooldown);
+            _events.Add(new TickEvent(TickEventKind.Throw, MagicianPosition));
         }
     }
 
