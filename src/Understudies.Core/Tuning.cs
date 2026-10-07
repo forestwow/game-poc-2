@@ -21,6 +21,14 @@ namespace Understudies.Core;
 /// <param name="MagicianMark">Where the magician stands when the show starts.</param>
 /// <param name="MagicianSpeed">Units per second.</param>
 /// <param name="MagicianRadius">The magician is a circle on the floor.</param>
+/// <param name="VanishDistance">How far the Vanish takes the magician, when no edge of the stage is in the way.</param>
+/// <param name="VanishCooldown">Seconds from one Vanish to the next.</param>
+/// <param name="VanishInvulnerableTime">Seconds from a Vanish in which nothing hurts the magician.</param>
+/// <param name="VanishCloudRadius">The cloud a Vanish leaves is a circle on the floor.</param>
+/// <param name="VanishCloudTime">Seconds the cloud is there.</param>
+/// <param name="VanishStunTime">
+/// Seconds a critic is stunned, counted from the last tick its circle touched a cloud.
+/// </param>
 /// <param name="ThrowRange">
 /// The magician throws at a critic whose centre is no further than this, and a thrown card flies this far.
 /// </param>
@@ -43,6 +51,12 @@ public sealed record Tuning(
     Vector2 MagicianMark,
     float MagicianSpeed,
     float MagicianRadius,
+    float VanishDistance,
+    float VanishCooldown,
+    float VanishInvulnerableTime,
+    float VanishCloudRadius,
+    float VanishCloudTime,
+    float VanishStunTime,
     float ThrowRange,
     float ThrowCooldown,
     float ThrownCardSpeed,
