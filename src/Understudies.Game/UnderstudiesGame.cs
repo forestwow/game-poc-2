@@ -1,3 +1,4 @@
+using FontStashSharp;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
@@ -28,6 +29,21 @@ internal sealed class UnderstudiesGame : Microsoft.Xna.Framework.Game
     // The same in every capture, so that a frame can be compared with the one before.
     private const ulong CaptureSeed = 1;
 
+    // How tall the words on the back wall are and the number at the box office's bar, in world units: the font is
+    // asked for at that many screen pixels, whatever the window's size.
+    private const float WordsHeight = 1.2f;
+    private const float NumberHeight = 0.8f;
+
+    // ponytail: a system font, the first of these files that this machine has: one for macOS, one for Windows and
+    // two for Linux. A font file is shipped with the game when a build leaves the owner's machine.
+    private static readonly string[] FontFiles =
+    [
+        "/System/Library/Fonts/Supplemental/Arial.ttf",
+        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Fonts), "arial.ttf"),
+        "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+        "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",
+    ];
+
     private static readonly Color Surround = new(24, 18, 28);
     private static readonly Color BackWall = new(52, 40, 62);
     private static readonly Color Floor = new(96, 74, 58);
@@ -43,6 +59,7 @@ internal sealed class UnderstudiesGame : Microsoft.Xna.Framework.Game
     private static readonly Color CriticStunnedBody = new(168, 180, 212);
     private static readonly Color CriticHead = new(226, 216, 200);
     private static readonly Color ThrownCardFace = new(250, 246, 236);
+    private static readonly Color Words = new(236, 228, 210);
 
     private readonly SimulationClock _clock = new();
     private readonly string? _capturePath;
@@ -54,6 +71,9 @@ internal sealed class UnderstudiesGame : Microsoft.Xna.Framework.Game
     private bool _vanishAsked;
     private SpriteBatch _spriteBatch = null!;
     private Texture2D _pixel = null!;
+
+    // Null on a machine that has none of the font files: the game then runs without its words.
+    private FontSystem? _fonts;
 
     /// <summary>With a <paramref name="capturePath"/> the game does not play: it saves one frame there and exits.</summary>
     public UnderstudiesGame(Tuning tuning, string? capturePath, int captureTicks)
@@ -81,6 +101,17 @@ internal sealed class UnderstudiesGame : Microsoft.Xna.Framework.Game
         _spriteBatch = new SpriteBatch(GraphicsDevice);
         _pixel = new Texture2D(GraphicsDevice, 1, 1);
         _pixel.SetData([Color.White]);
+
+        if (FontFiles.FirstOrDefault(File.Exists) is { } fontFile)
+        {
+            _fonts = new FontSystem();
+            _fonts.AddFont(File.ReadAllBytes(fontFile));
+            Console.WriteLine($"Font read from {fontFile}");
+        }
+        else
+        {
+            Console.Error.WriteLine("No font found: the game has no text.");
+        }
     }
 
     protected override void Update(GameTime gameTime)
@@ -128,10 +159,17 @@ internal sealed class UnderstudiesGame : Microsoft.Xna.Framework.Game
             _vanishAsked = true;
         }
 
+        // Enter or the gamepad's Start goes on to the next act. The simulation takes it between two acts only.
+        if (Pressed(Keys.Enter) || (pad.IsButtonDown(Buttons.Start) && _padBefore.IsButtonUp(Buttons.Start)))
+        {
+            _simulation.GoOn();
+        }
+
         _keysBefore = keys;
         _padBefore = pad;
 
-        // A closed show stands as it fell until R: its Step changes nothing.
+        // Between two acts the stage stands until the player goes on, and a performance that is over stands as it
+        // ended until R: there Step changes nothing.
         Vector2 move = ReadMove(keys, pad);
         int ticks = _clock.Advance(gameTime.ElapsedGameTime.TotalSeconds);
         for (int i = 0; i < ticks; i++)
@@ -145,8 +183,8 @@ internal sealed class UnderstudiesGame : Microsoft.Xna.Framework.Game
 
     protected override void Draw(GameTime gameTime)
     {
-        // A closed show has no next tick to draw towards.
-        DrawStage(_simulation.ShowClosed ? 1f : _clock.Alpha);
+        // Only an act has a next tick to draw towards.
+        DrawStage(_simulation.Phase == Phase.Act ? _clock.Alpha : 1f);
         base.Draw(gameTime);
     }
 
@@ -172,12 +210,16 @@ internal sealed class UnderstudiesGame : Microsoft.Xna.Framework.Game
         // office: more of them than the magician's cards can fell in time. Then two seconds back to the mark, which
         // is at the edge of the crowd by now, and three seconds still: the crowd turns on the magician and its hit
         // points go. On the first tick after thirty-one seconds a Vanish to the left: the cloud lies on the crowd,
-        // and the frames of the next second show it, the stunned in it and the Vanish's bar part full. Two seconds
-        // later the magician walks back into them, the Vanish's six units in forty ticks, and stands there until it
-        // falls, a little before thirty-five seconds.
+        // and the frames of the next second show it, the stunned in it and the Vanish's bar part full. There the
+        // magician stands for the rest of the act, out of the crowd's reach and with the crowd in its own: it
+        // throws until few are left. In every later act it stands on its mark and fells each critic that comes, so
+        // the performance is played to its ovation.
         const int second = Simulation.TicksPerSecond;
         for (int i = 0; i < _captureTicks; i++)
         {
+            // Nobody is here to press a key between two acts. Going on before the tick, and not after it, leaves a
+            // capture that ends on an act's last tick between the two acts.
+            _simulation.GoOn();
             _simulation.Step(i switch
             {
                 < 2 * second => new MagicianInput(new Vector2(1f, 1f)),
@@ -185,9 +227,6 @@ internal sealed class UnderstudiesGame : Microsoft.Xna.Framework.Game
                 < 28 * second => new MagicianInput(new Vector2(-1f, -1f)),
                 < 31 * second => default,
                 31 * second => new MagicianInput(new Vector2(-1f, 0f), Vanish: true),
-                < 33 * second => default,
-                // Forty ticks at the magician's speed are the Vanish's six units: back to where it stood.
-                < (33 * second) + 40 => new MagicianInput(new Vector2(1f, 0f)),
                 _ => default,
             });
         }
@@ -277,10 +316,10 @@ internal sealed class UnderstudiesGame : Microsoft.Xna.Framework.Game
 
         _spriteBatch.End();
 
-        // Over everything: a closed show goes dark, and the box office's hit points are a bar above it, a critic's
-        // height above, clear of the heads of the critics who stand behind the box.
+        // Over everything: a performance that is over goes dark, and the box office's hit points are a bar above it,
+        // a critic's height above, clear of the heads of the critics who stand behind the box.
         _spriteBatch.Begin(transformMatrix: worldToScreen);
-        if (_simulation.ShowClosed)
+        if (_simulation.Phase is Phase.Ovation or Phase.Closed)
         {
             Fill(Vector2.Zero, Tuning.StageSize, Color.Black * 0.6f);
         }
@@ -309,6 +348,59 @@ internal sealed class UnderstudiesGame : Microsoft.Xna.Framework.Game
                 VanishBar);
         }
 
+        _spriteBatch.End();
+        DrawWords(scale, corner, besideTheBar: barTopLeft + new Vector2(bar.X + 0.3f, bar.Y / 2f));
+    }
+
+    /// <summary>
+    /// The words of the screen: along the back wall the act, a line when no act is played, and the act's time
+    /// left; and the box office's hit points as a number at <paramref name="besideTheBar"/>, the point just to the
+    /// right of the middle of its bar's end. They are drawn in screen pixels, so they stay sharp: the font is asked
+    /// for at the size the window makes of it, and <paramref name="scale"/> and <paramref name="corner"/> only say
+    /// where on the screen a point of the stage is.
+    /// </summary>
+    private void DrawWords(float scale, Vector2 corner, Vector2 besideTheBar)
+    {
+        if (_fonts is null)
+        {
+            return;
+        }
+
+        // The text's line is centred on the height of `at`, a point of the stage, with its left end there, its
+        // middle (`anchor` 0.5) or its right end (1).
+        void Write(float height, string text, Vector2 at, float anchor, Color color)
+        {
+            // A whole number of pixels tall and on whole pixels: a glyph drawn between two pixels is smeared over
+            // both. A window too small for words still has a pixel's worth.
+            SpriteFontBase font = _fonts.GetFont(MathF.Max(1f, MathF.Round(height * scale)));
+            Vector2 topLeft = corner + (at * scale)
+                - new Vector2(font.MeasureString(text).X * anchor, font.LineHeight / 2f);
+            _spriteBatch.DrawString(font, text, new Vector2(MathF.Round(topLeft.X), MathF.Round(topLeft.Y)), color);
+        }
+
+        // Halfway up the back wall, and on a stage with no wall just clear of the top edge.
+        float line = MathF.Max(Tuning.StageFloorTop, WordsHeight + 0.4f) / 2f;
+
+        // A second that has begun still shows: the time reads 0:00 only when the act is over.
+        int seconds = (_simulation.ActTicksLeft + Simulation.TicksPerSecond - 1) / Simulation.TicksPerSecond;
+        string? said = _simulation.Phase switch
+        {
+            Phase.BetweenActs => $"Act {_simulation.Act} is over. Press Enter or Start to go on.",
+            Phase.Ovation => "A standing ovation! R starts a new performance.",
+            Phase.Closed when _simulation.MagicianHasFallen => "The magician fell. R starts a new performance.",
+            Phase.Closed => "The box office fell. R starts a new performance.",
+            _ => null,
+        };
+
+        _spriteBatch.Begin();
+        Write(WordsHeight, $"Act {_simulation.Act} of {Tuning.ActsInPerformance}", new Vector2(1f, line), 0f, Words);
+        Write(WordsHeight, $"{seconds / 60}:{seconds % 60:00}", new Vector2(Tuning.StageSize.X - 1f, line), 1f, Words);
+        if (said is not null)
+        {
+            Write(WordsHeight, said, new Vector2(Tuning.StageSize.X / 2f, line), 0.5f, Magician);
+        }
+
+        Write(NumberHeight, $"{MathF.Ceiling(_simulation.BoxOfficeHitPoints)}", besideTheBar, 0f, Words);
         _spriteBatch.End();
     }
 
