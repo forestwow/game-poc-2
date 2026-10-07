@@ -16,6 +16,11 @@ internal sealed class UnderstudiesGame : Microsoft.Xna.Framework.Game
     private const float MagicianHeight = 3f;
     private const float CriticBodyHeight = 1.4f;
     private const float CriticHeadSize = 0.6f;
+    private const float ThrownCardWidth = 0.5f;
+    private const float ThrownCardHeight = 0.35f;
+
+    // A card flies at the height of a critic's chest.
+    private const float ThrownCardLift = 1f;
 
     // The same in every capture, so that a frame can be compared with the one before.
     private const ulong CaptureSeed = 1;
@@ -30,6 +35,7 @@ internal sealed class UnderstudiesGame : Microsoft.Xna.Framework.Game
     private static readonly Color Magician = new(250, 226, 120);
     private static readonly Color CriticBody = new(62, 88, 156);
     private static readonly Color CriticHead = new(226, 216, 200);
+    private static readonly Color ThrownCardFace = new(250, 246, 236);
 
     private readonly SimulationClock _clock = new();
     private readonly string? _capturePath;
@@ -144,8 +150,8 @@ internal sealed class UnderstudiesGame : Microsoft.Xna.Framework.Game
     /// <summary>Walks a fixed script, draws the frame it ends on and saves it as a PNG.</summary>
     private void Capture(string path)
     {
-        // A third of a second right and down, then still: the magician ends in front of the box office's corner,
-        // where the critics of the first door gather, so one frame shows who is drawn in front of whom.
+        // A third of a second right and down, then still: the magician ends in front of the box office's corner, in
+        // range of the last stretch of the way the critics of the first door come, so a frame shows the fight.
         var rightAndDown = new MagicianInput(new Vector2(1f, 1f));
         for (int i = 0; i < _captureTicks; i++)
         {
@@ -210,6 +216,13 @@ internal sealed class UnderstudiesGame : Microsoft.Xna.Framework.Game
             Vector2 feet = Vector2.Lerp(critic.PreviousPosition, critic.Position, alpha);
             DrawUpright(feet, Tuning.CriticRadius * 2f, CriticBodyHeight, CriticBody);
             DrawUpright(feet, CriticHeadSize, CriticHeadSize, CriticHead, lift: CriticBodyHeight);
+        }
+
+        foreach (ThrownCard card in _simulation.ThrownCards)
+        {
+            // The card's position is the point of the floor it is over.
+            Vector2 below = Vector2.Lerp(card.PreviousPosition, card.Position, alpha);
+            DrawUpright(below, ThrownCardWidth, ThrownCardHeight, ThrownCardFace, lift: ThrownCardLift);
         }
 
         _spriteBatch.End();

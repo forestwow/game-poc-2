@@ -6,7 +6,8 @@ public class CriticTests
 {
     private const float Tolerance = 1e-3f;
 
-    private Tuning Tuning { get; } = CommittedTuning.Parse();
+    /// <summary>The committed numbers with a magician that reaches nobody: these are the critics left to themselves.</summary>
+    private Tuning Tuning { get; } = CommittedTuning.Parse() with { ThrowRange = 0f };
 
     [Test]
     public void Step_TheFirstTick_ACriticEntersAtTheFirstDoor()

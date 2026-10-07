@@ -8,13 +8,14 @@ public sealed class Rng(ulong seed)
 {
     private const ulong GoldenGamma = 0x9E3779B97F4A7C15UL;
 
-    private ulong _state = seed;
+    /// <summary>All the generator remembers: two with the same state give the same numbers from here on.</summary>
+    internal ulong State { get; private set; } = seed;
 
     public ulong NextULong()
     {
         unchecked
         {
-            ulong z = _state += GoldenGamma;
+            ulong z = State += GoldenGamma;
             z = (z ^ (z >> 30)) * 0xBF58476D1CE4E5B9UL;
             z = (z ^ (z >> 27)) * 0x94D049BB133111EBUL;
             return z ^ (z >> 31);
