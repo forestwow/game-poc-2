@@ -48,6 +48,20 @@ public class TuningTests
     }
 
     [Test]
+    public void Parse_AKeyWrittenTwice_IsRefusedWithItsName()
+    {
+        // The slip of copying a line to try another value: without the refusal the last one wins in silence.
+        (string key, JsonNode? value) = JsonNode.Parse(CommittedTuning.Json)!.AsObject().First();
+        string twice = CommittedTuning.Json.Insert(
+            CommittedTuning.Json.IndexOf('{') + 1,
+            $"\"{key}\": {value!.ToJsonString()},");
+
+        Assert.That(
+            () => Tuning.Parse(twice),
+            Throws.TypeOf<JsonException>().With.Message.Contains($"'{key}'"));
+    }
+
+    [Test]
     public void Parse_AFileThatSaysNull_IsRefused()
     {
         Assert.That(() => Tuning.Parse("null"), Throws.TypeOf<JsonException>());

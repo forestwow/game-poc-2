@@ -23,7 +23,9 @@ internal static class TuningFile
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or JsonException)
         {
-            Console.Error.WriteLine($"Tuning not read from {path}: {exception.Message}");
+            // A missing x or y names itself but not its point: the path and the line say which.
+            string where = exception is JsonException { Path: { } key, LineNumber: { } line } ? $" (at {key}, line {line + 1})" : "";
+            Console.Error.WriteLine($"Tuning not read from {path}: {exception.Message}{where}");
             return null;
         }
     }
