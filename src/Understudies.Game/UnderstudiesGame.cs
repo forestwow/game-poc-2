@@ -48,6 +48,7 @@ internal sealed class UnderstudiesGame : Microsoft.Xna.Framework.Game
     private readonly SimulationClock _clock = new();
     private readonly string? _capturePath;
     private readonly int _captureTicks;
+    private readonly Sound _sound;
     private Simulation _simulation;
     private Juice _juice;
     private bool _captured;
@@ -62,6 +63,7 @@ internal sealed class UnderstudiesGame : Microsoft.Xna.Framework.Game
     {
         _simulation = capturePath is null ? NewShow(tuning) : new Simulation(tuning, CaptureSeed);
         _juice = new Juice(capturePath is null ? Random.Shared : new Random((int)CaptureSeed));
+        _sound = new Sound(silent: capturePath is not null);
         _capturePath = capturePath;
         _captureTicks = captureTicks;
         _ = new GraphicsDeviceManager(this)
@@ -122,6 +124,12 @@ internal sealed class UnderstudiesGame : Microsoft.Xna.Framework.Game
         {
             _simulation = NewShow(Tuning);
             _juice = new Juice(Random.Shared);
+        }
+
+        // M mutes the sound, and M again brings it back.
+        if (Pressed(Keys.M))
+        {
+            _sound.Muted = !_sound.Muted;
         }
 
         // Space or the gamepad's A is one Vanish for each press. The press waits for a tick to take it: a frame may
@@ -186,6 +194,7 @@ internal sealed class UnderstudiesGame : Microsoft.Xna.Framework.Game
     {
         _simulation.Step(input);
         _juice.Feed(_simulation);
+        _sound.Feed(_simulation);
     }
 
     /// <summary>Walks a fixed script, draws the frame it ends on and saves it as a PNG.</summary>
