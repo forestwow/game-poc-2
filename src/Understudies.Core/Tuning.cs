@@ -21,8 +21,15 @@ namespace Understudies.Core;
 /// <param name="MagicianMark">Where the magician stands when the show starts.</param>
 /// <param name="MagicianSpeed">Units per second.</param>
 /// <param name="MagicianRadius">The magician is a circle on the floor.</param>
+/// <param name="ThrowRange">
+/// The magician throws at a critic whose centre is no further than this, and a thrown card flies this far.
+/// </param>
+/// <param name="ThrowCooldown">Seconds from one throw to the next.</param>
+/// <param name="ThrownCardSpeed">Units per second.</param>
+/// <param name="ThrownCardDamage">The hit points one card takes off a critic.</param>
 /// <param name="CriticSpeed">Units per second.</param>
 /// <param name="CriticRadius">A critic is a circle on the floor.</param>
+/// <param name="CriticHitPoints">What a critic has when it enters.</param>
 /// <param name="CriticEntryInterval">Seconds from one critic entering to the next.</param>
 /// <param name="CriticStrikeDamage">The hit points one strike takes off the box office.</param>
 /// <param name="CriticStrikeCooldown">Seconds from one strike of a critic to its next.</param>
@@ -36,8 +43,13 @@ public sealed record Tuning(
     Vector2 MagicianMark,
     float MagicianSpeed,
     float MagicianRadius,
+    float ThrowRange,
+    float ThrowCooldown,
+    float ThrownCardSpeed,
+    float ThrownCardDamage,
     float CriticSpeed,
     float CriticRadius,
+    float CriticHitPoints,
     float CriticEntryInterval,
     float CriticStrikeDamage,
     float CriticStrikeCooldown)
