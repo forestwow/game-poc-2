@@ -13,11 +13,18 @@ public sealed class Simulation(Tuning tuning, ulong seed)
     private readonly Rng _rng = new(seed);
     private readonly List<Critic> _critics = [];
     private readonly List<ThrownCard> _thrownCards = [];
+    private readonly List<Cloud> _clouds = [];
     private readonly List<TickEvent> _events = [];
     private int _ticksPlayed;
     private int _criticsEntered;
     private int _ticksToNextCritic;
     private int _ticksToNextThrow;
+
+    // One unit long: the way the magician was last asked to walk. When the curtain rises it faces the audience,
+    // down the stage.
+    private Vector2 _facing = Vector2.UnitY;
+    private int _ticksToNextVanish;
+    private int _ticksInvulnerable;
 
     /// <summary>
     /// The numbers the rules run on. New ones may be set between ticks: the state stays as it is and the next tick
@@ -31,11 +38,24 @@ public sealed class Simulation(Tuning tuning, ulong seed)
     /// <summary>Where the magician was before the last tick: the view draws between the two.</summary>
     public Vector2 MagicianPreviousPosition { get; private set; } = tuning.MagicianMark;
 
+    /// <summary>
+    /// How much of the Vanish's cooldown is left, as a share of the whole: 1 on the tick of a Vanish, and one
+    /// tick's share, not yet 0, when the very next tick would take a press again.
+    /// </summary>
+    public float VanishCooldownLeft =>
+        _ticksToNextVanish == 0 ? 0f : MathF.Min(1f, (float)_ticksToNextVanish / Ticks(Tuning.VanishCooldown));
+
+    /// <summary>Nothing hurts the magician now: a moment that starts with a Vanish.</summary>
+    public bool MagicianIsInvulnerable => _ticksInvulnerable > 0;
+
     /// <summary>The critics on the stage, in the order they entered.</summary>
     public IReadOnlyList<Critic> Critics => _critics;
 
     /// <summary>The cards in the air, in the order they were thrown.</summary>
     public IReadOnlyList<ThrownCard> ThrownCards => _thrownCards;
+
+    /// <summary>The clouds on the floor, in the order they were left.</summary>
+    public IReadOnlyList<Cloud> Clouds => _clouds;
 
     /// <summary>What happened in the last tick, in the order it happened. The next tick starts the list afresh.</summary>
     public IReadOnlyList<TickEvent> Events => _events;
@@ -54,10 +74,14 @@ public sealed class Simulation(Tuning tuning, ulong seed)
             return;
         }
 
+        // The clouds thin before the magician can leave a new one, so a cloud has its whole time on the tick it is
+        // left. And the magician moves before the critics walk, so the cloud of a Vanish stuns on the tick of it.
+        ThinTheClouds();
+        MoveTheMagician(input);
+
         // The cards fly before the critics walk: a card meets the critics where the last tick left them. And they fly
         // before the magician throws, so a card thrown this tick does not fly this tick: it is first seen where it
         // was thrown from, and takes its first step on the next tick.
-        WalkTheMagician(input);
         FlyTheCards();
         WalkTheCritics();
         ThrowACard();
@@ -89,6 +113,9 @@ public sealed class Simulation(Tuning tuning, ulong seed)
 
         hasher.AddInt(_ticksPlayed);
         AddPoint(MagicianPosition);
+        AddPoint(_facing);
+        hasher.AddInt(_ticksToNextVanish);
+        hasher.AddInt(_ticksInvulnerable);
         hasher.AddFloat(BoxOfficeHitPoints);
 
         // Each list after its length, so that where one ends and the next begins is never in doubt.
@@ -99,6 +126,7 @@ public sealed class Simulation(Tuning tuning, ulong seed)
             AddPoint(critic.Position);
             hasher.AddFloat(critic.HitPoints);
             hasher.AddInt(critic.TicksToNextStrike);
+            hasher.AddInt(critic.TicksStunned);
         }
 
         hasher.AddInt(_thrownCards.Count);
@@ -109,6 +137,13 @@ public sealed class Simulation(Tuning tuning, ulong seed)
             hasher.AddFloat(card.RangeLeft);
         }
 
+        hasher.AddInt(_clouds.Count);
+        foreach (Cloud cloud in _clouds)
+        {
+            AddPoint(cloud.Position);
+            hasher.AddInt(cloud.TicksLeft);
+        }
+
         hasher.AddInt(_ticksToNextThrow);
         hasher.AddInt(_ticksToNextCritic);
         hasher.AddInt(_criticsEntered);
@@ -116,23 +151,69 @@ public sealed class Simulation(Tuning tuning, ulong seed)
         return hasher.Value;
     }
 
-    private void WalkTheMagician(MagicianInput input)
+    private void ThinTheClouds() => _clouds.RemoveAll(cloud => --cloud.TicksLeft <= 0);
+
+    private void MoveTheMagician(MagicianInput input)
     {
         // A keyboard diagonal is no faster than a straight line; a stick pushed halfway stays at half speed.
         Vector2 move = input.Move;
         float lengthSquared = (move.X * move.X) + (move.Y * move.Y);
+        if (lengthSquared > 0f)
+        {
+            // The magician faces the way it was last asked to go, however hard the stick was pushed.
+            // ponytail: an input so short that its square is less than a float holds (about 1e-19 long) gives a
+            // facing shorter than one unit, and a short blink after it. No key and no stick gives such an input.
+            _facing = move / MathF.Sqrt(lengthSquared);
+        }
+
         if (lengthSquared > 1f)
         {
-            move /= MathF.Sqrt(lengthSquared);
+            move = _facing;
+        }
+
+        if (_ticksToNextVanish > 0)
+        {
+            _ticksToNextVanish--;
+        }
+
+        if (_ticksInvulnerable > 0)
+        {
+            _ticksInvulnerable--;
+        }
+
+        // The Vanish is ready a cooldown after the last one. A press before that is refused, and not kept for later.
+        Vector2 from = MagicianPosition;
+        Vector2 step = move * (Tuning.MagicianSpeed / TicksPerSecond);
+        bool vanishes = input.Vanish && _ticksToNextVanish == 0;
+        if (vanishes)
+        {
+            // A blink and not a run: it is the tick's whole move, with no step of the walk added.
+            step = _facing * Tuning.VanishDistance;
+            _ticksToNextVanish = Ticks(Tuning.VanishCooldown);
+            _ticksInvulnerable = Ticks(Tuning.VanishInvulnerableTime);
+            _events.Add(new TickEvent(TickEventKind.Vanish, from));
+            LeaveACloud(from);
         }
 
         // The stage's edge stops the magician: the whole circle stays on the floor.
         var radius = new Vector2(Tuning.MagicianRadius);
-        MagicianPreviousPosition = MagicianPosition;
-        MagicianPosition = Vector2.Clamp(
-            MagicianPosition + (move * (Tuning.MagicianSpeed / TicksPerSecond)),
-            radius,
-            Tuning.StageSize - radius);
+        MagicianPosition = Vector2.Clamp(from + step, radius, Tuning.StageSize - radius);
+
+        // The view draws the magician between the two: after a blink there is nothing between them to draw.
+        MagicianPreviousPosition = vanishes ? MagicianPosition : from;
+    }
+
+    /// <summary>
+    /// The cloud of a Vanish, kept apart from the blink: a Vanish leaves one where it began. A cloud with no time is
+    /// no cloud.
+    /// </summary>
+    private void LeaveACloud(Vector2 position)
+    {
+        int ticks = Ticks(Tuning.VanishCloudTime);
+        if (ticks > 0)
+        {
+            _clouds.Add(new Cloud(position, ticks));
+        }
     }
 
     private void FlyTheCards()
@@ -236,12 +317,31 @@ public sealed class Simulation(Tuning tuning, ulong seed)
 
         foreach (Critic critic in _critics)
         {
+            // A critic whose circle touches a cloud is stunned, for the stun's time counted from this tick: one
+            // that stays in a cloud is stunned anew on every tick of it.
+            if (critic.TicksStunned > 0)
+            {
+                critic.TicksStunned--;
+            }
+
+            if (TouchesACloud(critic.Position))
+            {
+                critic.TicksStunned = Ticks(Tuning.VanishStunTime);
+            }
+
             // Straight at the box office as far as where the two circles touch, and back out to there when the
-            // crowd has pushed the critic in.
+            // crowd has pushed the critic in. A stunned critic walks no step, and is put back out all the same:
+            // the others still push it.
             Vector2 toBoxOffice = Direction(Tuning.BoxOfficePosition - critic.Position, out float distance);
             float gap = distance - (Tuning.BoxOfficeSize / 2f) - Tuning.CriticRadius;
-            float step = Tuning.CriticSpeed / TicksPerSecond;
+            float step = critic.IsStunned ? 0f : Tuning.CriticSpeed / TicksPerSecond;
             critic.Position += toBoxOffice * MathF.Min(gap, step);
+
+            // Nor does it strike, and its time to the next strike stands still.
+            if (critic.IsStunned)
+            {
+                continue;
+            }
 
             // A critic that touches the box office strikes it, and again a cooldown later.
             if (critic.TicksToNextStrike > 0)
@@ -255,6 +355,22 @@ public sealed class Simulation(Tuning tuning, ulong seed)
                 critic.TicksToNextStrike = Ticks(Tuning.CriticStrikeCooldown);
             }
         }
+    }
+
+    /// <summary>A critic's circle with its middle at <paramref name="critic"/> touches some cloud.</summary>
+    private bool TouchesACloud(Vector2 critic)
+    {
+        float reach = Tuning.VanishCloudRadius + Tuning.CriticRadius;
+        foreach (Cloud cloud in _clouds)
+        {
+            Vector2 apart = critic - cloud.Position;
+            if ((apart.X * apart.X) + (apart.Y * apart.Y) <= reach * reach)
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private void ThrowACard()

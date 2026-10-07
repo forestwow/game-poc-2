@@ -22,6 +22,9 @@ internal sealed class UnderstudiesGame : Microsoft.Xna.Framework.Game
     // A card flies at the height of a critic's chest.
     private const float ThrownCardLift = 1f;
 
+    // A circle is laid of this many strips: there is no texture but the one pixel.
+    private const int DiscStrips = 48;
+
     // The same in every capture, so that a frame can be compared with the one before.
     private const ulong CaptureSeed = 1;
 
@@ -33,7 +36,10 @@ internal sealed class UnderstudiesGame : Microsoft.Xna.Framework.Game
     private static readonly Color HitPoints = new(132, 204, 110);
     private static readonly Color HitPointsLost = new(30, 22, 30);
     private static readonly Color Magician = new(250, 226, 120);
+    private static readonly Color VanishBar = new(150, 214, 236);
+    private static readonly Color CloudPuff = new(236, 232, 244);
     private static readonly Color CriticBody = new(62, 88, 156);
+    private static readonly Color CriticStunnedBody = new(168, 180, 212);
     private static readonly Color CriticHead = new(226, 216, 200);
     private static readonly Color ThrownCardFace = new(250, 246, 236);
 
@@ -43,6 +49,8 @@ internal sealed class UnderstudiesGame : Microsoft.Xna.Framework.Game
     private Simulation _simulation;
     private bool _captured;
     private KeyboardState _keysBefore;
+    private GamePadState _padBefore;
+    private bool _vanishAsked;
     private SpriteBatch _spriteBatch = null!;
     private Texture2D _pixel = null!;
 
@@ -111,14 +119,24 @@ internal sealed class UnderstudiesGame : Microsoft.Xna.Framework.Game
             _simulation = NewShow(Tuning);
         }
 
+        // Space or the gamepad's A is one Vanish for each press. The press waits for a tick to take it: a frame may
+        // run no tick, and it must not be lost, or several, and it must not be asked of each.
+        GamePadState pad = GamePad.GetState(PlayerIndex.One);
+        if (Pressed(Keys.Space) || (pad.IsButtonDown(Buttons.A) && _padBefore.IsButtonUp(Buttons.A)))
+        {
+            _vanishAsked = true;
+        }
+
         _keysBefore = keys;
+        _padBefore = pad;
 
         // A closed show stands as it fell until R: its Step changes nothing.
-        MagicianInput input = ReadInput();
+        Vector2 move = ReadMove(keys, pad);
         int ticks = _clock.Advance(gameTime.ElapsedGameTime.TotalSeconds);
         for (int i = 0; i < ticks; i++)
         {
-            _simulation.Step(input);
+            _simulation.Step(new MagicianInput(move, _vanishAsked));
+            _vanishAsked = false;
         }
 
         base.Update(gameTime);
@@ -134,28 +152,37 @@ internal sealed class UnderstudiesGame : Microsoft.Xna.Framework.Game
     /// <summary>A show nobody has seen: its seed is the time, which Core never reads.</summary>
     private static Simulation NewShow(Tuning tuning) => new(tuning, (ulong)DateTime.UtcNow.Ticks);
 
-    private static MagicianInput ReadInput()
+    private static Vector2 ReadMove(KeyboardState keys, GamePadState pad)
     {
-        KeyboardState keys = Keyboard.GetState();
-        var stick = GamePad.GetState(PlayerIndex.One).ThumbSticks.Left;
+        var stick = pad.ThumbSticks.Left;
 
         float Held(Keys letter, Keys arrow) => keys.IsKeyDown(letter) || keys.IsKeyDown(arrow) ? 1f : 0f;
 
         // A stick pushed up reports +Y; the stage's y grows downward.
-        return new MagicianInput(new Vector2(
+        return new Vector2(
             stick.X + Held(Keys.D, Keys.Right) - Held(Keys.A, Keys.Left),
-            -stick.Y + Held(Keys.S, Keys.Down) - Held(Keys.W, Keys.Up)));
+            -stick.Y + Held(Keys.S, Keys.Down) - Held(Keys.W, Keys.Up));
     }
 
     /// <summary>Walks a fixed script, draws the frame it ends on and saves it as a PNG.</summary>
     private void Capture(string path)
     {
-        // A third of a second right and down, then still: the magician ends in front of the box office's corner, in
-        // range of the last stretch of the way the critics of the first door come, so a frame shows the fight.
-        var rightAndDown = new MagicianInput(new Vector2(1f, 1f));
+        // Two seconds right and down, out of every critic's range, and still there while critics gather at the box
+        // office. Then two seconds back to the mark, which is at the edge of the crowd by now, and on the first tick
+        // after twenty seconds a Vanish to the left: the cloud lies on the crowd, and the magician stands where the
+        // next critics come, in range of both. The frames of the next second show the cloud, the stunned in it and
+        // the Vanish's bar part full.
+        const int second = Simulation.TicksPerSecond;
         for (int i = 0; i < _captureTicks; i++)
         {
-            _simulation.Step(i < Simulation.TicksPerSecond / 3 ? rightAndDown : default);
+            _simulation.Step(i switch
+            {
+                < 2 * second => new MagicianInput(new Vector2(1f, 1f)),
+                < 18 * second => default,
+                < 20 * second => new MagicianInput(new Vector2(-1f, -1f)),
+                20 * second => new MagicianInput(new Vector2(-1f, 0f), Vanish: true),
+                _ => default,
+            });
         }
 
         using var frame = new RenderTarget2D(GraphicsDevice, WindowWidth, WindowHeight);
@@ -190,6 +217,13 @@ internal sealed class UnderstudiesGame : Microsoft.Xna.Framework.Game
             Fill(topLeft, bottomRight - topLeft, i == 0 ? OpenDoor : ShutDoor);
         }
 
+        foreach (Cloud cloud in _simulation.Clouds)
+        {
+            // A pale patch the size of the cloud's circle, the fainter the less of its time it has left.
+            float thick = Math.Clamp(cloud.TicksLeft / (Tuning.VanishCloudTime * Simulation.TicksPerSecond), 0f, 1f);
+            FillDisc(cloud.Position, Tuning.VanishCloudRadius, CloudPuff * (0.5f * thick));
+        }
+
         _spriteBatch.End();
 
         // What stands on the floor: the lower on the screen, the later it is drawn (DrawUpright gives the depth).
@@ -205,16 +239,15 @@ internal sealed class UnderstudiesGame : Microsoft.Xna.Framework.Game
         const float hair = 0.001f;
         DrawUpright(
             boxOfficeFeet - new Vector2(0f, hair), Tuning.BoxOfficeSize, Tuning.BoxOfficeSize, BoxOffice, lift: -hair);
-        DrawUpright(
-            Vector2.Lerp(_simulation.MagicianPreviousPosition, _simulation.MagicianPosition, alpha),
-            Tuning.MagicianRadius * 2f,
-            MagicianHeight,
-            Magician);
+        Vector2 magicianFeet = Vector2.Lerp(_simulation.MagicianPreviousPosition, _simulation.MagicianPosition, alpha);
+        DrawUpright(magicianFeet, Tuning.MagicianRadius * 2f, MagicianHeight, Magician);
         foreach (Critic critic in _simulation.Critics)
         {
-            // A body with a paler head on it, so that the critics of a crowd can be told apart.
+            // A body with a paler head on it, so that the critics of a crowd can be told apart. A stunned critic
+            // has gone pale all over.
             Vector2 feet = Vector2.Lerp(critic.PreviousPosition, critic.Position, alpha);
-            DrawUpright(feet, Tuning.CriticRadius * 2f, CriticBodyHeight, CriticBody);
+            DrawUpright(
+                feet, Tuning.CriticRadius * 2f, CriticBodyHeight, critic.IsStunned ? CriticStunnedBody : CriticBody);
             DrawUpright(feet, CriticHeadSize, CriticHeadSize, CriticHead, lift: CriticBodyHeight);
         }
 
@@ -241,6 +274,13 @@ internal sealed class UnderstudiesGame : Microsoft.Xna.Framework.Game
         float left = Math.Clamp(_simulation.BoxOfficeHitPoints / Tuning.BoxOfficeHitPoints, 0f, 1f);
         Fill(barTopLeft, bar, HitPointsLost);
         Fill(barTopLeft, bar with { X = bar.X * left }, HitPoints);
+
+        // The Vanish's bar is over the magician's head: it fills as the Vanish comes back, and a full bar is a
+        // Vanish that is ready.
+        var vanishBar = new Vector2(1.6f, 0.25f);
+        Vector2 vanishBarTopLeft = magicianFeet - new Vector2(vanishBar.X / 2f, MagicianHeight + 0.3f + vanishBar.Y);
+        Fill(vanishBarTopLeft, vanishBar, HitPointsLost);
+        Fill(vanishBarTopLeft, vanishBar with { X = vanishBar.X * (1f - _simulation.VanishCooldownLeft) }, VanishBar);
         _spriteBatch.End();
     }
 
@@ -254,6 +294,21 @@ internal sealed class UnderstudiesGame : Microsoft.Xna.Framework.Game
             new Vector2(width, height),
             color,
             Math.Clamp(feet.Y / Tuning.StageSize.Y, 0f, 1f));
+
+    /// <summary>A filled circle in world units, flat on the floor.</summary>
+    private void FillDisc(Vector2 middle, float radius, Color color)
+    {
+        // Strips that lie side by side and never on one another: where two overlapped, a see-through colour would
+        // show twice as thick.
+        float height = 2f * radius / DiscStrips;
+        for (int i = 0; i < DiscStrips; i++)
+        {
+            // Each strip is as wide as the circle is at the strip's own middle.
+            float y = ((i + 0.5f) * height) - radius;
+            float halfWidth = MathF.Sqrt((radius * radius) - (y * y));
+            Fill(middle + new Vector2(-halfWidth, y - (height / 2f)), new Vector2(2f * halfWidth, height), color);
+        }
+    }
 
     /// <summary>A filled rectangle in world units.</summary>
     /// <param name="depth">Counts only in a sorted batch, from 0 to 1: the greater depth is drawn later.</param>

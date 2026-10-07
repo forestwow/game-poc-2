@@ -13,14 +13,14 @@ dotnet build Understudies.sln --configuration Release                     # CI r
 dotnet test Understudies.sln --configuration Release                      # then this
 dotnet test tests/Understudies.Core.Tests --filter "FullyQualifiedName~RngTests"   # one class or test
 dotnet run --project src/Understudies.Game                                # play; Esc quits
-dotnet run --project src/Understudies.Game -- --capture /tmp/frame.png --ticks 120   # no play: walk a fixed script for 120 ticks, save the frame, exit
+dotnet run --project src/Understudies.Game -- --capture /tmp/frame.png --ticks 1240  # no play: a fixed script for that many ticks (the fight starts near 1100), save the frame, exit
 ```
 
 ## Architecture
 
 Three projects, with one-way dependencies: **Core** ← **Game** and **Core.Tests**.
 
-- `src/Understudies.Core` is the game's rules, with no reference to MonoGame. `Simulation` owns the state and advances it one tick at a time from the magician's input of that tick; everything else reads the state and the events of the last tick (`Simulation.Events`: a hit and a kill so far; the next `Step` starts the list afresh, so whoever is driven by it reads it after every tick). The accumulator clock that turns frame time into whole ticks lives here too, where it can be tested. The same seed and inputs are meant to give the same result on every machine (a pinned state hash checks it across two, plan T19), so:
+- `src/Understudies.Core` is the game's rules, with no reference to MonoGame. `Simulation` owns the state and advances it one tick at a time from the magician's input of that tick; everything else reads the state and the events of the last tick (`Simulation.Events`, whose kinds `TickEventKind` lists; the next `Step` starts the list afresh, so whoever is driven by it reads it after every tick). The accumulator clock that turns frame time into whole ticks lives here too, where it can be tested. The same seed and inputs are meant to give the same result on every machine (a pinned state hash checks it across two, plan T19), so:
   - positions are `System.Numerics.Vector2` in world units, and the only arithmetic is + − × ÷ and the square root: no trigonometry;
   - randomness comes only from `Randomness/Rng` (SplitMix64), never `System.Random`: the simulation draws from the one it makes of the seed its creator gives it (the game takes a played show's seed from the clock, and a capture's is fixed);
   - the simulation never iterates a `Dictionary` or a `HashSet` and never reads a clock;

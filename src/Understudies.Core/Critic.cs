@@ -25,5 +25,10 @@ public sealed class Critic
     /// <summary>What the critic has left. A critic on the stage has more than nothing: at nothing it falls.</summary>
     public float HitPoints { get; internal set; }
 
+    /// <summary>A cloud touched the critic a moment ago: it neither walks nor strikes.</summary>
+    public bool IsStunned => TicksStunned > 0;
+
     internal int TicksToNextStrike { get; set; }
+
+    internal int TicksStunned { get; set; }
 }
