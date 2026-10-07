@@ -21,6 +21,8 @@ The .NET SDK named in `global.json` (10.0.1xx). Nothing else: MonoGame comes fro
 
 WASD, the arrows or a gamepad's left stick walk the magician. Esc quits.
 
+Every number of the rules is in `tuning.json` at the repository root. The game reads the `tuning.json` of the directory it is started from, so run it from the root, and the copy beside the executable when there is none. Edit the file and press F5 (fn+F5 on a Mac's built-in keyboard): the game goes on with the new numbers. A key the game does not know or a key that is missing is an error that names the key; the console shows it, and the game keeps the numbers it had (or, at start-up, does not start).
+
 To look at a frame without playing, the game can walk a fixed script for a number of ticks (60 a second), save the frame it ends on and exit:
 
     dotnet run --project src/Understudies.Game -- --capture /tmp/frame.png --ticks 120

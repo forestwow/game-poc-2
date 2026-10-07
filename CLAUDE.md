@@ -24,9 +24,10 @@ Three projects, with one-way dependencies: **Core** ← **Game** and **Core.Test
   - positions are `System.Numerics.Vector2` in world units, and the only arithmetic is + − × ÷ and the square root: no trigonometry;
   - randomness comes only from `Randomness/Rng` (SplitMix64), never `System.Random`;
   - the simulation never iterates a `Dictionary` or a `HashSet` and never reads a clock;
-  - `tuning.json` is the only place a tunable number lives (the tick rate is the one constant in code), and the tests read the same file.
+  - `tuning.json` at the repository root is the only place a tunable number lives (the tick rate is the one constant in code). `Tuning` is the record parsed from it, and `Simulation` is given one by whoever creates it. A new number is a new member of `Tuning` and a new key in the file: an unknown key and a missing key are both refused, at any depth.
 - `src/Understudies.Game` is the MonoGame (DesktopGL) layer: input, drawing, sound. It holds no rules: it feeds the simulation the player's input each tick and draws what the simulation reports, with positions interpolated between the last two ticks. Everything is drawn as shapes; there is no content pipeline and no art. Inside this project `Game` means the namespace, so MonoGame's base class is written `Microsoft.Xna.Framework.Game`.
 - `tests/Understudies.Core.Tests` is NUnit: the rule tests and, later, the scripted players that guard the balance.
+- `tuning.json` is copied by the project files beside the tests and beside the built game. The tests read that copy through `CommittedTuning`, so a test never carries its own numbers. The game reads `tuning.json` in the current directory first (the committed file itself, as commands run from the root) and the copy beside the executable otherwise; F5 reads it again while the game runs.
 
 ## How the work runs
 

@@ -12,4 +12,9 @@
     <PackageReference Include="MonoGame.Framework.DesktopGL" Version="3.8.5.1" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- A copy of the committed numbers goes beside the executable, for a build that leaves the repository. -->
+    <None Include="..\..\tuning.json" Link="tuning.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
 </Project>

@@ -11,6 +11,12 @@ else if (args.Length > 0)
     return 2;
 }
 
-using var game = new Understudies.Game.UnderstudiesGame(capturePath, captureTicks);
+// Without its numbers the game does not open a window: the reason is already on the console.
+if (Understudies.Game.TuningFile.Read() is not { } tuning)
+{
+    return 1;
+}
+
+using var game = new Understudies.Game.UnderstudiesGame(tuning, capturePath, captureTicks);
 game.Run();
 return 0;
