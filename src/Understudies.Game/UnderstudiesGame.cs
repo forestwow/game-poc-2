@@ -186,6 +186,7 @@ internal sealed class UnderstudiesGame : Microsoft.Xna.Framework.Game
                 < 31 * second => default,
                 31 * second => new MagicianInput(new Vector2(-1f, 0f), Vanish: true),
                 < 33 * second => default,
+                // Forty ticks at the magician's speed are the Vanish's six units: back to where it stood.
                 < (33 * second) + 40 => new MagicianInput(new Vector2(1f, 0f)),
                 _ => default,
             });

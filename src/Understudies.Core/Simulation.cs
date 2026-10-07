@@ -379,7 +379,8 @@ public sealed class Simulation(Tuning tuning, ulong seed)
             }
 
             // While nothing hurts the magician a touch takes nothing and is no blow: the critic's stays ready.
-            if (gap > step || critic.TicksToNextBlow > 0 || (turned && MagicianIsInvulnerable))
+            // And once a blow of this tick has closed the show, the critics after it in the list deal none.
+            if (ShowClosed || gap > step || critic.TicksToNextBlow > 0 || (turned && MagicianIsInvulnerable))
             {
                 continue;
             }
