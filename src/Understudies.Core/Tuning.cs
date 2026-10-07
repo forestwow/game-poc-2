@@ -29,6 +29,8 @@ public sealed record Tuning(
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
         // A key that no member answers to is an error.
         UnmappedMemberHandling = JsonUnmappedMemberHandling.Disallow,
+        // A key written twice is an error: the last one would win in silence.
+        AllowDuplicateProperties = false,
         // A Vector2's X and Y are fields.
         IncludeFields = true,
         // A missing key is an error at any depth. Marking every key here asks it of a point's x and y too, which
