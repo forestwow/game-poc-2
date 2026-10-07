@@ -186,6 +186,26 @@ public class CriticTests
     }
 
     [Test]
+    public void Step_ACriticStrikesTheBoxOffice_ItIsReportedWhereTheCriticStandsForThatTickOnly()
+    {
+        var simulation = new Simulation(OneCritic, seed: 1);
+
+        // The walk to the box office reports nothing.
+        while (simulation.BoxOfficeHitPoints == Tuning.BoxOfficeHitPoints)
+        {
+            Assert.That(simulation.Events, Is.Empty);
+            simulation.Step(default);
+        }
+
+        Assert.That(
+            simulation.Events,
+            Is.EqualTo(new[] { new TickEvent(TickEventKind.BoxOfficeStruck, simulation.Critics[0].Position) }));
+
+        simulation.Step(default);
+        Assert.That(simulation.Events, Is.Empty);
+    }
+
+    [Test]
     public void Step_TheBoxOfficesHitPointsRunOut_TheShowCloses()
     {
         // Two strikes are not enough and the third is more than enough.
@@ -226,6 +246,20 @@ public class CriticTests
         Assert.That(
             simulation.Critics.Select(critic => (critic.Id, critic.Position, critic.PreviousPosition)),
             Is.EqualTo(critics));
+    }
+
+    [Test]
+    public void Step_AfterTheShowCloses_LeavesNoEventsBehind()
+    {
+        // The first strike is more than enough: the tick that closes the show reports it.
+        Tuning tuning = OneCritic with { BoxOfficeHitPoints = 1f, CriticStrikeDamage = 2f };
+        var simulation = new Simulation(tuning, seed: 1);
+        RunUntil(simulation, () => simulation.ShowClosed);
+        Assert.That(simulation.Events.Select(e => e.Kind), Is.EqualTo(new[] { TickEventKind.BoxOfficeStruck }));
+
+        // And the show that has closed reports it no more: whoever is driven by the events does it once.
+        simulation.Step(default);
+        Assert.That(simulation.Events, Is.Empty);
     }
 
     [Test]
