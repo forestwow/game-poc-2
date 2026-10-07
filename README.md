@@ -25,7 +25,7 @@ Every number of the rules is in `tuning.json` at the repository root. The game r
 
 To look at a frame without playing, the game can walk a fixed script for a number of ticks (60 a second), save the frame it ends on and exit:
 
-    dotnet run --project src/Understudies.Game -- --capture frame.png --ticks 120
+    dotnet run --project src/Understudies.Game -- --capture /tmp/frame.png --ticks 120
 
 ## Tests
 

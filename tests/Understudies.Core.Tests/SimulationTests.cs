@@ -45,14 +45,27 @@ public class SimulationTests
     }
 
     [Test]
-    public void Step_AStickPushedHalfway_MovesAtHalfSpeed()
+    public void Step_AStraightInputLongerThanOne_IsNoFasterThanFullSpeed()
+    {
+        // The stick pushed right while D is held: the view sums them.
+        var simulation = new Simulation(Tuning);
+
+        Walk(simulation, new Vector2(2f, 0f), Simulation.TicksPerSecond);
+
+        Vector2 walked = simulation.MagicianPosition - Tuning.MagicianMark;
+        Assert.That(walked.X, Is.EqualTo(Tuning.MagicianSpeed).Within(Tolerance));
+    }
+
+    [TestCase(0.5f)]
+    [TestCase(0.8f)]
+    public void Step_AStickPushedPartWay_MovesAtThatShareOfTheSpeed(float share)
     {
         var simulation = new Simulation(Tuning);
 
-        Walk(simulation, new Vector2(0f, 0.5f), Simulation.TicksPerSecond);
+        Walk(simulation, new Vector2(0f, share), Simulation.TicksPerSecond);
 
         Vector2 walked = simulation.MagicianPosition - Tuning.MagicianMark;
-        Assert.That(walked.Y, Is.EqualTo(Tuning.MagicianSpeed / 2f).Within(Tolerance));
+        Assert.That(walked.Y, Is.EqualTo(Tuning.MagicianSpeed * share).Within(Tolerance));
     }
 
     [Test]
