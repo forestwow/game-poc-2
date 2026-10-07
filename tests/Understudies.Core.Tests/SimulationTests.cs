@@ -69,13 +69,28 @@ public class SimulationTests
     }
 
     [Test]
-    public void Step_IntoTheTopLeftCorner_TheMagiciansWholeCircleStaysOnTheStage()
+    public void Step_IntoTheTopLeftCorner_TheMagiciansWholeCircleStaysOnTheFloorBelowTheBackWall()
     {
-        var simulation = new Simulation(Tuning, seed: 1);
+        // The floor starts three units down the stage, at the foot of the back wall, and the magician's circle
+        // reaches half a unit from its middle.
+        Tuning tuning = Tuning with { StageFloorTop = 3f, MagicianRadius = 0.5f };
+        var simulation = new Simulation(tuning, seed: 1);
 
         Walk(simulation, new Vector2(-1f, -1f), ticks: 10 * Simulation.TicksPerSecond);
 
-        Assert.That(simulation.MagicianPosition, Is.EqualTo(new Vector2(Tuning.MagicianRadius)));
+        Assert.That(simulation.MagicianPosition, Is.EqualTo(new Vector2(0.5f, 3.5f)));
+    }
+
+    [Test]
+    public void Step_IntoTheTopLeftCornerOfAStageWithNoBackWall_TheMagiciansWholeCircleStaysOnTheStage()
+    {
+        // A floor that starts at the stage's top edge: that edge stops the magician as the other three do.
+        Tuning tuning = Tuning with { StageFloorTop = 0f };
+        var simulation = new Simulation(tuning, seed: 1);
+
+        Walk(simulation, new Vector2(-1f, -1f), ticks: 10 * Simulation.TicksPerSecond);
+
+        Assert.That(simulation.MagicianPosition, Is.EqualTo(new Vector2(tuning.MagicianRadius)));
     }
 
     [Test]

@@ -34,10 +34,12 @@ public class VanishTests
     /// office it touches 17.5 units below the door. The second critic is an hour away. A cloud reaches two units
     /// from its middle and is there for the tick of its Vanish only, so it stuns once, for half a second. Each test
     /// puts the mark where its cloud is to be; the Vanish itself goes down the stage, as it does before the first
-    /// move.
+    /// move. The stage has no back wall: its floor starts at the top edge, where the door is, so the mark can be
+    /// near enough to the door for the cloud to reach it, where a wall would not let the magician stand.
     /// </summary>
     private Tuning ACriticWalksDown => Scene with
     {
+        StageFloorTop = 0f,
         StageDoors = [Door],
         StageDoorWidth = 0f,
         BoxOfficePosition = Door + new Vector2(0f, 20f),
@@ -110,6 +112,19 @@ public class VanishTests
         simulation.Step(new MagicianInput(new Vector2(1f, 0f), Vanish: true));
 
         Assert.That(simulation.MagicianPosition, Is.EqualTo(new Vector2(tuning.StageSize.X - tuning.MagicianRadius, 13f)));
+    }
+
+    [Test]
+    public void Step_TheVanishUpTheStageFromNearerTheBackWallThanItsDistance_EndsAtTheFootOfTheWall()
+    {
+        // The floor starts three units down the stage and the mark is four units below that; the magician's circle
+        // reaches half a unit from its middle.
+        Tuning tuning = Scene with { StageFloorTop = 3f, MagicianRadius = 0.5f, MagicianMark = new Vector2(24f, 7f) };
+        var simulation = new Simulation(tuning, seed: 1);
+
+        simulation.Step(new MagicianInput(new Vector2(0f, -1f), Vanish: true));
+
+        Assert.That(simulation.MagicianPosition, Is.EqualTo(new Vector2(24f, 3.5f)));
     }
 
     [Test]

@@ -9,10 +9,16 @@ namespace Understudies.Core;
 /// Every tunable number of the game, in world units and seconds, as tuning.json holds them: a member here is the
 /// key of the same name there in camelCase, and a point is written <c>{ "x": 1, "y": 2 }</c>.
 /// </summary>
-/// <param name="StageSize">The stage's floor: (0, 0) is its top-left corner and y grows downward.</param>
+/// <param name="StageSize">
+/// The whole stage, the back wall at its top and the floor below it: (0, 0) is its top-left corner and y grows
+/// downward.
+/// </param>
+/// <param name="StageFloorTop">
+/// The y of the foot of the back wall, where the floor that can be walked starts. At 0 there is no wall.
+/// </param>
 /// <param name="StageDoors">
-/// The middle of each stage door, a point on the stage's edge, in the order the doors open. Critics enter at the
-/// first.
+/// The middle of each stage door, a point on the floor's edge, in the order the doors open: the floor's top edge is
+/// the foot of the back wall. Critics enter at the first.
 /// </param>
 /// <param name="StageDoorWidth">How much of the edge a door takes: a critic enters anywhere along it.</param>
 /// <param name="BoxOfficePosition">The centre of the box office's circle on the floor.</param>
@@ -21,7 +27,7 @@ namespace Understudies.Core;
 /// <param name="MagicianMark">Where the magician stands when the show starts.</param>
 /// <param name="MagicianSpeed">Units per second.</param>
 /// <param name="MagicianRadius">The magician is a circle on the floor.</param>
-/// <param name="VanishDistance">How far the Vanish takes the magician, when no edge of the stage is in the way.</param>
+/// <param name="VanishDistance">How far the Vanish takes the magician, when no edge of the floor is in the way.</param>
 /// <param name="VanishCooldown">Seconds from one Vanish to the next.</param>
 /// <param name="VanishInvulnerableTime">Seconds from a Vanish in which nothing hurts the magician.</param>
 /// <param name="VanishCloudRadius">The cloud a Vanish leaves is a circle on the floor.</param>
@@ -43,6 +49,7 @@ namespace Understudies.Core;
 /// <param name="CriticStrikeCooldown">Seconds from one strike of a critic to its next.</param>
 public sealed record Tuning(
     Vector2 StageSize,
+    float StageFloorTop,
     IReadOnlyList<Vector2> StageDoors,
     float StageDoorWidth,
     Vector2 BoxOfficePosition,
@@ -97,15 +104,29 @@ public sealed record Tuning(
 
     /// <summary>Reads the text of a tuning.json.</summary>
     /// <exception cref="JsonException">
-    /// The text is not a tuning. For an unknown key and for a missing one the message names the key.
+    /// The text is not a tuning. For an unknown key, a missing one, no stage door and a door above the floor's top
+    /// the message names the key.
     /// </exception>
     public static Tuning Parse(string json)
     {
         Tuning tuning = JsonSerializer.Deserialize<Tuning>(json, Options) ?? throw new JsonException("The tuning is null.");
 
         // The rules take the first door for granted.
-        return tuning.StageDoors is { Count: > 0 }
-            ? tuning
-            : throw new JsonException("'stageDoors' needs at least one door.");
+        if (tuning.StageDoors is not { Count: > 0 })
+        {
+            throw new JsonException("'stageDoors' needs at least one door.");
+        }
+
+        // A door up the back wall would let its critics in on the wall.
+        // ponytail: only a door's middle is looked at. A door in a side edge runs half its width up and down, so
+        // one within that of the wall's foot still lets a critic in a little above the floor; checking a door's
+        // ends needs the rule that says which way it runs, which lives in the simulation.
+        if (tuning.StageDoors.Any(door => door.Y < tuning.StageFloorTop))
+        {
+            throw new JsonException(
+                "'stageDoors' has a door whose y is less than 'stageFloorTop': it would be up the back wall.");
+        }
+
+        return tuning;
     }
 }
