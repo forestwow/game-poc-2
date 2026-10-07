@@ -85,6 +85,13 @@ public sealed record Tuning(
     /// <exception cref="JsonException">
     /// The text is not a tuning. For an unknown key and for a missing one the message names the key.
     /// </exception>
-    public static Tuning Parse(string json) =>
-        JsonSerializer.Deserialize<Tuning>(json, Options) ?? throw new JsonException("The tuning is null.");
+    public static Tuning Parse(string json)
+    {
+        Tuning tuning = JsonSerializer.Deserialize<Tuning>(json, Options) ?? throw new JsonException("The tuning is null.");
+
+        // The rules take the first door for granted.
+        return tuning.StageDoors is { Count: > 0 }
+            ? tuning
+            : throw new JsonException("'stageDoors' needs at least one door.");
+    }
 }

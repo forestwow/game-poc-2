@@ -39,6 +39,20 @@ public class CriticTests
     }
 
     [Test]
+    public void Step_AFirstDoorInTheRightEdge_TheCriticEntersSomewhereAlongIt()
+    {
+        var door = new Vector2(Tuning.StageSize.X, 9f);
+        Tuning tuning = Tuning with { StageDoors = [door] };
+        var simulation = new Simulation(tuning, seed: 1);
+
+        simulation.Step(default);
+
+        Assert.That(simulation.Critics[0].Position.X, Is.EqualTo(door.X));
+        Assert.That(simulation.Critics[0].Position.Y, Is.EqualTo(door.Y).Within(tuning.StageDoorWidth / 2f));
+        Assert.That(simulation.Critics[0].Position.Y, Is.Not.EqualTo(door.Y));
+    }
+
+    [Test]
     public void Step_AnotherSeed_TheCriticEntersAtAnotherPointOfTheDoor()
     {
         var one = new Simulation(Tuning, seed: 1);
@@ -69,20 +83,33 @@ public class CriticTests
     [Test]
     public void Step_CriticsEnterAtASteadyRate_EachWithItsOwnId()
     {
-        // Two seconds are 120 ticks: critics enter on ticks 1, 121 and 241.
+        // Critics enter on the first tick, then on the first tick after every two seconds.
+        const int twoSeconds = 2 * Simulation.TicksPerSecond;
         var simulation = new Simulation(Tuning with { CriticEntryInterval = 2f }, seed: 1);
 
-        Run(simulation, ticks: 120);
+        Run(simulation, ticks: twoSeconds);
         Assert.That(simulation.Critics, Has.Count.EqualTo(1));
         Critic first = simulation.Critics[0];
 
         Run(simulation, ticks: 1);
         Assert.That(simulation.Critics, Has.Count.EqualTo(2));
 
-        Run(simulation, ticks: 120);
+        Run(simulation, ticks: twoSeconds);
         Assert.That(simulation.Critics, Has.Count.EqualTo(3));
         Assert.That(simulation.Critics[0], Is.SameAs(first));
         Assert.That(simulation.Critics.Select(critic => critic.Id), Is.Unique);
+    }
+
+    [Test]
+    public void Step_ATimeBetweenTwoTicks_CountsTheNearerNumberOfTicks()
+    {
+        // 1.6 ticks are two ticks, not one: critics enter on ticks 1 and 3, and the fifth tick is not played.
+        Tuning tuning = Tuning with { CriticEntryInterval = 1.6f / Simulation.TicksPerSecond };
+        var simulation = new Simulation(tuning, seed: 1);
+
+        Run(simulation, ticks: 4);
+
+        Assert.That(simulation.Critics, Has.Count.EqualTo(2));
     }
 
     [Test]
@@ -130,7 +157,7 @@ public class CriticTests
     [Test]
     public void Step_ACriticAtTheBoxOffice_StrikesItOncePerCooldown()
     {
-        // Half a second is 30 ticks.
+        const int cooldown = Simulation.TicksPerSecond / 2;
         Tuning tuning = OneCritic with
         {
             BoxOfficeHitPoints = 100f, CriticStrikeDamage = 3f, CriticStrikeCooldown = 0.5f,
@@ -145,13 +172,13 @@ public class CriticTests
             Vector2.Distance(simulation.Critics[0].Position, tuning.BoxOfficePosition),
             Is.EqualTo((tuning.BoxOfficeSize / 2f) + tuning.CriticRadius).Within(Tolerance));
 
-        Run(simulation, ticks: 29);
+        Run(simulation, ticks: cooldown - 1);
         Assert.That(simulation.BoxOfficeHitPoints, Is.EqualTo(97f));
 
         Run(simulation, ticks: 1);
         Assert.That(simulation.BoxOfficeHitPoints, Is.EqualTo(94f));
 
-        Run(simulation, ticks: 30);
+        Run(simulation, ticks: cooldown);
         Assert.That(simulation.BoxOfficeHitPoints, Is.EqualTo(91f));
     }
 
@@ -205,13 +232,16 @@ public class CriticTests
         };
         var simulation = new Simulation(tuning, seed: 1);
         Run(simulation, ticks: 2);
-        Assert.That(simulation.Critics[1].Position, Is.EqualTo(simulation.Critics[0].Position));
+        Vector2 point = simulation.Critics[0].Position;
+        Assert.That(simulation.Critics[1].Position, Is.EqualTo(point));
 
         simulation.Step(default);
 
-        Assert.That(
-            Vector2.Distance(simulation.Critics[0].Position, simulation.Critics[1].Position),
-            Is.EqualTo(2f * tuning.CriticRadius).Within(Tolerance));
+        // Half the overlap each: the earlier one to the left, the later one to the right, until they only touch.
+        Assert.That(simulation.Critics[0].Position.X, Is.EqualTo(point.X - tuning.CriticRadius).Within(Tolerance));
+        Assert.That(simulation.Critics[1].Position.X, Is.EqualTo(point.X + tuning.CriticRadius).Within(Tolerance));
+        Assert.That(simulation.Critics[0].Position.Y, Is.EqualTo(point.Y));
+        Assert.That(simulation.Critics[1].Position.Y, Is.EqualTo(point.Y));
     }
 
     [Test]

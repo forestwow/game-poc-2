@@ -113,10 +113,10 @@ internal sealed class UnderstudiesGame : Microsoft.Xna.Framework.Game
 
         _keysBefore = keys;
 
-        // A closed show takes no more input: it stands as it fell until R.
+        // A closed show stands as it fell until R: its Step changes nothing.
         MagicianInput input = ReadInput();
         int ticks = _clock.Advance(gameTime.ElapsedGameTime.TotalSeconds);
-        for (int i = 0; i < ticks && !_simulation.ShowClosed; i++)
+        for (int i = 0; i < ticks; i++)
         {
             _simulation.Step(input);
         }
@@ -155,7 +155,7 @@ internal sealed class UnderstudiesGame : Microsoft.Xna.Framework.Game
         var rightAndDown = new MagicianInput(new Vector2(1f, 1f));
         for (int i = 0; i < _captureTicks; i++)
         {
-            _simulation.Step(i < 20 ? rightAndDown : default);
+            _simulation.Step(i < Simulation.TicksPerSecond / 3 ? rightAndDown : default);
         }
 
         using var frame = new RenderTarget2D(GraphicsDevice, WindowWidth, WindowHeight);
@@ -199,7 +199,12 @@ internal sealed class UnderstudiesGame : Microsoft.Xna.Framework.Game
         // that touches the circle from in front then overlaps the foot of the box, one at a side stands against its
         // wall, and one in front of a corner is not hidden behind it.
         Vector2 boxOfficeFeet = Tuning.BoxOfficePosition + new Vector2(0f, Tuning.BoxOfficeSize / 4f);
-        DrawUpright(boxOfficeFeet, Tuning.BoxOfficeSize, Tuning.BoxOfficeSize, BoxOffice);
+
+        // The batch keeps no order between equal depths, and the magician's mark is on this very line: the box
+        // office sorts a hair behind where it is drawn, so whoever stands exactly on its foot line is in front.
+        const float hair = 0.001f;
+        DrawUpright(
+            boxOfficeFeet - new Vector2(0f, hair), Tuning.BoxOfficeSize, Tuning.BoxOfficeSize, BoxOffice, lift: -hair);
         DrawUpright(
             Vector2.Lerp(_simulation.MagicianPreviousPosition, _simulation.MagicianPosition, alpha),
             Tuning.MagicianRadius * 2f,
