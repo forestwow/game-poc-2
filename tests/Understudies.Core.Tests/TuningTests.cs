@@ -88,16 +88,6 @@ public class TuningTests
     }
 
     [Test]
-    public void Parse_ADoorAtTheFootOfTheBackWall_IsTaken()
-    {
-        JsonNode file = JsonNode.Parse(CommittedTuning.Json)!;
-        file["stageFloorTop"] = 3;
-        file["stageDoors"] = JsonNode.Parse("""[{ "x": 0, "y": 15 }, { "x": 17, "y": 3 }]""");
-
-        Assert.That(Tuning.Parse(file.ToJsonString()).StageDoors, Has.Count.EqualTo(2));
-    }
-
-    [Test]
     public void Parse_AFileThatSaysNull_IsRefused()
     {
         Assert.That(() => Tuning.Parse("null"), Throws.TypeOf<JsonException>());

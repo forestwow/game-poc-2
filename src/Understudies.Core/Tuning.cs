@@ -117,10 +117,14 @@ public sealed record Tuning(
             throw new JsonException("'stageDoors' needs at least one door.");
         }
 
-        // Every door is on the floor: one up the back wall would let its critics in on the wall.
+        // A door up the back wall would let its critics in on the wall.
+        // ponytail: only a door's middle is looked at. A door in a side edge runs half its width up and down, so
+        // one within that of the wall's foot still lets a critic in a little above the floor; checking a door's
+        // ends needs the rule that says which way it runs, which lives in the simulation.
         if (tuning.StageDoors.Any(door => door.Y < tuning.StageFloorTop))
         {
-            throw new JsonException("'stageDoors' has a door above 'stageFloorTop', where the floor starts.");
+            throw new JsonException(
+                "'stageDoors' has a door whose y is less than 'stageFloorTop': it would be up the back wall.");
         }
 
         return tuning;

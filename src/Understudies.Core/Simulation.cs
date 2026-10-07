@@ -428,7 +428,7 @@ public sealed class Simulation(Tuning tuning, ulong seed)
     private void LetACriticIn()
     {
         // A door in a side edge runs up and down it; any other, at the foot of the back wall or in the bottom edge,
-        // runs along the stage's width. Either way its critic enters on the floor's edge.
+        // runs along the stage's width.
         Vector2 door = Tuning.StageDoors[0];
         bool inASide = door.X <= 0f || door.X >= Tuning.StageSize.X;
         float along = (_rng.NextFloat() - 0.5f) * Tuning.StageDoorWidth;
