@@ -1,5 +1,6 @@
 # Game v2: Direction Proposals
 
+- **Follow-up:** the lead direction is developed in `docs/vision.md` (The Understudies, vision v0.1, written after interview rounds 4–5).
 - **Status:** brainstorm, written 2026-10-07 after three rounds of a grill-me style interview with the owner. No code, no project skeleton, no assets. The next step is interview round 4 and then a vision document for the chosen direction.
 - **Owner's brief (Polish, summarised):** a second attempt at a game after `faith-defense`. Still strategy / tower defense, but the owner is looking for *the one mechanic that convinces them*. Inspirations: Thronefall (short, accessible, a hero fights beside troops, building in preset spots) and survivor.io (hero progression where every upgrade is visually loud). Nice to have: short, gripping rounds; a mix of mechanics; combat rich in effects, the player pulled into the fight and the world. The static feel of faith-defense combat was the thing that broke the owner's enjoyment. Story may be absurd (Plants vs. Zombies energy), mixed styles, abstraction welcome. Art from ludo.ai or PixelLab.
 
