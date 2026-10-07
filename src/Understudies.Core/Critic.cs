@@ -1,0 +1,25 @@
+using System.Numerics;
+
+namespace Understudies.Core;
+
+/// <summary>A critic on the stage: a circle on the floor that walks to the box office and strikes it.</summary>
+public sealed class Critic
+{
+    internal Critic(int id, Vector2 position)
+    {
+        Id = id;
+        Position = position;
+        PreviousPosition = position;
+    }
+
+    /// <summary>The same for the critic's whole life, and no other critic of the show has it.</summary>
+    public int Id { get; }
+
+    /// <summary>The middle of the critic's circle on the floor, after the last tick.</summary>
+    public Vector2 Position { get; internal set; }
+
+    /// <summary>Where the critic was before the last tick: the view draws between the two.</summary>
+    public Vector2 PreviousPosition { get; internal set; }
+
+    internal int TicksToNextStrike { get; set; }
+}

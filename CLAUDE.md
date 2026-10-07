@@ -22,8 +22,9 @@ Three projects, with one-way dependencies: **Core** ← **Game** and **Core.Test
 
 - `src/Understudies.Core` is the game's rules, with no reference to MonoGame. `Simulation` owns the state and advances it one tick at a time from the magician's input of that tick; everything else reads the state and the events of the last tick. The accumulator clock that turns frame time into whole ticks lives here too, where it can be tested. The same seed and inputs are meant to give the same result on every machine (a pinned state hash checks it across two, plan T19), so:
   - positions are `System.Numerics.Vector2` in world units, and the only arithmetic is + − × ÷ and the square root: no trigonometry;
-  - randomness comes only from `Randomness/Rng` (SplitMix64), never `System.Random`;
+  - randomness comes only from `Randomness/Rng` (SplitMix64), never `System.Random`: the simulation draws from the one it makes of the seed its creator gives it (the game takes a played show's seed from the clock, and a capture's is fixed);
   - the simulation never iterates a `Dictionary` or a `HashSet` and never reads a clock;
+  - a time in `tuning.json` is in seconds and a rule counts it in whole ticks;
   - `tuning.json` at the repository root is the only place a tunable number lives (the tick rate is the one constant in code). `Tuning` is the record parsed from it, and `Simulation` is given one by whoever creates it. A new number is a new member of `Tuning` and a new key in the file: an unknown key and a missing key are both refused, at any depth.
 - `src/Understudies.Game` is the MonoGame (DesktopGL) layer: input, drawing, sound. It holds no rules: it feeds the simulation the player's input each tick and draws what the simulation reports, with positions interpolated between the last two ticks. Everything is drawn as shapes; there is no content pipeline and no art. Inside this project `Game` means the namespace, so MonoGame's base class is written `Microsoft.Xna.Framework.Game`.
 - `tests/Understudies.Core.Tests` is NUnit: the rule tests and, later, the scripted players that guard the balance.

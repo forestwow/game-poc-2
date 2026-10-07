@@ -61,6 +61,19 @@ public class TuningTests
             Throws.TypeOf<JsonException>().With.Message.Contains($"'{key}'"));
     }
 
+    [TestCase("[]")]
+    [TestCase("null")]
+    public void Parse_NoStageDoor_IsRefusedWithTheKeysName(string doors)
+    {
+        // The rules take the first door for granted: without one the game would stop at the first tick.
+        JsonNode file = JsonNode.Parse(CommittedTuning.Json)!;
+        file["stageDoors"] = JsonNode.Parse(doors);
+
+        Assert.That(
+            () => Tuning.Parse(file.ToJsonString()),
+            Throws.TypeOf<JsonException>().With.Message.Contains("'stageDoors'"));
+    }
+
     [Test]
     public void Parse_AFileThatSaysNull_IsRefused()
     {
