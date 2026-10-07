@@ -1,6 +1,6 @@
 # The Understudies: prototype plan
 
-- **Status:** agreed with the owner on 2026-10-07 in three interview rounds after `docs/vision.md` v0.3. Rounds 1 and 2 were answered ("agreed", with one change: no study journal). Round 3 (decisions 19–22 below) was put to the owner with a recommendation each; the owner started the build without answering it, so those four stand as recommended and are the owner's to overturn.
+- **Status:** agreed with the owner on 2026-10-07 in three interview rounds after `docs/vision.md` v0.3. Rounds 1 and 2 were answered ("agreed", with one change: no study journal). Round 3 (decisions 19–22 below) was put to the owner with a recommendation each; the owner started the build without answering it, so those four stand as recommended and are the owner's to overturn. The same day, with the build under way, the owner asked for basic graphics to be planned too: decision 23 and tickets T07a and T07b.
 - **What this is:** the map of the work from an empty repository to a playable proof of concept. It is the ticket list too: one ticket is one small pull request.
 - **Where the rules come from:** `docs/vision.md`. Where this plan and the vision disagree, this plan is the later decision, and §3 says which line of the vision it settles.
 
@@ -48,6 +48,7 @@ The proof of concept ends at stop 3 (§6). The package for five outside testers 
 | 20 | Cards | self cards: damage, attack speed, range, Vanish cooldown, one more card per throw. Chorus card: damage for every understudy. Any card may be taken again. An understudy is a snapshot of the magician in the act it was recorded: it has every self card the magician had then |
 | 21 | The measure of applause | a share: applause collected in the act as a percentage of the critics released in that act, with two thresholds (15 % and 35 % to start with) and a bar with two notches on the screen. More than nothing but under the first threshold offers one card, the first threshold a choice of two, the second a choice of three with a chance of the chorus card. Replaces the counts (0–2, 3–5, 6 or more) of the table in vision §4 |
 | 22 | The bot guard | 20 seeds. The orbit player loses the box office by the end of act six in at least 16 of them; the doors player finishes act ten in at least 16. This reads the "must lose" and "must reach act ten" of vision §12 (e) as 16 of 20, the measure of faith-defense's map standard. Both pick cards in a fixed order, so the result depends on the route |
+| 23 | Basic graphics | placeholder sprites built in code from small pixel grids, and a dressed stage, before the juice: stop 1 is judged on figures, not on rectangles. No art tool, no image file and no content pipeline. This is not the style decision: the look test of vision §10 still makes that after G1, nothing is generated before it (the vision's own decision 23), and these sprites are thrown away with the rest of the view (decision 2) |
 
 Taken without a question, each a setting or a hypothesis:
 
@@ -68,7 +69,7 @@ Three projects, with one-way dependencies: `Understudies.Core` ← `Understudies
   - Randomness only through the seeded SplitMix64 streams ported from `faith-defense` (`src/FaithDefense.Core/Randomness/`); never `System.Random`. The simulation never iterates a `Dictionary` or a `HashSet`, and never reads a clock.
   - `Tuning` is one immutable record parsed from `tuning.json`. The committed file is the only place a tunable number lives; the tests read the same file.
   - The accumulator clock that turns frame time into whole ticks (the `SimulationClock` of faith-defense) lives here too: it needs nothing from the engine, and this is where it can be tested.
-- **`src/Understudies.Game`** is the MonoGame layer: positions interpolated between the last two ticks, the stage drawn in world units scaled to the window, everything as shapes. A figure is drawn upright from its feet and sorted by its y.
+- **`src/Understudies.Game`** is the MonoGame layer: positions interpolated between the last two ticks, the stage drawn in world units scaled to the window, everything as shapes. A figure is drawn upright from its feet and sorted by its y. From T07a on a figure is a sprite built in code from a pixel grid, and whatever a later ticket adds to the stage gets its sprite the same way; bars and other marks of the screen stay shapes.
 - **`tests/Understudies.Core.Tests`** holds the rule tests and the scripted players.
 
 ## 5. Tickets
@@ -106,6 +107,16 @@ Space, or the gamepad's A: a short dash in the direction of travel, a moment in 
 **T07 Critics turn on the magician.**
 Decision 16: the short radius, the return to the box office, a touch that hurts on a cooldown, the magician's hit points. At zero the magician falls and the show closes (the fall inside an act becomes T13).
 - Tests: a critic inside the radius walks at the magician and outside it goes back; a touch hurts once per cooldown and never during the Vanish.
+
+**T07a Sprites.**
+The figures stop being rectangles (decision 23). A sprite is a small grid of characters with a palette, written in the Game project and made into a texture at start-up: the magician (a top hat and a cape), the critic (a notepad and a pen), the box office (a booth with a striped awning), the thrown card, the cloud of the Vanish. Ten sprite pixels to a world unit and no smoothing, so the sizes of vision §10 hold: the magician is 30 pixels tall, a critic 20, the box office 40 wide. A figure faces the way it goes, bobs as it walks and has a shadow on the floor under its feet. What a tint said before, a tint still says: a stunned critic, the magician in the moment nothing hurts.
+- A captured frame shows it: the magician is told from a critic at a glance, one critic from the next in a crowd, and a sprite pixel is the same size everywhere on the screen at the window's default size.
+- No test. No image file, no art tool, no new dependency.
+
+**T07b The stage set.**
+The stage stops being a brown rectangle: floorboards, a back wall with a curtain along the top, footlights along the bottom edge, and the three stage doors drawn as doors, the open one lit. The back wall is a rule too: the floor that can be walked starts below it (a new number in `tuning.json`), the back alley's door is in that wall, and so no figure is drawn above the floor's edge any more.
+- Tests: the magician cannot walk onto the back wall; a critic from the back door enters on the floor.
+- A captured frame shows the set, with the magician standing as far up the stage as it can go and whole on the screen.
 
 **T08 Juice.**
 Driven by the tick's events: a flash on a hit, paper scraps and a fading body on a kill, a trail behind a thrown card, a shake of the screen when the box office is struck, a hit-stop on the Vanish.
@@ -188,4 +199,4 @@ In scope, but not sharp enough for a ticket yet. The first four wait for the ver
 
 ## 8. Out of scope
 
-Not in the prototype (decision 18): the brute, the heckler and the Reviewer; kits other than thrown cards; evolutions and statuses; stage hazards; music and the pit orchestra; unlocks, modifiers, the score and the performance code; a settings menu; re-recording an understudy; any art, and the look test.
+Not in the prototype (decision 18): the brute, the heckler and the Reviewer; kits other than thrown cards; evolutions and statuses; stage hazards; music and the pit orchestra; unlocks, modifiers, the score and the performance code; a settings menu; re-recording an understudy; art made with an art tool or kept as image files, and the look test (the placeholder sprites of decision 23 are neither).
