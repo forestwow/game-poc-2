@@ -28,15 +28,17 @@ public class CriticTests
     }
 
     [Test]
-    public void Step_AFirstDoorInTheTopEdge_TheCriticEntersSomewhereAlongIt()
+    public void Step_AFirstDoorInTheBackWall_TheCriticEntersOnTheFloorSomewhereAlongTheWall()
     {
-        var door = new Vector2(20f, 0f);
-        Tuning tuning = Tuning with { StageDoors = [door] };
+        // The floor starts three units down the stage and the door is at the foot of the wall there: it runs along
+        // the wall, so the critic enters on the floor's top edge and no higher.
+        var door = new Vector2(20f, 3f);
+        Tuning tuning = Tuning with { StageFloorTop = 3f, StageDoors = [door] };
         var simulation = new Simulation(tuning, seed: 1);
 
         simulation.Step(default);
 
-        Assert.That(simulation.Critics[0].Position.Y, Is.EqualTo(door.Y));
+        Assert.That(simulation.Critics[0].Position.Y, Is.EqualTo(3f));
         Assert.That(simulation.Critics[0].Position.X, Is.EqualTo(door.X).Within(tuning.StageDoorWidth / 2f));
         Assert.That(simulation.Critics[0].Position.X, Is.Not.EqualTo(door.X));
     }

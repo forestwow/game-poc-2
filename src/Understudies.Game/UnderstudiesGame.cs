@@ -29,6 +29,7 @@ internal sealed class UnderstudiesGame : Microsoft.Xna.Framework.Game
     private const ulong CaptureSeed = 1;
 
     private static readonly Color Surround = new(24, 18, 28);
+    private static readonly Color BackWall = new(52, 40, 62);
     private static readonly Color Floor = new(96, 74, 58);
     private static readonly Color OpenDoor = new(222, 180, 104);
     private static readonly Color ShutDoor = new(66, 50, 42);
@@ -210,14 +211,16 @@ internal sealed class UnderstudiesGame : Microsoft.Xna.Framework.Game
 
         GraphicsDevice.Clear(Surround);
 
-        // The floor and what lies flat on it.
+        // The back wall, the floor below it and what lies flat on the floor.
         _spriteBatch.Begin(transformMatrix: worldToScreen);
-        Fill(Vector2.Zero, Tuning.StageSize, Floor);
+        var floorTopLeft = new Vector2(0f, Tuning.StageFloorTop);
+        Fill(Vector2.Zero, Tuning.StageSize with { Y = Tuning.StageFloorTop }, BackWall);
+        Fill(floorTopLeft, Tuning.StageSize - floorTopLeft, Floor);
         for (int i = 0; i < Tuning.StageDoors.Count; i++)
         {
-            // A door is a mat as wide as the door, the half of it that is on the stage. Only the first door is open.
+            // A door is a mat as wide as the door, the half of it that is on the floor. Only the first door is open.
             var half = new Vector2(Tuning.StageDoorWidth / 2f);
-            Vector2 topLeft = Vector2.Max(Tuning.StageDoors[i] - half, Vector2.Zero);
+            Vector2 topLeft = Vector2.Max(Tuning.StageDoors[i] - half, floorTopLeft);
             Vector2 bottomRight = Vector2.Min(Tuning.StageDoors[i] + half, Tuning.StageSize);
             Fill(topLeft, bottomRight - topLeft, i == 0 ? OpenDoor : ShutDoor);
         }

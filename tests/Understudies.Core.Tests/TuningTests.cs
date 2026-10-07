@@ -75,6 +75,19 @@ public class TuningTests
     }
 
     [Test]
+    public void Parse_ADoorAboveTheFloorsTop_IsRefusedWithTheKeysName()
+    {
+        // The floor starts three units down the stage, and the second door is half a unit up the back wall.
+        JsonNode file = JsonNode.Parse(CommittedTuning.Json)!;
+        file["stageFloorTop"] = 3;
+        file["stageDoors"] = JsonNode.Parse("""[{ "x": 0, "y": 15 }, { "x": 17, "y": 2.5 }]""");
+
+        Assert.That(
+            () => Tuning.Parse(file.ToJsonString()),
+            Throws.TypeOf<JsonException>().With.Message.Contains("'stageDoors'"));
+    }
+
+    [Test]
     public void Parse_AFileThatSaysNull_IsRefused()
     {
         Assert.That(() => Tuning.Parse("null"), Throws.TypeOf<JsonException>());

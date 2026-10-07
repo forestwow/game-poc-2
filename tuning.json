@@ -1,9 +1,10 @@
 {
   "stageSize": { "x": 48, "y": 27 },
+  "stageFloorTop": 3,
   "stageDoors": [
     { "x": 0, "y": 15 },
     { "x": 48, "y": 9 },
-    { "x": 17, "y": 0 }
+    { "x": 17, "y": 3 }
   ],
   "stageDoorWidth": 3,
   "boxOfficePosition": { "x": 31, "y": 12 },

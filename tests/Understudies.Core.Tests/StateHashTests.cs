@@ -111,9 +111,11 @@ public class StateHashTests
     [Test]
     public void ComputeStateHash_TwoMagiciansThatFaceTwoWays_AreTwoHashes()
     {
-        // In the stage's top-left corner the edge stops a step to the left and a step up alike: the two shows differ
-        // only in the way the magician was last asked to go, which is the way its next Vanish goes.
-        Tuning inTheCorner = Tuning with { MagicianMark = new Vector2(Tuning.MagicianRadius) };
+        // In the floor's top-left corner the stage's edge stops a step to the left and the back wall a step up
+        // alike: the two shows differ only in the way the magician was last asked to go, which is the way its next
+        // Vanish goes.
+        var corner = new Vector2(Tuning.MagicianRadius, Tuning.StageFloorTop + Tuning.MagicianRadius);
+        Tuning inTheCorner = Tuning with { MagicianMark = corner };
         var left = new MagicianInput(new Vector2(-1f, 0f));
         var up = new MagicianInput(new Vector2(0f, -1f));
 
