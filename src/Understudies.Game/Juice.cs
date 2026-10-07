@@ -46,26 +46,26 @@ internal sealed class Juice(Random random)
 
     // A blow adds its trauma, which is never more than 1 and falls by TraumaFade a second. The stage is moved by up
     // to ShakeReach, sideways and up or down, times the square of the trauma: one strike is a nudge of two thirds
-    // of ShakeReach that is over in a quarter of a second, a touch on the magician one of half, and a crowd's
-    // blows, many a second, keep the stage shaking by near the whole of it and by no more.
+    // of ShakeReach that is over in a quarter of a second, a touch on the magician one of under a third, and a
+    // crowd's blows, many a second, keep the stage shaking by near the whole of it and by no more.
     private const float StrikeTrauma = 0.8f;
-    private const float HurtTrauma = 0.7f;
+    private const float HurtTrauma = 0.55f;
     private const float TraumaFade = 3f;
     private const float ShakeReach = 0.2f;
 
-    // The moment of a Vanish holds the world still for this long: three frames of sixty a second.
-    private const float VanishHitStop = 0.05f;
+    // The moment of a Vanish holds the world still for this long: three frames of sixty a second, whatever their
+    // jitter. Three frames' worth to the hair (0.05) would hold three frames or four as the frames fell.
+    private const float VanishHitStop = 0.045f;
 
     /// <summary>A scrap of paper, as it is drawn.</summary>
     public static readonly Vector2 ScrapSize = new(0.3f, 0.18f);
 
     /// <summary>
-    /// The streak behind a thrown card: how long at most, how wide, and how thick at the card (it thins towards its
-    /// end).
+    /// The streak behind a thrown card: how long at most, how wide and how thick.
     /// </summary>
     public const float TrailLength = 3f;
     public const float TrailWidth = 0.15f;
-    public const float TrailOpacity = 0.7f;
+    public const float TrailOpacity = 0.5f;
 
     private readonly Dictionary<int, (float HitPoints, float FlashedAt)> _critics = [];
     private readonly List<(Vector2 Position, float FellAt)> _bodies = [];
