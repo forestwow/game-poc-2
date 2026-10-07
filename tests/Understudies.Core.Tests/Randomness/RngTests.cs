@@ -59,4 +59,25 @@ public class RngTests
     {
         Assert.Throws<ArgumentOutOfRangeException>(() => new Rng(1).NextInt(maxExclusive));
     }
+
+    [Test]
+    public void NextFloat_SeedZero_IsTheTop24BitsOfTheReferenceSequence()
+    {
+        var rng = new Rng(0UL);
+
+        // 0xE220A8397B1DCDAF and 0x6E789E6AA1B965F4, as above.
+        Assert.That(rng.NextFloat(), Is.EqualTo(0xE220A8 / 16777216f));
+        Assert.That(rng.NextFloat(), Is.EqualTo(0x6E789E / 16777216f));
+    }
+
+    [Test]
+    public void NextFloat_ReturnsAValueFromZeroToBelowOne()
+    {
+        var rng = new Rng(7);
+
+        for (int i = 0; i < 10_000; i++)
+        {
+            Assert.That(rng.NextFloat(), Is.GreaterThanOrEqualTo(0f).And.LessThan(1f));
+        }
+    }
 }

@@ -1,8 +1,20 @@
 {
   "stageSize": { "x": 48, "y": 27 },
+  "stageDoors": [
+    { "x": 0, "y": 15 },
+    { "x": 48, "y": 9 },
+    { "x": 17, "y": 0 }
+  ],
+  "stageDoorWidth": 3,
   "boxOfficePosition": { "x": 31, "y": 12 },
   "boxOfficeSize": 4,
+  "boxOfficeHitPoints": 400,
   "magicianMark": { "x": 27, "y": 13 },
   "magicianSpeed": 9,
-  "magicianRadius": 0.6
+  "magicianRadius": 0.6,
+  "criticSpeed": 4,
+  "criticRadius": 0.5,
+  "criticEntryInterval": 3,
+  "criticStrikeDamage": 1,
+  "criticStrikeCooldown": 1
 }

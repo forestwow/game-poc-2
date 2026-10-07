@@ -21,6 +21,9 @@ public sealed class Rng(ulong seed)
         }
     }
 
+    /// <summary>Uniform in [0, 1): the top 24 bits, which is every bit a float keeps, so the division is exact.</summary>
+    public float NextFloat() => (NextULong() >> 40) / 16777216f;
+
     /// <summary>Uniform integer in [0, maxExclusive), without modulo bias.</summary>
     public int NextInt(int maxExclusive)
     {
