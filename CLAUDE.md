@@ -13,6 +13,7 @@ dotnet build Understudies.sln --configuration Release                     # CI r
 dotnet test Understudies.sln --configuration Release                      # then this
 dotnet test tests/Understudies.Core.Tests --filter "FullyQualifiedName~RngTests"   # one class or test
 dotnet run --project src/Understudies.Game                                # play; Esc quits
+dotnet run --project src/Understudies.Game -- --capture /tmp/frame.png --ticks 120   # no play: walk a fixed script for 120 ticks, save the frame, exit
 ```
 
 ## Architecture
