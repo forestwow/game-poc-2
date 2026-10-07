@@ -291,6 +291,55 @@ public class CriticsTurnTests
         Assert.That(simulation.Events, Is.Empty);
     }
 
+    [Test]
+    public void Step_SeveralBlowsAreReadyOnTheTickTheMagicianFalls_OnlyTheOneThatFellsItLands()
+    {
+        // Critics gather round a magician that nothing hurts for a second, each keeping its blow ready, and one
+        // blow is all the magician can take. On the first tick it can be hurt the first of them fells it: the show
+        // is closed there and then, and the others deal nothing.
+        Tuning tuning = Scene with
+        {
+            StageDoorWidth = 4f,
+            CriticEntryInterval = 0.25f,
+            CriticTurnRadius = 30f,
+            MagicianHitPoints = 2f,
+            VanishInvulnerableTime = 1f,
+            VanishCloudTime = 0f,
+        };
+        var simulation = new Simulation(tuning, seed: 1);
+        simulation.Step(Vanish);
+
+        for (int i = 0; i < 2 * Simulation.TicksPerSecond && !simulation.MagicianHasFallen; i++)
+        {
+            simulation.Step(default);
+        }
+
+        Assert.That(simulation.MagicianHasFallen, Is.True);
+        float touch = tuning.MagicianRadius + tuning.CriticRadius + Tolerance;
+        Assert.That(
+            simulation.Critics.Count(critic => Vector2.Distance(critic.Position, simulation.MagicianPosition) <= touch),
+            Is.GreaterThan(1),
+            "The scene needs more than one critic touching the magician when it falls.");
+        Assert.That(
+            simulation.Events,
+            Is.EqualTo(new[] { new TickEvent(TickEventKind.MagicianHurt, simulation.MagicianPosition) }));
+    }
+
+    [Test]
+    public void Step_NothingHurtsTheMagician_TheBoxOfficeIsStruckAllTheSame()
+    {
+        // No critic turns, and the one critic reaches the box office on the nineteenth tick, inside the second in
+        // which nothing hurts the magician: that moment is the magician's and shields nothing else.
+        Tuning tuning = Scene with { CriticTurnRadius = 0f, VanishInvulnerableTime = 1f, VanishCloudTime = 0f };
+        var simulation = new Simulation(tuning, seed: 1);
+        simulation.Step(Vanish);
+
+        Run(simulation, ticks: 18);
+
+        Assert.That(simulation.MagicianIsInvulnerable, Is.True);
+        Assert.That(simulation.BoxOfficeHitPoints, Is.EqualTo(99f));
+    }
+
     private static void Run(Simulation simulation, int ticks)
     {
         for (int i = 0; i < ticks; i++)

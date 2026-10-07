@@ -206,9 +206,11 @@ public sealed class Simulation(Tuning tuning, ulong seed)
             LeaveACloud(from);
         }
 
-        // The stage's edge stops the magician: the whole circle stays on the floor.
+        // The floor's edge stops the magician, a walk and a blink alike: the whole circle stays on the floor, which
+        // starts at the foot of the back wall and ends at the stage's other three edges.
         var radius = new Vector2(Tuning.MagicianRadius);
-        MagicianPosition = Vector2.Clamp(from + step, radius, Tuning.StageSize - radius);
+        var floorTopLeft = new Vector2(0f, Tuning.StageFloorTop);
+        MagicianPosition = Vector2.Clamp(from + step, floorTopLeft + radius, Tuning.StageSize - radius);
 
         // The view draws the magician between the two: after a blink there is nothing between them to draw.
         MagicianPreviousPosition = vanishes ? MagicianPosition : from;
@@ -377,7 +379,8 @@ public sealed class Simulation(Tuning tuning, ulong seed)
             }
 
             // While nothing hurts the magician a touch takes nothing and is no blow: the critic's stays ready.
-            if (gap > step || critic.TicksToNextBlow > 0 || (turned && MagicianIsInvulnerable))
+            // And once a blow of this tick has closed the show, the critics after it in the list deal none.
+            if (ShowClosed || gap > step || critic.TicksToNextBlow > 0 || (turned && MagicianIsInvulnerable))
             {
                 continue;
             }
@@ -465,7 +468,8 @@ public sealed class Simulation(Tuning tuning, ulong seed)
 
     private void LetACriticIn()
     {
-        // A door in a side edge runs up and down it; a door in the top or the bottom edge runs along it.
+        // A door in a side edge runs up and down it; any other, at the foot of the back wall or in the bottom edge,
+        // runs along the stage's width.
         Vector2 door = Tuning.StageDoors[0];
         bool inASide = door.X <= 0f || door.X >= Tuning.StageSize.X;
         float along = (_rng.NextFloat() - 0.5f) * Tuning.StageDoorWidth;
