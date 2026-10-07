@@ -189,9 +189,11 @@ public sealed class Simulation(Tuning tuning, ulong seed)
             }
 
             // The path's line is inside the circle from `entry` to `exit`: the path touches the circle when some of
-            // that stretch is on it. A card that starts inside a circle has a negative entry.
+            // that stretch is on it. A card that starts inside a circle is in it from its first step, however far
+            // the circle reaches back: of several such circles (the magician in a squeezed crowd) the critic that
+            // entered first is the one hurt, and never one for lying further behind the card.
             float halfChord = MathF.Sqrt(halfChordSquared);
-            float entry = along - halfChord;
+            float entry = MathF.Max(0f, along - halfChord);
             float exit = along + halfChord;
             if (exit >= 0f && entry <= length && entry < firstEntry)
             {
@@ -269,6 +271,10 @@ public sealed class Simulation(Tuning tuning, ulong seed)
         }
 
         // At the nearest critic whose centre is in range; of two as near, at the one that entered first.
+        // ponytail: the card flies at where its target stands now, so it only hits what cannot leave that spot in
+        // time: thrownCardSpeed must stay at or above criticSpeed x throwRange / criticRadius (72 with the
+        // committed numbers, which is exactly where it is). A faster enemy or a longer range breaks that and
+        // cards start to miss across the line of fire; the throw then has to aim ahead of its target.
         Vector2? aim = null;
         float nearest = float.PositiveInfinity;
         foreach (Critic critic in _critics)
