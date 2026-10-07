@@ -20,17 +20,19 @@ internal sealed class UnderstudiesGame : Microsoft.Xna.Framework.Game
     private static readonly Color BoxOffice = new(150, 44, 52);
     private static readonly Color Magician = new(250, 226, 120);
 
-    private readonly Simulation _simulation = new();
+    private readonly Simulation _simulation;
     private readonly SimulationClock _clock = new();
     private readonly string? _capturePath;
     private readonly int _captureTicks;
     private bool _captured;
+    private bool _reloadWasHeld;
     private SpriteBatch _spriteBatch = null!;
     private Texture2D _pixel = null!;
 
     /// <summary>With a <paramref name="capturePath"/> the game does not play: it saves one frame there and exits.</summary>
-    public UnderstudiesGame(string? capturePath, int captureTicks)
+    public UnderstudiesGame(Tuning tuning, string? capturePath, int captureTicks)
     {
+        _simulation = new Simulation(tuning);
         _capturePath = capturePath;
         _captureTicks = captureTicks;
         _ = new GraphicsDeviceManager(this)
@@ -44,6 +46,9 @@ internal sealed class UnderstudiesGame : Microsoft.Xna.Framework.Game
         // One Update per drawn frame with the real time since the last one; the clock makes the fixed ticks of it.
         IsFixedTimeStep = false;
     }
+
+    /// <summary>The numbers the simulation runs on now: the view keeps no copy, so a reload reaches the drawing too.</summary>
+    private Tuning Tuning => _simulation.Tuning;
 
     protected override void LoadContent()
     {
@@ -71,6 +76,16 @@ internal sealed class UnderstudiesGame : Microsoft.Xna.Framework.Game
         {
             Exit();
         }
+
+        // Once per press, F5 reads tuning.json again and the next tick runs on the new numbers. A file that does not
+        // parse leaves the numbers as they were.
+        bool reloadHeld = Keyboard.GetState().IsKeyDown(Keys.F5);
+        if (reloadHeld && !_reloadWasHeld && TuningFile.Read() is { } tuning)
+        {
+            _simulation.Tuning = tuning;
+        }
+
+        _reloadWasHeld = reloadHeld;
 
         MagicianInput input = ReadInput();
         int ticks = _clock.Advance(gameTime.ElapsedGameTime.TotalSeconds);

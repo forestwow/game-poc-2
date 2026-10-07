@@ -6,10 +6,12 @@ public class SimulationTests
 {
     private const float Tolerance = 1e-4f;
 
+    private Tuning Tuning { get; } = CommittedTuning.Parse();
+
     [Test]
     public void Step_NoInput_TheMagicianStaysOnTheMark()
     {
-        var simulation = new Simulation();
+        var simulation = new Simulation(Tuning);
 
         Walk(simulation, Vector2.Zero, ticks: 10);
 
@@ -19,7 +21,7 @@ public class SimulationTests
     [Test]
     public void Step_OneSecondInAStraightLine_CoversTheMagiciansSpeed()
     {
-        var simulation = new Simulation();
+        var simulation = new Simulation(Tuning);
 
         Walk(simulation, new Vector2(1f, 0f), Simulation.TicksPerSecond);
 
@@ -31,8 +33,8 @@ public class SimulationTests
     [Test]
     public void Step_ADiagonal_IsNoFasterThanAStraightLine()
     {
-        var straight = new Simulation();
-        var diagonal = new Simulation();
+        var straight = new Simulation(Tuning);
+        var diagonal = new Simulation(Tuning);
 
         Walk(straight, new Vector2(1f, 0f), ticks: 30);
         Walk(diagonal, new Vector2(1f, 1f), ticks: 30);
@@ -45,7 +47,7 @@ public class SimulationTests
     [Test]
     public void Step_AStickPushedHalfway_MovesAtHalfSpeed()
     {
-        var simulation = new Simulation();
+        var simulation = new Simulation(Tuning);
 
         Walk(simulation, new Vector2(0f, 0.5f), Simulation.TicksPerSecond);
 
@@ -56,7 +58,7 @@ public class SimulationTests
     [Test]
     public void Step_IntoTheTopLeftCorner_TheMagiciansWholeCircleStaysOnTheStage()
     {
-        var simulation = new Simulation();
+        var simulation = new Simulation(Tuning);
 
         Walk(simulation, new Vector2(-1f, -1f), ticks: 10 * Simulation.TicksPerSecond);
 
@@ -66,7 +68,7 @@ public class SimulationTests
     [Test]
     public void Step_IntoTheBottomRightCorner_TheMagiciansWholeCircleStaysOnTheStage()
     {
-        var simulation = new Simulation();
+        var simulation = new Simulation(Tuning);
 
         Walk(simulation, new Vector2(1f, 1f), ticks: 10 * Simulation.TicksPerSecond);
 
@@ -76,7 +78,7 @@ public class SimulationTests
     [Test]
     public void Step_KeepsThePositionBeforeTheTickForTheView()
     {
-        var simulation = new Simulation();
+        var simulation = new Simulation(Tuning);
         Walk(simulation, new Vector2(1f, 0f), ticks: 3);
         Vector2 before = simulation.MagicianPosition;
 
@@ -84,6 +86,22 @@ public class SimulationTests
 
         Assert.That(simulation.MagicianPreviousPosition, Is.EqualTo(before));
         Assert.That(simulation.MagicianPosition, Is.Not.EqualTo(before));
+    }
+
+    [Test]
+    public void Step_AfterNewTuning_WalksOnFromWhereItStoodByTheNewNumbers()
+    {
+        var simulation = new Simulation(Tuning);
+        var right = new MagicianInput(new Vector2(1f, 0f));
+        simulation.Step(right);
+        Vector2 stood = simulation.MagicianPosition;
+        float oneTick = stood.X - Tuning.MagicianMark.X;
+
+        simulation.Tuning = Tuning with { MagicianSpeed = Tuning.MagicianSpeed * 2f };
+        simulation.Step(right);
+
+        Assert.That(simulation.MagicianPreviousPosition, Is.EqualTo(stood));
+        Assert.That(simulation.MagicianPosition.X - stood.X, Is.EqualTo(2f * oneTick).Within(Tolerance));
     }
 
     private static void Walk(Simulation simulation, Vector2 move, int ticks)

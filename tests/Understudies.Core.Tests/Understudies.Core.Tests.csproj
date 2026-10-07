@@ -15,4 +15,9 @@
     <ProjectReference Include="..\..\src\Understudies.Core\Understudies.Core.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- The tests read the committed numbers, the same file the game reads. -->
+    <None Include="..\..\tuning.json" Link="tuning.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
 </Project>
