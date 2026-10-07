@@ -33,6 +33,8 @@ internal sealed class Sound
 
     // A sound does not start again within this long of its own last start: a crowd strikes the box office many
     // times a second, and every blow of one tick would start at once.
+    // ponytail: one gap for all six, so a sound longer than the gap still lies on itself under a crowd, the buzz
+    // of a hurt magician four deep. A gap of its own for each sound, near its length, when that is too much.
     private const float RepeatGap = 0.05f;
 
     // Each time a sound is played it is this far higher or lower at most, in octaves, by chance: the same sound
