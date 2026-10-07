@@ -32,6 +32,25 @@ public sealed class Simulation(Tuning tuning, ulong seed)
     /// </summary>
     public Tuning Tuning { get; set; } = tuning;
 
+    /// <summary>
+    /// Where the performance stands. A closed show is closed whatever its act's timer says; an act whose time has
+    /// run out is over, and after the last act of the performance comes the ovation. Only in an act does
+    /// <see cref="Step"/> change anything.
+    /// </summary>
+    public Phase Phase =>
+        ShowClosed ? Phase.Closed
+        : ActTicksLeft > 0 ? Phase.Act
+        : Act < Tuning.ActsInPerformance ? Phase.BetweenActs
+        : Phase.Ovation;
+
+    /// <summary>The number of the act that is played, or of the one just over: the first is 1.</summary>
+    public int Act { get; private set; } = 1;
+
+    /// <summary>
+    /// What the act has left of its time, in ticks: all of its length when it begins, and nothing when it is over.
+    /// </summary>
+    public int ActTicksLeft { get; private set; } = Ticks(tuning.ActLength);
+
     /// <summary>The middle of the magician's circle on the floor, after the last tick.</summary>
     public Vector2 MagicianPosition { get; private set; } = tuning.MagicianMark;
 
@@ -75,10 +94,14 @@ public sealed class Simulation(Tuning tuning, ulong seed)
     /// </summary>
     public bool ShowClosed => BoxOfficeHitPoints <= 0f || MagicianHasFallen;
 
+    /// <summary>
+    /// Plays one tick of an act. Between two acts and when the performance is over the world stands: the tick
+    /// reports nothing and changes nothing.
+    /// </summary>
     public void Step(MagicianInput input)
     {
         _events.Clear();
-        if (ShowClosed)
+        if (Phase != Phase.Act)
         {
             return;
         }
@@ -104,6 +127,34 @@ public sealed class Simulation(Tuning tuning, ulong seed)
         }
 
         _ticksPlayed++;
+
+        // The act's time is counted last: its last tick is played in full, and the act is over when that tick is,
+        // whatever is on the stage. A blow of that very tick may still have closed the show.
+        ActTicksLeft--;
+    }
+
+    /// <summary>
+    /// Between two acts, begins the next one: the magician is whole and on its mark, facing the audience, with the
+    /// Vanish ready. Everything else on the stage is as the last act left it, the critics too (plan decision 17).
+    /// In any other phase this does nothing.
+    /// </summary>
+    public void GoOn()
+    {
+        if (Phase != Phase.BetweenActs)
+        {
+            return;
+        }
+
+        Act++;
+        ActTicksLeft = Ticks(Tuning.ActLength);
+
+        // Both positions: there is nothing between where the magician stood and the mark for the view to draw.
+        MagicianPosition = Tuning.MagicianMark;
+        MagicianPreviousPosition = Tuning.MagicianMark;
+        MagicianHitPoints = Tuning.MagicianHitPoints;
+        _facing = Vector2.UnitY;
+        _ticksToNextVanish = 0;
+        _ticksInvulnerable = 0;
     }
 
     /// <summary>
@@ -122,6 +173,11 @@ public sealed class Simulation(Tuning tuning, ulong seed)
         }
 
         hasher.AddInt(_ticksPlayed);
+
+        // The phase beside the act's number and time: whether an act that is over was the last is not in those.
+        hasher.AddInt((int)Phase);
+        hasher.AddInt(Act);
+        hasher.AddInt(ActTicksLeft);
         AddPoint(MagicianPosition);
         AddPoint(_facing);
         hasher.AddInt(_ticksToNextVanish);

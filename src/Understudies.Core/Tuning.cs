@@ -9,6 +9,8 @@ namespace Understudies.Core;
 /// Every tunable number of the game, in world units and seconds, as tuning.json holds them: a member here is the
 /// key of the same name there in camelCase, and a point is written <c>{ "x": 1, "y": 2 }</c>.
 /// </summary>
+/// <param name="ActLength">Seconds an act is played for: its timer ends it, whatever is on the stage.</param>
+/// <param name="ActsInPerformance">How many acts a performance is: the last ends in the standing ovation.</param>
 /// <param name="StageSize">
 /// The whole stage, the back wall at its top and the floor below it: (0, 0) is its top-left corner and y grows
 /// downward.
@@ -24,10 +26,10 @@ namespace Understudies.Core;
 /// <param name="BoxOfficePosition">The centre of the box office's circle on the floor.</param>
 /// <param name="BoxOfficeSize">The box office is this wide and this tall; its circle's radius is half of it.</param>
 /// <param name="BoxOfficeHitPoints">What the box office has when the show starts.</param>
-/// <param name="MagicianMark">Where the magician stands when the show starts.</param>
+/// <param name="MagicianMark">Where the magician stands when an act starts.</param>
 /// <param name="MagicianSpeed">Units per second.</param>
 /// <param name="MagicianRadius">The magician is a circle on the floor.</param>
-/// <param name="MagicianHitPoints">What the magician has when the show starts.</param>
+/// <param name="MagicianHitPoints">What the magician has when an act starts.</param>
 /// <param name="VanishDistance">How far the Vanish takes the magician, when no edge of the floor is in the way.</param>
 /// <param name="VanishCooldown">Seconds from one Vanish to the next.</param>
 /// <param name="VanishInvulnerableTime">Seconds from a Vanish in which nothing hurts the magician.</param>
@@ -58,6 +60,8 @@ namespace Understudies.Core;
 /// the magician.
 /// </param>
 public sealed record Tuning(
+    float ActLength,
+    int ActsInPerformance,
     Vector2 StageSize,
     float StageFloorTop,
     IReadOnlyList<Vector2> StageDoors,

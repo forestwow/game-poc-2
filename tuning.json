@@ -1,4 +1,6 @@
 {
+  "actLength": 75,
+  "actsInPerformance": 10,
   "stageSize": { "x": 48, "y": 27 },
   "stageFloorTop": 3,
   "stageDoors": [
