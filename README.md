@@ -19,7 +19,11 @@ The .NET SDK named in `global.json` (10.0.1xx). Nothing else: MonoGame comes fro
 
     dotnet run --project src/Understudies.Game
 
-Esc quits.
+WASD, the arrows or a gamepad's left stick walk the magician. Esc quits.
+
+To look at a frame without playing, the game can walk a fixed script for a number of ticks (60 a second), save the frame it ends on and exit:
+
+    dotnet run --project src/Understudies.Game -- --capture frame.png --ticks 120
 
 ## Tests
 
