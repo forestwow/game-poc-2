@@ -13,7 +13,7 @@ A prototype of a short roguelite for PC. You are a stage magician defending the 
 
 ## Requirements
 
-The .NET SDK pinned in `global.json`. Nothing else: MonoGame comes from NuGet.
+The .NET SDK named in `global.json` (10.0.1xx). Nothing else: MonoGame comes from NuGet.
 
 ## Running
 
