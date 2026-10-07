@@ -39,8 +39,8 @@ public sealed class Simulation(Tuning tuning, ulong seed)
     public Vector2 MagicianPreviousPosition { get; private set; } = tuning.MagicianMark;
 
     /// <summary>
-    /// How much of the Vanish's cooldown is left, as a share of the whole: 1 on the tick of a Vanish, 0 when the
-    /// next one is ready.
+    /// How much of the Vanish's cooldown is left, as a share of the whole: 1 on the tick of a Vanish, and one
+    /// tick's share, not yet 0, when the very next tick would take a press again.
     /// </summary>
     public float VanishCooldownLeft =>
         _ticksToNextVanish == 0 ? 0f : MathF.Min(1f, (float)_ticksToNextVanish / Ticks(Tuning.VanishCooldown));
@@ -162,16 +162,7 @@ public sealed class Simulation(Tuning tuning, ulong seed)
         return hasher.Value;
     }
 
-    private void ThinTheClouds()
-    {
-        for (int i = 0; i < _clouds.Count; i++)
-        {
-            if (--_clouds[i].TicksLeft <= 0)
-            {
-                _clouds.RemoveAt(i--);
-            }
-        }
-    }
+    private void ThinTheClouds() => _clouds.RemoveAll(cloud => --cloud.TicksLeft <= 0);
 
     private void MoveTheMagician(MagicianInput input)
     {
@@ -181,6 +172,8 @@ public sealed class Simulation(Tuning tuning, ulong seed)
         if (lengthSquared > 0f)
         {
             // The magician faces the way it was last asked to go, however hard the stick was pushed.
+            // ponytail: an input so short that its square is less than a float holds (about 1e-19 long) gives a
+            // facing shorter than one unit, and a short blink after it. No key and no stick gives such an input.
             _facing = move / MathF.Sqrt(lengthSquared);
         }
 

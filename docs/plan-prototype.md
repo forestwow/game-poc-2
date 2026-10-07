@@ -1,24 +1,25 @@
 # The Understudies: prototype plan
 
-- **Status:** agreed with the owner on 2026-10-07 in three interview rounds after `docs/vision.md` v0.3. Rounds 1 and 2 were answered ("agreed", with one change: no study journal). Round 3 (decisions 19–22 below) was put to the owner with a recommendation each; the owner started the build without answering it, so those four stand as recommended and are the owner's to overturn.
+- **Status:** agreed with the owner on 2026-10-07 in three interview rounds after `docs/vision.md` v0.3. Rounds 1 and 2 were answered ("agreed", with one change: no study journal). Round 3 (decisions 19–22 below) was put to the owner with a recommendation each; the owner started the build without answering it, so those four stand as recommended and are the owner's to overturn. The same day, with the build under way, the owner asked for basic graphics to be planned too, with PixelLab allowed and a wish to try a new tool: decision 23 and tickets T07b to T07d. Decision 24 (the back wall) was not asked of the owner either and stands the same way as 19–22.
 - **What this is:** the map of the work from an empty repository to a playable proof of concept. It is the ticket list too: one ticket is one small pull request.
 - **Where the rules come from:** `docs/vision.md`. Where this plan and the vision disagree, this plan is the later decision, and §3 says which line of the vision it settles.
 
 ## 1. Destination
 
-A small playable proof of concept that lets the owner check the idea: one stage in placeholder shapes, ten acts, understudies that replay the routes the owner ran, the applause rule, and two scripted players that measure whether hiding at the box office loses. The owner plays it and writes a verdict: does the idea hold?
+A small playable proof of concept that lets the owner check the idea: one stage, in placeholder shapes at first and with a basic set of generated art once the owner has picked a tool (decision 23), ten acts, understudies that replay the routes the owner ran, the applause rule, and two scripted players that measure whether hiding at the box office loses. The owner plays it and writes a verdict: does the idea hold?
 
 The proof of concept ends at stop 3 (§6). The package for five outside testers and the G1 judgement of the vision (§12 there) are a separate step, taken only after a positive verdict (§7).
 
 ## 2. How the work runs
 
 - **One ticket, one branch, one small pull request into `main`.** The branch is named `tNN-short-name`; the pull request's title starts with the ticket id (`T04: ...`). A ticket is done when its pull request is merged; nothing else tracks status.
-- **Tickets are taken in order.** Each builds on the one before it.
+- **Tickets are taken in order.** Each builds on the one before it. The basic graphics (T07b to T07d) are the one exception: they wait for the owner and are taken when they are free.
 - **Review before every merge.** A separate agent with a clean context reviews the pull request with the `mattpocock-skills:code-review` skill (fixed point `main`; the spec is the ticket in this file) and with `ponytail:ponytail-review`. What it finds is fixed or answered in the pull request, then CI must be green, then the merge.
 - **Implementation may run in separate agents.** The lead session then only briefs them, waits, checks their result (tests, the diff, a captured frame) and merges.
 - **Tests first in Core.** Every rule in `Understudies.Core` gets its test before its code. The view and the juice have no tests: they are judged by eye at the stops, and by a captured frame in review (T02).
 - **The smallest thing that works.** No abstraction, option or layer that no ticket here asks for. A deliberate shortcut with a known ceiling is marked with a `ponytail:` comment that names the ceiling.
 - **Language:** everything in the repository is in English. There is no study journal in this project.
+- **Art tools.** Their servers are connected to this project by the owner; the loop never copies a key from another project. The loop never buys anything: no plan, no credits, no top-up. Inside a subscription the owner already has, generations need no asking, up to the number a ticket names; when a tool says its allowance has run out, the loop stops using it and tells the owner.
 - **The owner's checkout stays on `main`.** Work happens in git worktrees, so the latest merged game can be run at any time.
 - **Stops (§6)** are where the owner plays and judges. The loop does not wait at a stop: it announces it and goes on with tickets that do not depend on the judgement. What a judgement asks to be changed becomes a ticket when it is given.
 
@@ -27,7 +28,7 @@ The proof of concept ends at stop 3 (§6). The package for five outside testers 
 | # | Topic | Decision |
 |---|---|---|
 | 1 | Plan | this file: the build of the prototype and, after the verdict, the G1 protocol; the look test gets its own plan after G1 |
-| 2 | Fate of the code | Core is written to stay (tests, a clean boundary); the MonoGame layer in shapes is thrown away after the look test |
+| 2 | Fate of the code | Core is written to stay (tests, a clean boundary); the MonoGame layer, with its shapes and its basic art, is thrown away after the look test |
 | 3 | Who writes | the agent loop of §2; the owner plays at the stops |
 | 4 | Machines | the playtest build targets `win-x64` and `osx-arm64`; the keyboard is the main control, a gamepad works from the first playable ticket but testers need not own one |
 | 5 | Playtest | live or on a call for at least three of five testers, and the game always writes a log of the performance (after the verdict, §7) |
@@ -48,6 +49,8 @@ The proof of concept ends at stop 3 (§6). The package for five outside testers 
 | 20 | Cards | self cards: damage, attack speed, range, Vanish cooldown, one more card per throw. Chorus card: damage for every understudy. Any card may be taken again. An understudy is a snapshot of the magician in the act it was recorded: it has every self card the magician had then |
 | 21 | The measure of applause | a share: applause collected in the act as a percentage of the critics released in that act, with two thresholds (15 % and 35 % to start with) and a bar with two notches on the screen. More than nothing but under the first threshold offers one card, the first threshold a choice of two, the second a choice of three with a chance of the chorus card. Replaces the counts (0–2, 3–5, 6 or more) of the table in vision §4 |
 | 22 | The bot guard | 20 seeds. The orbit player loses the box office by the end of act six in at least 16 of them; the doors player finishes act ten in at least 16. This reads the "must lose" and "must reach act ten" of vision §12 (e) as 16 of 20, the measure of faith-defense's map standard. Both pick cards in a fixed order, so the result depends on the route |
+| 23 | Basic graphics | generated art, pulled forward at the owner's wish: a sprite for every figure and thing that stands on the stage in the prototype, and the stage set. This overturns the "no art is generated before G1" of vision §10 and the split of tools in the vision's decision 25. PixelLab may be used, and the owner wants to try a new tool beside it: ludo.ai is the candidate (the vision gave it one afternoon on what PixelLab does not cover; here it is tried on the figures too). Which tool and which look is the owner's pick on captured frames (T07b). An understudy is never new art: it is the magician's sprite through a treatment, as vision §10 says. The look test with its four candidate styles stays where the vision put it, after G1, and what is made now may be replaced by it |
+| 24 | The back wall | the top of the stage is a back wall, and the floor that can be walked starts at its foot (T07a). The screen stays the 48 × 27 of decision 14; the floor is what lies below the wall. The review of T02 left this to the owner as a design question (a figure at the top edge was drawn mostly off the screen) and it was not asked: it stands as recommended and is the owner's to overturn |
 
 Taken without a question, each a setting or a hypothesis:
 
@@ -68,7 +71,7 @@ Three projects, with one-way dependencies: `Understudies.Core` ← `Understudies
   - Randomness only through the seeded SplitMix64 streams ported from `faith-defense` (`src/FaithDefense.Core/Randomness/`); never `System.Random`. The simulation never iterates a `Dictionary` or a `HashSet`, and never reads a clock.
   - `Tuning` is one immutable record parsed from `tuning.json`. The committed file is the only place a tunable number lives; the tests read the same file.
   - The accumulator clock that turns frame time into whole ticks (the `SimulationClock` of faith-defense) lives here too: it needs nothing from the engine, and this is where it can be tested.
-- **`src/Understudies.Game`** is the MonoGame layer: positions interpolated between the last two ticks, the stage drawn in world units scaled to the window, everything as shapes. A figure is drawn upright from its feet and sorted by its y.
+- **`src/Understudies.Game`** is the MonoGame layer: positions interpolated between the last two ticks, the stage drawn in world units scaled to the window, everything as shapes. A figure is drawn upright from its feet and sorted by its y. From T07c on a figure is a sprite read from an image file under `art/`, and whatever a later ticket adds to the stage gets its sprite by the same recipe, except an understudy, which is the magician's sprite through a treatment. Until then, and for bars, the thrown card, the Vanish's cloud and other marks of the screen, shapes.
 - **`tests/Understudies.Core.Tests`** holds the rule tests and the scripted players.
 
 ## 5. Tickets
@@ -107,8 +110,33 @@ Space, or the gamepad's A: a short dash in the direction of travel, a moment in 
 Decision 16: the short radius, the return to the box office, a touch that hurts on a cooldown, the magician's hit points. At zero the magician falls and the show closes (the fall inside an act becomes T13).
 - Tests: a critic inside the radius walks at the magician and outside it goes back; a touch hurts once per cooldown and never during the Vanish.
 
+**T07a The back wall.**
+The top of the stage is a back wall (decision 24): the floor that can be walked starts at its foot, a new number in `tuning.json`. The back alley's door moves down to that foot, so that the two numbers agree, and a door above the floor's top is refused when the file is read. The view draws the wall as a plain band until the stage set (T07d).
+- Tests: the magician cannot walk onto the back wall; a critic entering by a door in the back wall enters on the floor (in a tuning of the test's own, since only the first door is open before T14); a door above the floor's top is refused with its key's name.
+- A captured frame shows the magician standing as far up the stage as it can go, whole on the screen.
+
+T07b to T07d are the basic graphics of decision 23, the one exception to "in order" (§2). T07b waits for the owner (a server to connect, then a pick), so the loop does not stand at it: it goes on with T08 and later on shapes and takes these three as soon as each is free. They change only the view.
+
+**T07b The art spike.** *Needs the owner twice: an art tool's server connected to this project before it, the pick after it.*
+The same three things from every art tool that is connected: the magician standing, a critic, and the box office; each alone on a transparent background, as a PNG, seen as the game sees them (top-down three-quarter) and in the proportions of vision §10. Each tool in the look it is good at: PixelLab pixel art, a tool that is not a pixel-art tool a flat cut-out (the vision's candidate B). What a tool returns is kept under `art/<tool>/`, with the prompt and the settings of every generation in `art/<tool>/manifest.json`, as faith-defense kept them. At most thirty generations a tool.
+
+The game gets the smallest way to draw a figure from an image file: `Texture2D.FromFile` and the upright draw there already is, no atlas and no animation. `art/` is found as `tuning.json` is, in the current directory first and beside the executable otherwise. Pixel art is drawn at ten sprite pixels to a world unit without smoothing; anything else at thirty or more pixels to a unit, smoothed. The capture mode takes one more argument, `--art <tool>`; without it the game draws shapes as before.
+- One captured frame per tool and one in shapes, all of the same ticks; the pull request shows them side by side and says how many generations each tool took.
+- If only one tool is connected the spike still runs, and its pull request says plainly that nothing new was tried.
+- The owner picks the tool and the look. Nothing more is generated before the pick.
+
+**T07c Sprites.** *After the pick.*
+The picked tool's recipe is written down in `art/prompt-guide.md`, so that later figures match, and makes a sprite for everything that stands on the stage when this ticket is built: the magician, the critic, the box office, and whatever later tickets have added by then. The other tool's folder and the `--art` argument go: the game draws sprites. A figure faces the way it goes (mirrored), bobs as it walks and has a shadow on the floor under its feet; there is no walk cycle. What a tint said before, a tint still says (a stunned critic, the magician in the moment nothing hurts), and the flash of T08 still works: a white copy of the sprite, since a tint can only darken.
+- A captured frame shows it: the magician is told from a critic at a glance, and one critic from the next in a crowd.
+- No test.
+
+**T07d The stage set.** *After the pick.*
+The stage stops being a brown rectangle: a floor, a curtain along the back wall of T07a, footlights along the bottom edge, and the three stage doors drawn as doors, the open one lit; made with the picked tool or composed from its pieces.
+- A captured frame shows the set.
+- No test.
+
 **T08 Juice.**
-Driven by the tick's events: a flash on a hit, paper scraps and a fading body on a kill, a trail behind a thrown card, a shake of the screen when the box office is struck, a hit-stop on the Vanish.
+Driven by the tick's events: a flash on a hit, paper scraps and a fading body on a kill, a trail behind a thrown card, a shake of the screen when the box office is struck, a hit-stop on the Vanish. The juice goes through a figure's own draw call and assumes no rectangle, so it holds when figures become sprites (T07c).
 - A captured frame taken in the middle of a fight shows scraps, a trail and a flash.
 - No test; the owner judges it at stop 1.
 
@@ -138,8 +166,8 @@ Three doors that open in acts 1, 3 and 6. Each act has a budget and each enemy a
 - Tests: an act's purchases never exceed its budget and leave less than the cheapest enemy; nothing enters by a closed door; the same seed gives the same performance and another seed a different one.
 
 **T15 The stagehand.**
-A second enemy from act two: fast, frail, and it never turns on the magician (decision 16).
-- Tests: no stagehand in act one; a stagehand inside the radius keeps walking to the box office.
+A second enemy from act two: fast, frail, and it never turns on the magician (decision 16). From this ticket on the throw aims ahead of a moving target: a straight card at T05's speed misses anything faster than a critic (the ceiling is written where the throw is made).
+- Tests: no stagehand in act one; a stagehand inside the radius keeps walking to the box office; a card thrown at a stagehand running across the line of fire hits it.
 
 ### Stop 3: the rule
 
@@ -188,4 +216,4 @@ In scope, but not sharp enough for a ticket yet. The first four wait for the ver
 
 ## 8. Out of scope
 
-Not in the prototype (decision 18): the brute, the heckler and the Reviewer; kits other than thrown cards; evolutions and statuses; stage hazards; music and the pit orchestra; unlocks, modifiers, the score and the performance code; a settings menu; re-recording an understudy; any art, and the look test.
+Not in the prototype (decision 18): the brute, the heckler and the Reviewer; kits other than thrown cards; evolutions and statuses; stage hazards; music and the pit orchestra; unlocks, modifiers, the score and the performance code; a settings menu; re-recording an understudy; art beyond decision 23 (walk cycles, portraits, a title screen), and the look test with its four candidate styles.

@@ -209,7 +209,12 @@ public class VanishTests
         simulation.Step(Vanish);
         Assert.That(simulation.MagicianIsInvulnerable, Is.True);
 
-        Run(simulation, ticks: 14);
+        // The button held down: every press after the first is refused, and a refused press renews nothing.
+        for (int i = 0; i < 14; i++)
+        {
+            simulation.Step(Vanish);
+        }
+
         Assert.That(simulation.MagicianIsInvulnerable, Is.True);
 
         Run(simulation, ticks: 1);
@@ -223,9 +228,10 @@ public class VanishTests
         simulation.Step(Vanish);
         Assert.That(simulation.Events, Is.EqualTo(new[] { new TickEvent(TickEventKind.Vanish, Mark) }));
 
-        // A refused press is no Vanish.
+        // A refused press is no Vanish: no event, and no second cloud.
         simulation.Step(Vanish);
         Assert.That(simulation.Events, Is.Empty);
+        Assert.That(simulation.Clouds, Has.Count.EqualTo(1));
     }
 
     [Test]
@@ -304,6 +310,30 @@ public class VanishTests
 
         Run(simulation, ticks: 1);
         Assert.That(simulation.Critics[0].IsStunned, Is.False);
+        Assert.That(simulation.Critics[0].Position, Is.EqualTo(Door + new Vector2(0f, 1f)));
+    }
+
+    [Test]
+    public void Step_TwoCloudsAtOnce_TheSecondStunsAsTheFirstDoes()
+    {
+        // Two Vanishes to the right, a tick apart, each cloud there for five ticks. The first cloud is six units
+        // to the critic's left and touches nobody; the second is left under the critic, which has walked one step.
+        Tuning tuning = ACriticWalksDown with
+        {
+            MagicianMark = Door + new Vector2(-6f, 2.25f),
+            VanishCooldown = 1f / Simulation.TicksPerSecond,
+            VanishCloudTime = 5f / Simulation.TicksPerSecond,
+        };
+        Simulation simulation = ACriticAtTheDoor(tuning);
+        var vanishRight = new MagicianInput(new Vector2(1f, 0f), Vanish: true);
+
+        simulation.Step(vanishRight);
+        Assert.That(simulation.Critics[0].IsStunned, Is.False);
+        Assert.That(simulation.Critics[0].Position, Is.EqualTo(Door + new Vector2(0f, 1f)));
+
+        simulation.Step(vanishRight);
+        Assert.That(simulation.Clouds, Has.Count.EqualTo(2));
+        Assert.That(simulation.Critics[0].IsStunned, Is.True);
         Assert.That(simulation.Critics[0].Position, Is.EqualTo(Door + new Vector2(0f, 1f)));
     }
 
