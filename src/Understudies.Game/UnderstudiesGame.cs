@@ -237,9 +237,10 @@ internal sealed class UnderstudiesGame : Microsoft.Xna.Framework.Game
         float scale = MathF.Min(viewport.Width / Tuning.StageSize.X, viewport.Height / Tuning.StageSize.Y);
         Vector2 corner = (new Vector2(viewport.Width, viewport.Height) - (Tuning.StageSize * scale)) / 2f;
 
-        // A shake moves the whole picture, bars and all. The strip of the window it uncovers at an edge is the
-        // surround, laid afresh under every frame: nothing of the frame before shows there.
+        // A shake moves the whole picture, bars and all. The wall and the floor are laid as far past the stage's
+        // edge as the stage is moved, so the strip of the window a shake uncovers is stage and not the surround.
         corner += _juice.Shake * scale;
+        Vector2 past = Vector2.Abs(_juice.Shake);
         Matrix worldToScreen = Matrix.CreateScale(scale, scale, 1f) * Matrix.CreateTranslation(corner.X, corner.Y, 0f);
 
         GraphicsDevice.Clear(Surround);
@@ -247,8 +248,9 @@ internal sealed class UnderstudiesGame : Microsoft.Xna.Framework.Game
         // The back wall, the floor below it and what lies flat on the floor.
         _spriteBatch.Begin(transformMatrix: worldToScreen);
         var floorTopLeft = new Vector2(0f, Tuning.StageFloorTop);
-        Fill(Vector2.Zero, Tuning.StageSize with { Y = Tuning.StageFloorTop }, BackWall);
-        Fill(floorTopLeft, Tuning.StageSize - floorTopLeft, Floor);
+        var across = new Vector2(Tuning.StageSize.X + (2f * past.X), 0f);
+        Fill(-past, across with { Y = Tuning.StageFloorTop + past.Y }, BackWall);
+        Fill(floorTopLeft with { X = -past.X }, across with { Y = Tuning.StageSize.Y - Tuning.StageFloorTop + past.Y }, Floor);
         for (int i = 0; i < Tuning.StageDoors.Count; i++)
         {
             // A door is a mat as wide as the door, the half of it that is on the floor. Only the first door is open.
@@ -308,24 +310,18 @@ internal sealed class UnderstudiesGame : Microsoft.Xna.Framework.Game
             }
 
             // The trail: a streak from the middle of the card back along its flight, so that a card that is in the
-            // air for an eighth of a second is seen. Pieces that all start at the card and reach further and
-            // further back lie on one another, thickest at the card.
+            // air for an eighth of a second is seen.
             // ponytail: the streak never reaches back past the magician, who throws every card there is. When an
             // understudy throws too, a card has to say where it was thrown from.
-            const int pieces = 4;
             Vector2 middle = below - new Vector2(0f, ThrownCardLift + (ThrownCardHeight / 2f));
             Vector2 back = -Vector2.Normalize(flown)
                 * MathF.Min(Juice.TrailLength, Vector2.Distance(below, magicianFeet));
-            for (int i = 1; i <= pieces; i++)
-            {
-                Vector2 reach = back * ((float)i / pieces);
-                FillTurned(
-                    middle + (reach / 2f),
-                    new Vector2(reach.Length(), Juice.TrailWidth),
-                    MathF.Atan2(reach.Y, reach.X),
-                    ThrownCardFace * (Juice.TrailOpacity / pieces),
-                    Depth(below));
-            }
+            FillTurned(
+                middle + (back / 2f),
+                new Vector2(back.Length(), Juice.TrailWidth),
+                MathF.Atan2(back.Y, back.X),
+                ThrownCardFace * Juice.TrailOpacity,
+                Depth(below));
         }
 
         _spriteBatch.End();
