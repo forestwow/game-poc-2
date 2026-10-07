@@ -51,7 +51,7 @@ internal sealed class Juice(Random random)
     private const float StrikeTrauma = 0.8f;
     private const float HurtTrauma = 0.7f;
     private const float TraumaFade = 3f;
-    private const float ShakeReach = 0.15f;
+    private const float ShakeReach = 0.2f;
 
     // The moment of a Vanish holds the world still for this long: three frames of sixty a second.
     private const float VanishHitStop = 0.05f;
