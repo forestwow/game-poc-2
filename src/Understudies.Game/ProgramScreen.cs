@@ -8,7 +8,8 @@ using Vector2 = System.Numerics.Vector2;
 namespace Understudies.Game;
 
 // The program's screen (plan T18): the offer as cards on the dimmed stage, the choosing, and the card just taken
-// shown for a moment. It is a part of the game's one class because it draws with that class's batch and words.
+// shown for a moment. An encore's three cards are offered on the same panels, in the act (plan T23). It is a part
+// of the game's one class because it draws with that class's batch and words.
 internal sealed partial class UnderstudiesGame
 {
     // The cards stand side by side in the front half of the floor, centred, their tops this far above the stage's
@@ -40,27 +41,35 @@ internal sealed partial class UnderstudiesGame
     // How far a stick is pushed to the side before it moves the highlight.
     private const float StickLean = 0.5f;
 
+    // Seconds from an encore's opening in which no card is taken: an encore opens in the middle of a fight, and
+    // the Space pressed for a Vanish a moment too late must not take a card nobody has read.
+    private const float EncoreGuardTime = 0.4f;
+
     // A self card is the magician's yellow and the chorus card the first understudy's green: the two colours the
     // stage already has for the two.
     private static readonly Color Ink = new(24, 18, 28);
     private static readonly Color FaintInk = new(110, 96, 100);
 
-    // The offer of the program that is up, or of the one the act just over had: the simulation empties its own
-    // with the pick. None from going on until the next program: an act that earned no card has none.
+    // The offer that is up, an encore's or the program's, or the one last taken from: the simulation empties its
+    // own with the pick.
     private IReadOnlyList<Card> _offered = [];
     private int _highlighted;
     private int _taken;
     private float _takenLeft;
+    private float _guardLeft;
 
-    /// <summary>The cards are on the screen: a program is up, or its card was taken a moment ago.</summary>
-    private bool ProgramIsShown =>
-        _simulation.Phase == Phase.Program || (_simulation.Phase == Phase.BetweenActs && _takenLeft > 0f);
+    /// <summary>Cards are on offer: an encore is read, or the program.</summary>
+    private bool IsOffered => _simulation.Phase is Phase.Encore or Phase.Program;
+
+    /// <summary>The cards are on the screen: they are on offer, or the program's card was taken a moment ago.</summary>
+    private bool ProgramIsShown => IsOffered || (_simulation.Phase == Phase.BetweenActs && _takenLeft > 0f);
 
     /// <summary>
-    /// A frame's presses in the program. Left and right (the arrows, A and D, a gamepad's d-pad or its left stick)
+    /// A frame's presses in the program, and in an encore. Left and right (the arrows, A and D, a gamepad's d-pad or its left stick)
     /// move the highlight; Enter, Space or the gamepad's A take the highlighted card; 1, 2 and 3 take the card in
     /// that place at once. Every one of them is a press and never a hold: a key or a stick held since the act,
-    /// Space for a Vanish or D to walk, was down the frame before and does nothing until it has been let go.
+    /// Space for a Vanish or D to walk, was down the frame before and does nothing until it has been let go. In
+    /// the first moment of an encore (<see cref="EncoreGuardTime"/>) the highlight moves and nothing is taken.
     /// </summary>
     private void ChooseInTheProgram(KeyboardState keys, GamePadState pad)
     {
@@ -76,6 +85,10 @@ internal sealed partial class UnderstudiesGame
             + (Pressed(Keys.Right) || Pressed(Keys.D) || PadPressed(Buttons.DPadRight) ? 1 : 0)
             - (Pressed(Keys.Left) || Pressed(Keys.A) || PadPressed(Buttons.DPadLeft) ? 1 : 0);
         _highlighted = Math.Clamp(_highlighted + step, 0, _offered.Count - 1);
+        if (_guardLeft > 0f)
+        {
+            return;
+        }
 
         for (int place = 0; place < _offered.Count; place++)
         {
@@ -98,11 +111,17 @@ internal sealed partial class UnderstudiesGame
         Acknowledge(place);
     }
 
-    /// <summary>The card at <paramref name="place"/> was taken: it stays lit for a moment, with a chime.</summary>
+    /// <summary>
+    /// The card at <paramref name="place"/> was taken, with a chime: the program's stays lit for a moment, and an
+    /// encore's is gone at once, for the act goes on.
+    /// </summary>
     private void Acknowledge(int place)
     {
-        _taken = place;
-        _takenLeft = TakenTime;
+        if (_simulation.Phase == Phase.BetweenActs)
+        {
+            _taken = place;
+            _takenLeft = TakenTime;
+        }
 
         // ponytail: the chime of a piece of applause picked up. A sound of its own when the sounds are done over.
         _sound.Play(TickEventKind.ApplausePickedUp);
@@ -117,11 +136,11 @@ internal sealed partial class UnderstudiesGame
             Tuning.StageSize.Y - PanelLift - (IsLit(place) ? PanelRaise : 0f));
     }
 
-    /// <summary>The highlighted card of a program that is up, and afterwards the one that was taken.</summary>
-    private bool IsLit(int place) => place == (_simulation.Phase == Phase.Program ? _highlighted : _taken);
+    /// <summary>The highlighted card while cards are offered, and afterwards the one that was taken.</summary>
+    private bool IsLit(int place) => place == (IsOffered ? _highlighted : _taken);
 
     /// <summary>All of a card that was taken and of every card while they are offered; little of one passed over.</summary>
-    private float Seen(int place) => _simulation.Phase == Phase.Program || IsLit(place) ? 1f : NotTakenOpacity;
+    private float Seen(int place) => IsOffered || IsLit(place) ? 1f : NotTakenOpacity;
 
     private float PanelsBottom => Tuning.StageSize.Y - PanelLift + PanelSize.Y;
 
@@ -143,35 +162,33 @@ internal sealed partial class UnderstudiesGame
             Fill(topLeft, PanelSize with { Y = PanelBand }, whose * Seen(place));
         }
 
-        if (_simulation.Phase == Phase.Program)
+        if (IsOffered)
         {
+            float time = _simulation.Phase == Phase.Encore ? Tuning.EncoreTime : Tuning.ProgramTime;
             FillBar(
                 new Vector2((Tuning.StageSize.X - CountdownBar.X) / 2f, PanelsBottom + 2f),
                 CountdownBar,
-                _simulation.ProgramTicksLeft / MathF.Max(1f, Tuning.ProgramTime * Simulation.TicksPerSecond),
+                _simulation.OfferTicksLeft / MathF.Max(1f, time * Simulation.TicksPerSecond),
                 Words);
         }
     }
 
     /// <summary>
-    /// The words of the program and of the stage between two acts: what the act's applause earned, under its bar,
-    /// and what the magician holds, at the stage's bottom edge; and while the cards are shown the words on them,
-    /// with the countdown and the keys under them while they are offered.
+    /// The words of an encore, of the program and of the stage between two acts: how many encores were taken, under
+    /// the applause's bar, and what the magician holds, at the stage's bottom edge; and while the cards are shown
+    /// the words on them, with the countdown and the keys under them while they are offered.
     /// </summary>
     private void DrawProgramWords()
     {
         float middle = Tuning.StageSize.X / 2f;
 
-        // By the cards that were offered, and not by the applause's band of now: a threshold reloaded while the
-        // program is up must not make the line say three over two panels.
-        string earned = _offered.Count switch
-        {
-            0 => "The house sat on its hands: no applause, no card.",
-            1 => "A little applause, short of the first notch: one card, and no choice.",
-            2 => "The applause reached the first notch: a choice of two cards.",
-            _ => "The applause reached the second notch: a choice of three cards.",
-        };
-        Write(SmallWordsHeight, earned, new Vector2(middle, Tuning.StageFloorTop + 0.9f), 0.5f, ApplauseHeart);
+        int encores = _simulation.EncoresTaken;
+        Write(
+            SmallWordsHeight,
+            $"{(encores == 1 ? "1 encore" : $"{encores} encores")} so far. The next costs {_simulation.EncoreCost} pieces of applause in one act.",
+            new Vector2(middle, Tuning.StageFloorTop + 0.9f),
+            0.5f,
+            ApplauseHeart);
 
         var held = Enum.GetValues<Card>().Where(card => Held(card) > 0).Select(card => $"{Describe(card).Name} x{Held(card)}");
         string holds = string.Join(", ", held) is { Length: > 0 } cards ? $"You hold: {cards}" : "You hold no card yet.";
@@ -214,14 +231,14 @@ internal sealed partial class UnderstudiesGame
             }
         }
 
-        if (_simulation.Phase != Phase.Program)
+        if (!IsOffered)
         {
             return;
         }
 
         // A second that has begun still shows, as on the act's clock. Nobody is to be surprised by what the end
         // of the time does.
-        int seconds = (_simulation.ProgramTicksLeft + Simulation.TicksPerSecond - 1) / Simulation.TicksPerSecond;
+        int seconds = (_simulation.OfferTicksLeft + Simulation.TicksPerSecond - 1) / Simulation.TicksPerSecond;
         bool choice = _offered.Count > 1;
         Write(
             CountdownHeight,

@@ -1,9 +1,10 @@
 namespace Understudies.Core;
 
 /// <summary>
-/// The cards of the program (plan decision 20). Five are self cards, which change the magician and, with it, the
-/// understudy of every act played from then on; one is a chorus card, which changes every understudy and not the
-/// magician. Any of them may be taken again and adds again; how much each gives is the tuning's.
+/// The cards (plan decisions 20 and 26). Five are self cards, which an encore offers: they change the magician
+/// and, with it, the understudy of every act that begins from then on. One is a chorus card, which the program
+/// offers: it changes every understudy and not the magician. Any of them may be taken again and adds again; how
+/// much each gives is the tuning's.
 /// </summary>
 public enum Card
 {
@@ -34,8 +35,8 @@ public enum Card
 
 /// <summary>
 /// The self cards somebody has: how many of each. The magician's are those it has taken in this performance, and
-/// an understudy's those the magician had in the act it was recorded, for ever (plan decision 20). The numbers a
-/// throw runs on are the tuning's as these change them.
+/// an understudy's those the magician had when the act it was recorded in began, for ever (plan decision 20): not
+/// those of that act's encores. The numbers a throw runs on are the tuning's as these change them.
 /// </summary>
 public readonly record struct SelfCards(
     int Damage = 0,

@@ -13,13 +13,20 @@ public enum Phase
     Act,
 
     /// <summary>
-    /// An act is over and its applause has paid for cards: the world stands while the program offers them, until
-    /// <see cref="Simulation.Pick"/> or the end of the program's time. An act that picked up nothing has no program.
+    /// An act stands for an encore (plan decision 26): its applause has paid for one, and the world and the act's
+    /// own time stand while three self cards are offered, until <see cref="Simulation.Pick"/> or the end of the
+    /// encore's time. Then the act goes on.
+    /// </summary>
+    Encore,
+
+    /// <summary>
+    /// An act is over and another follows: the world stands while the program offers the chorus card, until
+    /// <see cref="Simulation.Pick"/> or the end of the program's time.
     /// </summary>
     Program,
 
     /// <summary>
-    /// An act is over, and its card taken if it earned one, and the next has not begun: the world stands until
+    /// An act is over, its program's card taken, and the next has not begun: the world stands until
     /// <see cref="Simulation.GoOn"/>.
     /// </summary>
     BetweenActs,

@@ -62,6 +62,7 @@ public class UnderstudyTests
         // Nor when the act is over: the act just played is an understudy from the next act on.
         Run(simulation, ticks: ActTicks);
 
+        simulation.Pick(0);
         Assert.That(simulation.Phase, Is.EqualTo(Phase.BetweenActs));
         Assert.That(simulation.Understudies, Is.Empty);
     }
@@ -74,6 +75,7 @@ public class UnderstudyTests
         for (int act = 2; act <= 5; act++)
         {
             Run(simulation, ticks: ActTicks);
+            simulation.Pick(0);
             simulation.GoOn();
 
             // In the order of their acts, the oldest first.
@@ -100,6 +102,7 @@ public class UnderstudyTests
             _ => new MagicianInput(new Vector2(0f, -0.5f)),
         });
         Assert.That(first.Select(stood => stood.Position).Distinct().Count(), Is.EqualTo(ActTicks - 10));
+        simulation.Pick(0);
         simulation.GoOn();
 
         // Before the act's first tick the understudy stands on the first place of its route: where the magician
@@ -111,6 +114,7 @@ public class UnderstudyTests
 
         (Vector2 Position, Vector2 Before)[] second = Play(
             simulation, _ => new MagicianInput(new Vector2(0f, 1f)), tick => AssertStandsAsIn(first, ofTheFirst, tick));
+        simulation.Pick(0);
         simulation.GoOn();
 
         // In the third act both play theirs again, each from its first tick, whatever the magician does now.
@@ -138,6 +142,7 @@ public class UnderstudyTests
             _ => default,
         });
         Assert.That(first[20], Is.EqualTo((from + new Vector2(-6f, 0f), from + new Vector2(-6f, 0f))));
+        simulation.Pick(0);
         simulation.GoOn();
 
         // The magician of the second act walks down the stage and never vanishes.
@@ -177,6 +182,7 @@ public class UnderstudyTests
         bool[] fromTheFortyFirst = [.. Enumerable.Range(0, ActTicks).Select(tick => tick is >= 40 and < 70)];
         Play(simulation, tick => new MagicianInput(Vector2.Zero, Vanish: tick == 40), NoteTheCritic);
         Assert.That(stunned, Is.EqualTo(fromTheFortyFirst));
+        simulation.Pick(0);
         simulation.GoOn();
 
         // In the second act the magician only stands there: the stun is the understudy's.
@@ -214,6 +220,7 @@ public class UnderstudyTests
             }
         });
         Assert.That(simulation.Critics[0].HitPoints, Is.EqualTo(1f));
+        simulation.Pick(0);
         simulation.GoOn();
 
         // In the second the magician stays on its mark, out of range: whatever is thrown, the understudy throws.
@@ -235,6 +242,7 @@ public class UnderstudyTests
             events,
             Is.EqualTo(new[] { new TickEvent(TickEventKind.Throw, inRange), new TickEvent(TickEventKind.Kill, Door) }));
         Assert.That(simulation.Critics, Is.Empty);
+        simulation.Pick(0);
         simulation.GoOn();
 
         // In the third act two understudies have their throws ready and nobody is left to throw at.
@@ -252,6 +260,7 @@ public class UnderstudyTests
         // The critic enters on the first tick, after the throws: the magician throws on ticks 1, 46 and 91.
         Play(simulation, _ => default);
         Assert.That((Thrown(byTheMagician: true), Thrown(byTheMagician: false)), Is.EqualTo((3, 0)));
+        simulation.Pick(0);
         simulation.GoOn();
 
         // The understudy's throw is ready when the act begins, and the critic is there: ticks 0, 45 and 90. The
@@ -273,6 +282,7 @@ public class UnderstudyTests
         Assert.That(magicians[15], Is.EqualTo(3));
         Assert.That(magicians[16], Is.EqualTo(4));
         Assert.That(magicians[^1], Is.EqualTo(6));
+        simulation.Pick(0);
         simulation.GoOn();
 
         // An act begins with every understudy's throw ready, though the first threw thirty ticks ago.
@@ -317,8 +327,10 @@ public class UnderstudyTests
     {
         var simulation = Shows.WithOneCritic(Scene);
         Play(simulation, tick => new MagicianInput(Vector2.Zero, Vanish: tick == 20));
+        simulation.Pick(0);
         simulation.GoOn();
         Play(simulation, _ => default);
+        simulation.Pick(0);
         simulation.GoOn();
 
         // An act's recording starts empty: the second act's has no Vanish of the first in it. So the third act has
@@ -336,11 +348,13 @@ public class UnderstudyTests
         // one a step to the right of it.
         var simulation = Shows.WithOneCritic(Scene);
         Play(simulation, tick => tick == 0 ? new MagicianInput(new Vector2(-1f, 0f)) : default);
+        simulation.Pick(0);
         simulation.GoOn();
         Play(simulation, tick => tick == 0 ? new MagicianInput(new Vector2(1f, 0f)) : default);
 
         // From the third act on a throw reaches the critic from anywhere near the mark, and all three are ready.
         simulation.Tuning = Scene with { ThrowRange = 30f };
+        simulation.Pick(0);
         simulation.GoOn();
         simulation.Step(new MagicianInput(new Vector2(0f, 1f)));
 
@@ -361,6 +375,7 @@ public class UnderstudyTests
         var simulation = Shows.WithOneCritic(InRangeOnTheMark with { ActLength = 1f });
         Play(simulation, _ => default);
         simulation.Tuning = InRangeOnTheMark;
+        simulation.Pick(0);
         simulation.GoOn();
         Understudy understudy = simulation.Understudies[0];
         Assert.That(understudy.Route, Has.Count.EqualTo(60));
@@ -382,6 +397,7 @@ public class UnderstudyTests
         Assert.That(thrown[^1], Is.EqualTo(2));
 
         // The next act has it back, from the start of its route.
+        simulation.Pick(0);
         simulation.GoOn();
         Assert.That(understudy.IsOnStage, Is.True);
         simulation.Step(default);
@@ -405,6 +421,7 @@ public class UnderstudyTests
         };
         var simulation = Shows.WithOneCritic(tuning);
         Play(simulation, tick => tick < 24 ? new MagicianInput(new Vector2(-1f, 0f)) : default);
+        simulation.Pick(0);
         simulation.GoOn();
         Understudy understudy = simulation.Understudies[0];
         Critic critic = simulation.Critics[0];
@@ -444,6 +461,7 @@ public class UnderstudyTests
         Play(stood, _ => default);
         foreach (Simulation simulation in new[] { walked, stood })
         {
+            simulation.Pick(0);
             simulation.GoOn();
             Run(simulation, ticks: 3);
             Assert.That(simulation.MagicianPosition, Is.EqualTo(Mark));
@@ -490,7 +508,9 @@ public class UnderstudyTests
         var other = Shows.WithOneCritic(tuning);
         Play(one, tick => new MagicianInput(Vector2.Zero, Vanish: tick == 0));
         Play(other, tick => new MagicianInput(Vector2.Zero, Vanish: tick == otherVanishTick));
+        one.Pick(0);
         one.GoOn();
+        other.Pick(0);
         other.GoOn();
 
         Assert.That(other.ComputeStateHash(), Is.Not.EqualTo(one.ComputeStateHash()));
@@ -507,6 +527,7 @@ public class UnderstudyTests
             var simulation = Shows.WithOneCritic(Scene);
             Play(simulation, tick => tick < 60 ? new MagicianInput(new Vector2(-1f, 0f)) : default);
             simulation.Tuning = Scene with { ThrowRange = 15f, ThrowCooldown = throwCooldown };
+            simulation.Pick(0);
             simulation.GoOn();
             Run(simulation, ticks: 52);
             Assert.That(simulation.ThrownCards.Select(card => card.ThrownByMagician), Is.EqualTo(new[] { false }));

@@ -2,11 +2,12 @@ using System.Numerics;
 
 namespace Understudies.Core.Tests;
 
-/// <summary>How one act of a scripted performance went, as it stood when the act was over and its card taken.</summary>
+/// <summary>
+/// How one act of a scripted performance went, as it stood when the act was over and its program's card taken.
+/// </summary>
 /// <param name="Entries">The enemies let onto the stage in the act, of every kind.</param>
 /// <param name="Applause">The pieces the magician picked up.</param>
-/// <param name="Share">The applause as a share of the entries (plan decision 21).</param>
-/// <param name="Card">The card taken in the act's program, or none when the act earned no program.</param>
+/// <param name="Encores">The encores taken in the act (plan decision 26).</param>
 /// <param name="Fell">Whether the magician fell in the act.</param>
 /// <param name="BoxOffice">What the box office had left.</param>
 /// <param name="Dropped">The pieces of applause dropped in the act, picked up or not.</param>
@@ -20,9 +21,7 @@ namespace Understudies.Core.Tests;
 internal readonly record struct ActRecord(
     int Entries,
     int Applause,
-    float Share,
-    ApplauseBand Band,
-    Card? Card,
+    int Encores,
     bool Fell,
     float BoxOffice,
     int Dropped,
@@ -33,9 +32,9 @@ internal readonly record struct ActRecord(
 /// <summary>A scripted performance played to its end: the ovation or the close.</summary>
 /// <param name="Ended"><see cref="Phase.Ovation"/> or <see cref="Phase.Closed"/>.</param>
 /// <param name="Acts">Every act that was played, the one the show closed in too.</param>
-/// <param name="Offers">What each of those acts' programs offered, from the leftmost: nothing for an act with no program.</param>
+/// <param name="Encores">The cards taken in the encores of each of those acts, in the order they were taken.</param>
 internal sealed record Performance(
-    Phase Ended, IReadOnlyList<ActRecord> Acts, IReadOnlyList<IReadOnlyList<Card>> Offers)
+    Phase Ended, IReadOnlyList<ActRecord> Acts, IReadOnlyList<IReadOnlyList<Card>> Encores)
 {
     /// <summary>The number of the act the performance ended in.</summary>
     public int Act => Acts.Count;
@@ -250,14 +249,16 @@ internal static class ScriptedPlayers
     }
 
     /// <summary>
-    /// Plays one performance with <paramref name="player"/> to its end. Between two acts it does what a person
-    /// does: takes the card <see cref="Choose"/> names, at once, and goes on.
+    /// Plays one performance with <paramref name="player"/> to its end. In an encore it does what a person does:
+    /// takes the card <see cref="Choose"/> names, at once. Between two acts it takes the program's card, at once,
+    /// and goes on.
     /// </summary>
     public static Performance Play(Tuning tuning, ulong seed, Func<Simulation, MagicianInput> player)
     {
         var simulation = new Simulation(tuning, seed);
         var acts = new List<ActRecord>();
-        var offers = new List<IReadOnlyList<Card>>();
+        var encores = new List<IReadOnlyList<Card>>();
+        var taken = new List<Card>();
         float reach = tuning.MagicianRadius + tuning.ApplausePickUpReach;
 
         // Where the pieces lie that were dropped in reach and are not picked up yet. The act's applause is gone
@@ -293,27 +294,25 @@ internal static class ScriptedPlayers
                 }
             }
 
+            if (simulation.Phase == Phase.Encore)
+            {
+                int place = Choose(simulation.Offer);
+                taken.Add(simulation.Offer[place]);
+                simulation.Pick(place);
+            }
+
             if (simulation.Phase is Phase.Curtain or Phase.Act)
             {
                 continue;
             }
 
-            Card[] offer = [.. simulation.Offer];
-            Card? card = null;
-            if (offer.Length > 0)
-            {
-                int place = Choose(offer);
-                card = offer[place];
-                simulation.Pick(place);
-            }
-
-            offers.Add(offer);
+            // The program's one card, where the act has a program.
+            simulation.Pick(0);
+            encores.Add(taken);
             acts.Add(new ActRecord(
                 simulation.ActEntriesMade,
                 simulation.ActApplause,
-                simulation.ActApplauseShare,
-                simulation.ActApplauseBand,
-                card,
+                taken.Count,
                 simulation.MagicianHasFallen,
                 simulation.BoxOfficeHitPoints,
                 dropped,
@@ -322,10 +321,11 @@ internal static class ScriptedPlayers
                 simulation.ComputeStateHash()));
             if (simulation.Phase != Phase.BetweenActs)
             {
-                return new Performance(simulation.Phase, acts, offers);
+                return new Performance(simulation.Phase, acts, encores);
             }
 
             simulation.GoOn();
+            taken = [];
             inReach.Clear();
             dropped = fellInReach = walkedTo = 0;
         }

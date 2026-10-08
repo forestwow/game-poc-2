@@ -73,6 +73,7 @@ public class ActTests
         simulation.Step(default);
 
         // Nobody had to fall for the act to end: it is the first act that is over, and its critic stands.
+        simulation.Pick(0);
         Assert.That(simulation.Phase, Is.EqualTo(Phase.BetweenActs));
         Assert.That(simulation.Act, Is.EqualTo(1));
         Assert.That(simulation.ActTicksLeft, Is.Zero);
@@ -87,6 +88,7 @@ public class ActTests
 
         Run(simulation, ticks: 19);
 
+        simulation.Pick(0);
         Assert.That(simulation.Phase, Is.EqualTo(Phase.BetweenActs));
         Assert.That(simulation.BoxOfficeHitPoints, Is.EqualTo(999f));
     }
@@ -99,6 +101,7 @@ public class ActTests
         var simulation = Shows.WithOneCritic(Scene with { VanishDistance = 0f });
         Run(simulation, ticks: ActTicks - 1);
         simulation.Step(Vanish);
+        simulation.Pick(0);
         Assert.That(simulation.Phase, Is.EqualTo(Phase.BetweenActs));
         Assert.That(simulation.Events, Is.Not.Empty);
         ulong state = simulation.ComputeStateHash();
@@ -132,6 +135,7 @@ public class ActTests
         Critic critic = simulation.Critics[0];
         Vector2 stood = critic.Position;
 
+        simulation.Pick(0);
         simulation.GoOn();
 
         // The second act with its whole time, and the critic where it stood. Nothing has been played yet.
@@ -156,6 +160,7 @@ public class ActTests
         Assert.That(simulation.MagicianHitPoints, Is.LessThan(tuning.MagicianHitPoints - 1f));
         Assert.That(simulation.MagicianPosition.X, Is.LessThan(Mark.X - 1f));
 
+        simulation.Pick(0);
         simulation.GoOn();
 
         // There is nothing between the two positions for the view to draw: the magician is on the mark at once.
@@ -173,6 +178,7 @@ public class ActTests
         Assert.That(simulation.VanishCooldownLeft, Is.EqualTo(1f));
         Assert.That(simulation.MagicianIsInvulnerable, Is.True);
 
+        simulation.Pick(0);
         simulation.GoOn();
 
         Assert.That(simulation.VanishCooldownLeft, Is.Zero);
@@ -189,6 +195,7 @@ public class ActTests
         var simulation = Shows.WithOneCritic(Scene);
         Run(simulation, ticks: ActTicks, Left);
 
+        simulation.Pick(0);
         simulation.GoOn();
 
         // A Vanish from standing goes the way the magician faces: down the stage, as when the first act began.
@@ -224,6 +231,7 @@ public class ActTests
         }
 
         // Everything the act's end could wrongly clear is on the stage.
+        twoActs.Pick(0);
         Assert.That(twoActs.Phase, Is.EqualTo(Phase.BetweenActs));
         Assert.That(twoActs.Critics.Count(critic => critic.IsStunned), Is.GreaterThan(0));
         Assert.That(twoActs.Critics.Count(critic => critic.HitPoints < tuning.Critic().HitPoints), Is.GreaterThan(0));
@@ -232,6 +240,7 @@ public class ActTests
         Assert.That(twoActs.BoxOfficeHitPoints, Is.LessThan(tuning.BoxOfficeHitPoints));
         object[] left = Stage(twoActs);
 
+        twoActs.Pick(0);
         twoActs.GoOn();
 
         // Going on moves nothing but the magician, which was on its mark and whole already.
@@ -278,8 +287,10 @@ public class ActTests
     {
         var simulation = Shows.WithOneCritic(Scene);
         Run(simulation, ticks: ActTicks);
+        simulation.Pick(0);
         simulation.GoOn();
         Run(simulation, ticks: ActTicks);
+        simulation.Pick(0);
         simulation.GoOn();
         Run(simulation, ticks: ActTicks - 1);
         Assert.That(simulation.Phase, Is.EqualTo(Phase.Act));
@@ -316,6 +327,7 @@ public class ActTests
         for (int act = 1; act <= 9; act++)
         {
             Run(simulation, ticks: Simulation.TicksPerSecond);
+            simulation.Pick(0);
             Assert.That(simulation.Phase, Is.EqualTo(Phase.BetweenActs), $"after act {act}");
             simulation.GoOn();
         }

@@ -33,6 +33,7 @@ public class RngTests
         Assert.That((ulong)RngStream.Waves, Is.EqualTo(1UL));
         Assert.That((ulong)RngStream.DoorPlaces, Is.EqualTo(2UL));
         Assert.That((ulong)RngStream.Program, Is.EqualTo(3UL));
+        Assert.That((ulong)RngStream.Encore, Is.EqualTo(4UL));
     }
 
     [Test]

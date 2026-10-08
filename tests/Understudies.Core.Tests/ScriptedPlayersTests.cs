@@ -18,8 +18,8 @@ public class ScriptedPlayersTests
     /// Plan decision 9's question, whether <c>float</c> gives one result on two machines: two scripted
     /// performances, each pinned at the end of its third act and at its end, here (macOS ARM) and in CI (Linux
     /// x64). The earlier pin says how early a disagreement starts. The first is the doors player on the committed
-    /// numbers; the second, the orbit player with a fuller first act, is asserted to have the Vanish and its
-    /// cloud, stunned critics and blows on the box office in it. A change to tuning.json, to a
+    /// numbers, asserted to have an encore in it; the second, the orbit player with a fuller first act, is
+    /// asserted to have the Vanish and its cloud, stunned critics and blows on the box office in it. A change to tuning.json, to a
     /// rule or to a player changes them: pin them again from the failure's message, and say so in the pull
     /// request. If the two machines ever disagree, that is a finding for the owner and not a test to make pass.
     /// </summary>
@@ -30,8 +30,10 @@ public class ScriptedPlayersTests
 
         Assert.Multiple(() =>
         {
-            Assert.That(performance.Acts[2].StateHash, Is.EqualTo(11646234639164644491UL), "the end of act three");
-            Assert.That(performance.Acts[^1].StateHash, Is.EqualTo(18366125120241640357UL), "the end of the performance");
+            // An act that stood for an encore is in what is pinned.
+            Assert.That(performance.Acts.Sum(act => act.Encores), Is.GreaterThan(0), "encores");
+            Assert.That(performance.Acts[2].StateHash, Is.EqualTo(13885894256537837588UL), "the end of act three");
+            Assert.That(performance.Acts[^1].StateHash, Is.EqualTo(16447972836273208917UL), "the end of the performance");
         });
     }
 
@@ -58,8 +60,8 @@ public class ScriptedPlayersTests
             Assert.That(vanishes, Is.GreaterThan(0), "Vanishes");
             Assert.That(blows, Is.GreaterThan(0), "blows on the box office");
             Assert.That(stunned, Is.GreaterThan(0), "stunned critics");
-            Assert.That(performance.Acts[2].StateHash, Is.EqualTo(2910077769663245940UL), "the end of act three");
-            Assert.That(performance.Acts[^1].StateHash, Is.EqualTo(13414949432979666193UL), "the end of the performance");
+            Assert.That(performance.Acts[2].StateHash, Is.EqualTo(3232927010837077928UL), "the end of act three");
+            Assert.That(performance.Acts[^1].StateHash, Is.EqualTo(11559302210917232874UL), "the end of the performance");
         });
     }
 
@@ -73,7 +75,7 @@ public class ScriptedPlayersTests
         {
             Assert.That(other.Ended, Is.EqualTo(one.Ended));
             Assert.That(other.Acts, Is.EqualTo(one.Acts));
-            Assert.That(other.Offers, Is.EqualTo(one.Offers));
+            Assert.That(other.Encores, Is.EqualTo(one.Encores));
         });
     }
 
@@ -96,12 +98,19 @@ public class ScriptedPlayersTests
             return orbit(simulation);
         });
 
-        Assert.That(performance.Acts.Sum(act => act.Applause), Is.GreaterThan(0), "the performance has applause to count");
+        Assert.That(performance.Acts.Sum(act => act.Encores), Is.GreaterThan(0), "the performance has encores to count");
         Assert.That(performance.Acts[^1].BoxOffice, Is.LessThan(Crowded.BoxOfficeHitPoints), "and blows on the box office");
+        int encoresBefore = 0;
         for (int i = 0; i < performance.Acts.Count; i++)
         {
             ActRecord act = performance.Acts[i];
-            IReadOnlyList<Card> offer = performance.Offers[i];
+            IReadOnlyList<Card> taken = performance.Encores[i];
+
+            // Decision 26: every encore costs what the first does and more for each taken before it, in the
+            // performance; an act pays with its own applause.
+            int spent = Enumerable.Range(encoresBefore, taken.Count)
+                .Sum(before => Crowded.EncoreFirstCost + (Crowded.EncoreCostGrowth * before));
+            encoresBefore += taken.Count;
             bool last = i == performance.Acts.Count - 1;
             Assert.Multiple(() =>
             {
@@ -111,22 +120,9 @@ public class ScriptedPlayersTests
                     $"act {i + 1}: entries");
                 Assert.That(act.FellInReach + act.WalkedTo, Is.EqualTo(act.Applause), $"act {i + 1}: applause");
                 Assert.That(act.Dropped, Is.GreaterThanOrEqualTo(act.Applause), $"act {i + 1}: dropped");
-                Assert.That(act.Share, Is.EqualTo((float)act.Applause / act.Entries), $"act {i + 1}: share");
-
-                // Decision 21: nothing, under the first threshold, the first, the second; and a card offered
-                // for each of the band's places, but after the last act.
-                ApplauseBand band = act.Applause == 0 ? ApplauseBand.None
-                    : act.Share >= Crowded.ApplauseSecondThreshold ? ApplauseBand.Second
-                    : act.Share >= Crowded.ApplauseFirstThreshold ? ApplauseBand.First
-                    : ApplauseBand.UnderTheFirst;
-                Assert.That(act.Band, Is.EqualTo(band), $"act {i + 1}: band");
-                Assert.That(offer, Has.Count.EqualTo(last ? 0 : (int)band), $"act {i + 1}: offer");
-
-                // The card taken is the first of the order that the offer has.
-                Assert.That(
-                    act.Card,
-                    Is.EqualTo(offer.Count == 0 ? (Card?)null : ScriptedPlayers.CardOrder.First(offer.Contains)),
-                    $"act {i + 1}: card");
+                Assert.That(act.Encores, Is.EqualTo(taken.Count), $"act {i + 1}: encores");
+                Assert.That(spent, Is.LessThanOrEqualTo(act.Applause), $"act {i + 1}: what its encores cost");
+                Assert.That(taken, Has.None.EqualTo(Card.ChorusDamage), $"act {i + 1}: an encore's cards");
                 if (!last)
                 {
                     Assert.That(act.BoxOffice, Is.EqualTo(boxOfficeAtTheCurtain[i + 1]), $"act {i + 1}: box office");
@@ -387,21 +383,21 @@ public class ScriptedPlayersTests
             var mine = Enumerable.Range(1, Seeds).Select(seed => Of(player, seed)).ToList();
             table.WriteLine();
             table.WriteLine($"{players[player].Name}: the acts' averages over the performances that played the act");
-            table.WriteLine("act  played  entries  share  band 0/<1/1/2  dropped  in reach  walked to  fell  box office  cards taken");
+            table.WriteLine("act  played  entries  dropped  in reach  walked to  applause  encores  fell  box office  cards taken in the encores");
             for (int act = 0; act < mine.Max(played => played.Acts.Count); act++)
             {
                 var acts = mine.Where(played => played.Acts.Count > act).Select(played => played.Acts[act]).ToList();
-                string bands = string.Join("/", Enum.GetValues<ApplauseBand>().Select(band => acts.Count(a => a.Band == band)));
+                var taken = mine.Where(played => played.Acts.Count > act).SelectMany(played => played.Encores[act]).ToList();
                 string cards = string.Join(" ", ScriptedPlayers.CardOrder
-                    .Select(card => (Card: card, Taken: acts.Count(a => a.Card == card)))
-                    .Where(taken => taken.Taken > 0)
-                    .Select(taken => $"{taken.Card}:{taken.Taken}"));
+                    .Select(card => (Card: card, Taken: taken.Count(t => t == card)))
+                    .Where(count => count.Taken > 0)
+                    .Select(count => $"{count.Card}:{count.Taken}"));
                 table.WriteLine(
-                    $"{act + 1,3}  {acts.Count,6}  {Number(acts.Average(a => a.Entries)),7}  {Number(acts.Average(a => a.Share), "0.00"),5}  {bands,13}  {Number(acts.Average(a => a.Dropped)),7}  {Number(acts.Average(a => a.FellInReach)),8}  {Number(acts.Average(a => a.WalkedTo)),9}  {acts.Count(a => a.Fell),4}  {Number(acts.Average(a => a.BoxOffice)),10}  {cards}".TrimEnd());
+                    $"{act + 1,3}  {acts.Count,6}  {Number(acts.Average(a => a.Entries)),7}  {Number(acts.Average(a => a.Dropped)),7}  {Number(acts.Average(a => a.FellInReach)),8}  {Number(acts.Average(a => a.WalkedTo)),9}  {Number(acts.Average(a => a.Applause)),8}  {Number(acts.Average(a => a.Encores)),7}  {acts.Count(a => a.Fell),4}  {Number(acts.Average(a => a.BoxOffice)),10}  {cards}".TrimEnd());
             }
 
             table.WriteLine(
-                $"cards taken in a performance: {Number(mine.Average(played => played.Acts.Count(a => a.Card is not null)))}");
+                $"encores taken in a performance: {Number(mine.Average(played => played.Acts.Sum(a => a.Encores)))}");
         }
 
         table.WriteLine();

@@ -31,6 +31,7 @@ public class ApplauseTests
     /// every half second at what is within nine units, and its card flies a unit a tick: a critic that enters on
     /// the first tick falls on the eighth. The magician's circle is 0.6 and it reaches 0.4 past it: a piece no
     /// further than one unit from its centre is picked up. A piece lies for four seconds, longer than an act.
+    /// An encore costs more pieces than an act has.
     /// The stage has no back wall and the curtain no length: these tests count their ticks from the first tick
     /// of an act.
     /// </summary>
@@ -53,8 +54,7 @@ public class ApplauseTests
         ThrownCardDamage = 1f,
         ApplauseTime = 4f,
         ApplausePickUpReach = 0.4f,
-        ApplauseFirstThreshold = 0.15f,
-        ApplauseSecondThreshold = 0.35f,
+        EncoreFirstCost = 1000,
     };
 
     /// <summary>
@@ -113,6 +113,7 @@ public class ApplauseTests
         // range, and the understudy on the mark is the only one to throw.
         var simulation = new Simulation(Scene, seed: 1, [[], [new PlannedEntry(Simulation.TicksPerSecond, Door: 0, Kind: 0)]]);
         PlayTheAct(simulation, _ => default);
+        simulation.Pick(0);
         simulation.GoOn();
 
         List<TickEvent> events = PlayTheAct(simulation, _ => Right);
@@ -132,6 +133,7 @@ public class ApplauseTests
         Tuning tuning = Scene.WithCritic(critic => critic with { HitPoints = hitPoints });
         var simulation = new Simulation(tuning, seed: 1, [[], [new PlannedEntry(0, Door: 0, Kind: 0)]]);
         PlayTheAct(simulation, _ => default);
+        simulation.Pick(0);
         simulation.GoOn();
 
         List<TickEvent> events = PlayTheAct(simulation, _ => default);
@@ -236,6 +238,7 @@ public class ApplauseTests
         // understudy walks onto the piece and stands on it for more than a second.
         var simulation = new Simulation(Scene, seed: 1, [[], [new PlannedEntry(0, Door: 0, Kind: 0)]]);
         PlayTheAct(simulation, tick => tick < 30 ? default : Up);
+        simulation.Pick(0);
         simulation.GoOn();
 
         List<TickEvent> events = PlayTheAct(simulation, _ => default);
@@ -290,87 +293,17 @@ public class ApplauseTests
             _ => default,
         });
 
-        // The act that is over still says what it earned, in its program and when a card is taken.
+        // The act that is over still says what it picked up, in its program and when the card is taken.
         Assert.That(simulation.Phase, Is.EqualTo(Phase.Program));
         simulation.Pick(0);
         Assert.That(simulation.Phase, Is.EqualTo(Phase.BetweenActs));
         Assert.That(simulation.ActApplause, Is.EqualTo(1));
-        Assert.That(simulation.ActApplauseBand, Is.EqualTo(ApplauseBand.Second));
         Assert.That(simulation.ApplauseOnTheFloor, Has.Count.EqualTo(1));
 
         simulation.GoOn();
 
         Assert.That(simulation.ActApplause, Is.Zero);
-        Assert.That(simulation.ActApplauseShare, Is.Zero);
-        Assert.That(simulation.ActApplauseBand, Is.EqualTo(ApplauseBand.None));
         Assert.That(simulation.ApplauseOnTheFloor, Is.Empty);
-    }
-
-    [Test]
-    public void ActApplauseShare_IsOfTheCriticsLetInInThisActSoFar()
-    {
-        // Four critics in the first act and two in the second, ten ticks apart. Every one falls; in each act the
-        // magician picks up the first one's piece and no other.
-        var simulation = new Simulation(
-            PointBlank,
-            seed: 1,
-            [[.. Every10Ticks(4)], [.. Every10Ticks(2)]]);
-
-        // Nobody has entered: there is nothing to have a share of.
-        Assert.That(simulation.ActApplauseShare, Is.Zero);
-
-        // One piece, and one critic let in so far of the act's four.
-        Run(simulation, ticks: 4);
-        Assert.That((simulation.ActApplause, simulation.ActEntriesMade), Is.EqualTo((1, 1)));
-        Assert.That(simulation.ActApplauseShare, Is.EqualTo(1f));
-
-        PlayTheActAndPickUp(simulation, pieces: 1);
-        Assert.That(simulation.ActApplauseShare, Is.EqualTo(0.25f));
-
-        // The second act counts its own two critics, and not the six of the performance.
-        simulation.Pick(0);
-        simulation.GoOn();
-        PlayTheActAndPickUp(simulation, pieces: 1);
-        Assert.That(simulation.ActApplause, Is.EqualTo(1));
-        Assert.That(simulation.ActApplauseShare, Is.EqualTo(0.5f));
-    }
-
-    // Of twenty critics, three are the first threshold's fifteen in a hundred and seven the second's thirty-five.
-    [TestCase(0, ApplauseBand.None)]
-    [TestCase(1, ApplauseBand.UnderTheFirst)]
-    [TestCase(2, ApplauseBand.UnderTheFirst)]
-    [TestCase(3, ApplauseBand.First)]
-    [TestCase(6, ApplauseBand.First)]
-    [TestCase(7, ApplauseBand.Second)]
-    [TestCase(20, ApplauseBand.Second)]
-    public void ActApplauseBand_WhenTheActIsOver_IsTheThresholdItsShareHasReached(int pieces, ApplauseBand band)
-    {
-        var simulation = new Simulation(PointBlank with { ActLength = 4f }, seed: 1, [[.. Every10Ticks(20)]]);
-
-        PlayTheActAndPickUp(simulation, pieces);
-
-        // The act is over: in its program, when it has earned one.
-        Assert.That(simulation.Phase, Is.EqualTo(pieces == 0 ? Phase.BetweenActs : Phase.Program));
-        Assert.That((simulation.ActApplause, simulation.ActEntriesMade), Is.EqualTo((pieces, 20)));
-        Assert.That(simulation.ActApplauseBand, Is.EqualTo(band));
-    }
-
-    [Test]
-    public void ActApplauseBand_APieceInAnActNobodyEntered_IsUnderTheFirstAndNotNone()
-    {
-        // Nobody throws in the first act, and its one critic is still at the door when the second begins: an act
-        // with no critic of its own, in which the magician stands at the door, fells that one and picks its piece
-        // up. A share of nothing, and still more than no applause: only an act that picked up nothing has none.
-        Simulation simulation = Shows.WithOneCritic(PointBlank with { ThrowRange = 0f });
-        PlayTheAct(simulation, _ => default);
-        simulation.Tuning = PointBlank;
-        simulation.GoOn();
-
-        Run(simulation, ticks: 4);
-
-        Assert.That((simulation.ActApplause, simulation.ActEntriesMade), Is.EqualTo((1, 0)));
-        Assert.That(simulation.ActApplauseShare, Is.Zero);
-        Assert.That(simulation.ActApplauseBand, Is.EqualTo(ApplauseBand.UnderTheFirst));
     }
 
     [Test]
@@ -402,9 +335,6 @@ public class ApplauseTests
         Assert.That((one.ActApplause, other.ActApplause), Is.EqualTo((1, 0)));
         Assert.That(other.ComputeStateHash(), Is.Not.EqualTo(one.ComputeStateHash()));
     }
-
-    private static IEnumerable<PlannedEntry> Every10Ticks(int critics) =>
-        Enumerable.Range(0, critics).Select(i => new PlannedEntry(10 * i, Door: 0, Kind: 0));
 
     private static int Count(List<TickEvent> events, TickEventKind kind) =>
         events.Count(happened => happened.Kind == kind);
@@ -443,19 +373,5 @@ public class ApplauseTests
         }
 
         return events;
-    }
-
-    /// <summary>
-    /// Plays what is left of an act of <see cref="PointBlank"/>: the magician stands at the door until the act has
-    /// picked up <paramref name="pieces"/>, then steps down to where it still fells every critic that enters and
-    /// reaches no piece.
-    /// </summary>
-    private static void PlayTheActAndPickUp(Simulation simulation, int pieces)
-    {
-        while (simulation.Phase == Phase.Act)
-        {
-            bool away = simulation.ActApplause >= pieces && simulation.MagicianPosition.Y < 3f;
-            simulation.Step(away ? Down : default);
-        }
     }
 }

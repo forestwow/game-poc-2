@@ -203,6 +203,7 @@ public class WaveTests
             var simulation = new Simulation(ShortActs, seed);
             for (int i = 0; i < 25 * Simulation.TicksPerSecond; i++)
             {
+                simulation.Pick(0);
                 simulation.GoOn();
                 simulation.Step(default);
             }
@@ -248,6 +249,7 @@ public class WaveTests
             }
 
             Assert.That(simulation.ActEntriesMade, Is.EqualTo(simulation.ActEntries.Count));
+            simulation.Pick(0);
             simulation.GoOn();
         }
     }
@@ -261,6 +263,7 @@ public class WaveTests
         int second = first + ShortActs.BudgetGrowthPerAct;
         Play(simulation);
         Assert.That(simulation.Critics, Has.Count.EqualTo(first));
+        simulation.Pick(0);
         simulation.GoOn();
 
         Play(simulation);
@@ -315,6 +318,7 @@ public class WaveTests
         {
             open.Add([simulation.DoorIsOpen(0), simulation.DoorIsOpen(1), simulation.DoorIsOpen(2)]);
             simulation.Step(default);
+            simulation.Pick(0);
             simulation.GoOn();
         }
 
@@ -350,6 +354,7 @@ public class WaveTests
 
         simulation.Tuning = ShortActs with { FirstActBudget = 1, BudgetGrowthPerAct = 0 };
         Play(simulation);
+        simulation.Pick(0);
         simulation.GoOn();
 
         Assert.That(simulation.Plan.Select(act => act.Count).Take(2), Is.EqualTo(new[] { first, second }));
