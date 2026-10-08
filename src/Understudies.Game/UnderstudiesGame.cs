@@ -57,6 +57,9 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
     private const float WordsHeight = 1.2f;
     private const float NumberHeight = 0.8f;
 
+    // The back wall's middle line keeps this far from the act's line on its left and the clock on its right.
+    private const float WordsGap = 1f;
+
     // The one caption of a performance, over the head of the first understudy and going where it goes: through
     // the curtain of the second act and for the first seconds of that act, long enough to be read. Where the
     // understudy stands beside the magician the words are clear of the bar over the magician's head.
@@ -886,12 +889,21 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
             act += $": {toCome} to come";
         }
 
+        string clock = $"{seconds / 60}:{seconds % 60:00}";
         _spriteBatch.Begin();
         Write(WordsHeight, act, new Vector2(1f, line), 0f, Words);
-        Write(WordsHeight, $"{seconds / 60}:{seconds % 60:00}", new Vector2(Tuning.StageSize.X - 1f, line), 1f, Words);
+        Write(WordsHeight, clock, new Vector2(Tuning.StageSize.X - 1f, line), 1f, Words);
         if (said is not null)
         {
-            Write(WordsHeight, said, new Vector2(Tuning.StageSize.X / 2f, line), 0.5f, Magician);
+            // The three share one line of the wall, and the middle one has what the other two leave: in the
+            // middle of the stage where it has the room, moved aside where it has not, and smaller where it is
+            // longer than all that is left, so that it is never drawn over the act or the clock.
+            float from = 1f + Wide(WordsHeight, act) + WordsGap;
+            float to = Tuning.StageSize.X - 1f - Wide(WordsHeight, clock) - WordsGap;
+            float height = WordsHeight * MathF.Min(1f, (to - from) / Wide(WordsHeight, said));
+            float half = MathF.Min(Wide(height, said), to - from) / 2f;
+            float middle = Math.Clamp(Tuning.StageSize.X / 2f, from + half, to - half);
+            Write(height, said, new Vector2(middle, line), 0.5f, Magician);
         }
 
         // Beside the bar's end, what it counts: the pieces toward the next encore, over its cost.
@@ -949,12 +961,16 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
         _spriteBatch.DrawString(font, text, new Vector2(MathF.Round(topLeft.X), MathF.Round(topLeft.Y)), color);
     }
 
-    /// <summary>A bar that is <paramref name="share"/> full, from its left end.</summary>
+    /// <summary>How wide <see cref="Write"/> draws <paramref name="text"/> at that height, in world units.</summary>
+    private float Wide(float height, string text) =>
+        _fonts!.GetFont(MathF.Max(1f, MathF.Round(height * _scale))).MeasureString(text).X / _scale;
+
     private Vector2 ApplauseBarTopLeft => new(
         (Tuning.StageSize.X - ApplauseBar.X) / 2f,
         MathF.Max(Tuning.StageFloorTop, WordsHeight + 0.4f + ApplauseBar.Y + (2f * ApplauseBarGap))
             - ApplauseBarGap - ApplauseBar.Y);
 
+    /// <summary>A bar that is <paramref name="share"/> full, from its left end.</summary>
     private void FillBar(Vector2 topLeft, Vector2 size, float share, Color color)
     {
         Fill(topLeft, size, HitPointsLost);
