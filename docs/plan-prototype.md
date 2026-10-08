@@ -8,7 +8,7 @@
 
 A small playable proof of concept that lets the owner check the idea: one stage, in placeholder shapes at first and with a basic set of generated art once the owner has picked a tool (decision 23), ten acts, understudies that replay the routes the owner ran, the applause rule, and two scripted players that measure whether hiding at the box office loses. The owner plays it and writes a verdict: does the idea hold?
 
-The proof of concept ends at stop 3 (§6). The package for five outside testers and the G1 judgement of the vision (§12 there) are a separate step, taken only after a positive verdict (§7).
+The proof of concept ends at stop 3 (§6). The package for five outside testers and the G1 judgement of the vision (§12 there) are a separate step, taken only after a positive verdict and the owner's word that the game is ready to be given out (§6, §7).
 
 ## 2. How the work runs
 
@@ -45,7 +45,7 @@ The proof of concept ends at stop 3 (§6). The package for five outside testers 
 | 16 | Critics and the magician | a critic walks to the box office, turns on the magician inside a short radius and goes back to the box office when the magician leaves it; a stagehand never turns. The magician is whole again at every curtain |
 | 17 | Critics alive when an act ends | they stay on the stage, frozen while the program is read, and the next act adds to them |
 | 18 | Not in the prototype | the list of §8 |
-| 19 | The owner's verdict | the proof of concept ends at stop 3; the testers' package follows a positive verdict |
+| 19 | The owner's verdict | the proof of concept ends at stop 3; the testers' package follows a positive verdict and the owner's word that the game is ready to be given out (§6) |
 | 20 | Cards | self cards: damage, attack speed, range, Vanish cooldown, one more card per throw. Chorus card: damage for every understudy. Any card may be taken again. An understudy is a snapshot of the magician in the act it was recorded: it has every self card the magician had then |
 | 21 | The measure of applause | a share: applause collected in the act as a percentage of the critics released in that act, with two thresholds (15 % and 35 % to start with) and a bar with two notches on the screen. More than nothing but under the first threshold offers one card, the first threshold a choice of two, the second a choice of three with a chance of the chorus card. Replaces the counts (0–2, 3–5, 6 or more) of the table in vision §4 |
 | 22 | The bot guard | 20 seeds. The orbit player loses the box office by the end of act six in at least 16 of them; the doors player finishes act ten in at least 16. This reads the "must lose" and "must reach act ten" of vision §12 (e) as 16 of 20, the measure of faith-defense's map standard. Both pick cards in a fixed order, so the result depends on the route |
@@ -208,9 +208,25 @@ The radius and the reach are constants of the players. A test run by name (`[Exp
 | 3. The rule | T20 | Is it worth leaving the box office? And the verdict: does the idea hold? |
 | 4. The package | §7 | G1 of the vision, with five testers |
 
+### The owner's verdict (stop 3, 2026-10-08)
+
+**The idea holds** (the agent's wording, which the owner confirmed in chat). The owner played the build with the sprites and the set (after T07d) and said: it is taking shape; it is good to play when something is happening and one has to steer; by the second attempt it was already easier; the game already asks something of the player, and just standing does not win the game. Earlier the same day, on the build of T20, the owner had thought the third act probably could not be won and put the balance off ("balance later").
+
+What follows from it:
+
+- The proof of concept has answered its question. Stops 1 and 2 got no judgement of their own. On the build of T20 the owner said that it works, that the Vanish is on Space, that the magician throws by itself at single enemies, that the sounds are fine and the play is fine too, and that the idea "so far starts to get interesting". Stop 2's question (does an understudy read as "past me"?) has no answer on record.
+- **The package for outside testers (stop 4) waits.** The owner wants to add a good deal to the game before anything is given out.
+- The owner counts it a gain that the game can go to nearly any platform. As built it is MonoGame DesktopGL, which builds for Windows, macOS and Linux; decision 4's two targets for the testers' build stand, and the check on a real Windows machine (§7) is still open. A phone is another MonoGame project around the same Core, a console that and the platform holder's licence; neither is a part of this plan.
+
+What the owner named the same day as missing or open, none of it a ticket yet:
+
+- Is the stage always the same? (The owner did not know how other games have it.)
+- Effects when the cards are thrown.
+- The upgrades should show more, and there should be many more of them, so that at some point the screen is one great carnage.
+
 ## 7. Not yet specified
 
-In scope, but not sharp enough for a ticket yet. The first four wait for the verdict of stop 3:
+In scope, but not sharp enough for a ticket yet. The first four wait for the owner's word that the game is ready to be given out (§6):
 
 - The log of a performance (a line per act: time near the box office, applause, cards, whether a second performance was started).
 - The start screen and the way back to it.
