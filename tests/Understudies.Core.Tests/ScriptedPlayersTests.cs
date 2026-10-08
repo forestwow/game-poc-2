@@ -36,8 +36,8 @@ public class ScriptedPlayersTests
 
             // An act that stood for an encore is in what is pinned.
             Assert.That(performance.Acts.Sum(act => act.Encores), Is.GreaterThan(0), "encores");
-            Assert.That(performance.Acts[2].StateHash, Is.EqualTo(851245374359038781UL), "the end of act three");
-            Assert.That(performance.Acts[^1].StateHash, Is.EqualTo(8259367377736146208UL), "the end of the performance");
+            Assert.That(performance.Acts[2].StateHash, Is.EqualTo(9787319584506315531UL), "the end of act three");
+            Assert.That(performance.Acts[^1].StateHash, Is.EqualTo(17624584197219898077UL), "the end of the performance");
         });
     }
 
@@ -69,8 +69,8 @@ public class ScriptedPlayersTests
             Assert.That(blows, Is.GreaterThan(0), "blows on the box office");
             Assert.That(stunned, Is.GreaterThan(0), "stunned critics");
             Assert.That(performance.Acts.Sum(act => act.Encores), Is.GreaterThan(0), "encores");
-            Assert.That(performance.Acts[2].StateHash, Is.EqualTo(4345378464534316888UL), "the end of act three");
-            Assert.That(performance.Acts[^1].StateHash, Is.EqualTo(2203870041061055484UL), "the end of the performance");
+            Assert.That(performance.Acts[2].StateHash, Is.EqualTo(14979360235718945559UL), "the end of act three");
+            Assert.That(performance.Acts[^1].StateHash, Is.EqualTo(5480085658794934295UL), "the end of the performance");
         });
     }
 
@@ -150,13 +150,18 @@ public class ScriptedPlayersTests
             // The order itself: another order is another instrument, and the guard's table is read anew.
             Assert.That(ScriptedPlayers.CardOrder, Is.EqualTo(new[]
             {
-                Card.OneMoreCard, Card.ChorusDamage, Card.Damage, Card.AttackSpeed, Card.Range, Card.VanishCooldown,
+                Card.OneMoreCard, Card.ChorusDamage, Card.Damage, Card.AttackSpeed,
+                Card.Pierce, Card.Ricochet, Card.Burst,
+                Card.Range, Card.VanishCooldown,
             }));
             Assert.That(ScriptedPlayers.Choose([Card.Range, Card.OneMoreCard, Card.Damage]), Is.EqualTo(1));
             Assert.That(ScriptedPlayers.Choose([Card.VanishCooldown, Card.Range, Card.ChorusDamage]), Is.EqualTo(2));
             Assert.That(ScriptedPlayers.Choose([Card.AttackSpeed, Card.Damage]), Is.EqualTo(1));
             Assert.That(ScriptedPlayers.Choose([Card.VanishCooldown, Card.Range]), Is.EqualTo(1));
             Assert.That(ScriptedPlayers.Choose([Card.VanishCooldown]), Is.EqualTo(0));
+            Assert.That(ScriptedPlayers.Choose([Card.Burst, Card.Pierce, Card.AttackSpeed]), Is.EqualTo(2));
+            Assert.That(ScriptedPlayers.Choose([Card.Burst, Card.Ricochet, Card.Pierce]), Is.EqualTo(2));
+            Assert.That(ScriptedPlayers.Choose([Card.Range, Card.VanishCooldown, Card.Burst]), Is.EqualTo(2));
         });
     }
 
@@ -430,13 +435,13 @@ public class ScriptedPlayersTests
     /// <summary>
     /// Plan T29, two tripwires on the seeds 1 to 20, which the numbers are searched on. The first fails a step
     /// before the guard's count moves: the doors player's box office at the end is at least 350 of 400 on
-    /// average. On the committed numbers it is 390; one seed that collapses leaves some 370 and two some 350,
+    /// average. On the committed numbers it is 392; one seed that collapses leaves some 370 and two some 350,
     /// and the guard's own floor of 16 finished lets four collapse, which is 320: a tuning between "fine" and
     /// "the guard's floor" is caught here. The second is the card order, which must not be a hidden hinge
     /// (T29's first numbers held by the committed order alone and lost act seven on every seed by any other):
-    /// taking the longer arm first, the doors player still finishes act ten on at least 16 of 20. It finishes 18
-    /// (17 on the seeds 101 to 120), and the same tuning drawn otherwise moves that by a seed: the margin is thin on
-    /// purpose, and a break here is a finding about a card or a player, not a floor to lower unread.
+    /// taking the longer arm first, the doors player still finishes act ten on at least 16 of 20. Since plan T25
+    /// it finishes 20 (and 20 on the seeds 101 to 120), where it finished 18 and 17 before the three cards that
+    /// change what a card does: a break here is a finding about a card or a player, not a floor to lower unread.
     /// </summary>
     [Test]
     public void TheGuard_OnTheCommittedTuning_TheDoorsPlayerKeepsTheBoxOfficeAndFinishesByAnotherCardOrderToo()
@@ -460,9 +465,9 @@ public class ScriptedPlayersTests
     /// Plan T37, the kiter as the rival of going out to the doors: over each set of seeds the doors player
     /// finishes act ten at least as often as the kiter, with at least half as many encores again a performance
     /// and at least fifty more of the box office left on average (on the committed numbers both finish every
-    /// seed, and the doors player has 39.9 encores against 22.5 and 390 of the box office against 320 on the
-    /// first set, 39.8 against 23.1 and 400 against 289 on the second: the seventy of the first set is not far
-    /// over the fifty). Whether the kiter has to lose outright is the owner's question, open in the plan:
+    /// seed, and the doors player has 40.2 encores against 18.5 and 392 of the box office against 337 on the
+    /// first set, 40.9 against 17.9 and 395 against 330 on the second: the fifty-five of the first set is barely
+    /// over the fifty, and plan T25 says what the order of the cards has to do with it). Whether the kiter has to lose outright is the owner's question, open in the plan:
     /// nothing here says it loses, and by the committed card order it does not.
     /// </summary>
     [TestCase(1)]
@@ -532,10 +537,13 @@ public class ScriptedPlayersTests
     /// <summary>
     /// What the one order the players take cards by decides (plan T37): the doors player and the kiter on the
     /// committed tuning, over the seeds 1 to 20 and the sets <c>UNDERSTUDIES_SEED_SETS</c> names, taking their
-    /// cards by the committed order, by its reverse, with "one more card" last, and with the longer arm first.
+    /// cards by the committed order, by its reverse, with "one more card" last, and with the longer arm first;
+    /// and, since plan T25, with each of its three cards first, and with each of them in the place of "one more
+    /// card", which is then taken last; and with the three behind every other card, as they do what they do
+    /// and made to do nothing.
     /// </summary>
     [Test]
-    [Explicit("Prints how the doors player and the kiter end on the committed tuning when they take their cards by four different orders (a few seconds a set)")]
+    [Explicit("Prints how the doors player and the kiter end on the committed tuning when they take their cards by eleven different orders, one of them twice (some ten seconds a set)")]
     public void PrintTheCardOrders()
     {
         (string Name, IReadOnlyList<Card> Order)[] orders =
@@ -544,6 +552,20 @@ public class ScriptedPlayersTests
             ("reversed", [.. ScriptedPlayers.CardOrder.Reverse()]),
             ("one more card last", OneMoreCardLast),
             ("range first", RangeFirst),
+            ("pierce first", First(Card.Pierce)),
+            ("ricochet first", First(Card.Ricochet)),
+            ("burst first", First(Card.Burst)),
+
+            // Each of the three in the place of "one more card", which is then taken last: the one against the
+            // other, where the rows above have both.
+            .. new[] { Card.Pierce, Card.Ricochet, Card.Burst }.Select(card => (
+                $"{card} for one more".ToLowerInvariant(),
+                (IReadOnlyList<Card>)[card, .. OneMoreCardLast.Where(other => other != card)])),
+
+            // The order plan T25 was asked for and did not take: the three behind the longer arm and the quicker
+            // Vanish, which the players then take. Its second row has the three made to do nothing: what the
+            // offer of eight does by itself.
+            ("the three last", ThreeLast),
         ];
         (string Name, Func<Simulation, MagicianInput> Player)[] players = [GuardPlayers[Doors], GuardPlayers[Kiter]];
         TextWriter table = TestContext.Out;
@@ -553,12 +575,19 @@ public class ScriptedPlayersTests
             table.WriteLine($"seeds {firstSeed}-{firstSeed + Seeds - 1}");
             foreach ((string name, IReadOnlyList<Card> order) in orders)
             {
-                Performance[] performances = PlayTheGuard(Tuning, firstSeed, players, order);
+                Print(name, PlayTheGuard(Tuning, firstSeed, players, order));
+            }
+
+            Tuning nothing = Tuning with { CardPierceLoss = 1000f, CardRicochetReach = 0f, CardBurstRadius = 0f };
+            Print("the three last, null", PlayTheGuard(nothing, firstSeed, players, ThreeLast));
+
+            void Print(string name, Performance[] performances)
+            {
                 for (int player = 0; player < players.Length; player++)
                 {
                     List<Performance> mine = Of(performances, player);
                     table.WriteLine(
-                        $"  {name,-18} {players[player].Name,-5}: finished {mine.Count(Finished),2}, lost {HowLost(mine)}; encores {Number(mine.Average(Encores))}; "
+                        $"  {name,-21} {players[player].Name,-5}: finished {mine.Count(Finished),2}, lost {HowLost(mine)}; encores {Number(mine.Average(Encores))}; "
                         + $"box office at the end {Number(mine.Average(played => played.BoxOffice), "0")}, the worst {Number(mine.Min(played => played.BoxOffice), "0")}");
                 }
             }
@@ -660,9 +689,19 @@ public class ScriptedPlayersTests
         return lost.Count == 0 ? "never" : string.Join(", ", lost);
     }
 
+    /// <summary>The committed order with one card taken before anything else.</summary>
+    private static IReadOnlyList<Card> First(Card first) =>
+        [first, .. ScriptedPlayers.CardOrder.Where(card => card != first)];
+
+    /// <summary>The committed order with the three cards of plan T25 behind every other.</summary>
+    private static readonly IReadOnlyList<Card> ThreeLast =
+    [
+        .. ScriptedPlayers.CardOrder.Where(card => card is not (Card.Pierce or Card.Ricochet or Card.Burst)),
+        Card.Pierce, Card.Ricochet, Card.Burst,
+    ];
+
     /// <summary>The committed order with the longer arm taken before anything else.</summary>
-    private static readonly IReadOnlyList<Card> RangeFirst =
-        [Card.Range, .. ScriptedPlayers.CardOrder.Where(card => card != Card.Range)];
+    private static readonly IReadOnlyList<Card> RangeFirst = First(Card.Range);
 
     /// <summary>The committed order with "one more card" taken after everything else.</summary>
     private static readonly IReadOnlyList<Card> OneMoreCardLast =

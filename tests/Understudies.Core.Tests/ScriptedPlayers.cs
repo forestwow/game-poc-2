@@ -107,11 +107,19 @@ internal static class ScriptedPlayers
 
     /// <summary>
     /// The one order every player picks cards by, the most wanted first: of an offer they take the card that
-    /// comes first here, so the result depends on the route and not on a taste.
+    /// comes first here, so the result depends on the route and not on a taste. The three cards of plan T25 come
+    /// after the four the players took before them and ahead of the two they never took: an offer of three of the
+    /// five self cards there were always had "one more card", the damage card or the attack speed card, so no
+    /// player ever took the longer arm or the quicker Vanish, and with the three behind those two they would take
+    /// them in one encore of six (measured with the three made to do nothing: the kiter then keeps 354 of the box
+    /// office to the doors player's 388, and the guard's comparison of the two fails by the offer alone). So one
+    /// of the three is taken in one encore of six, and what they do counts in what the guard reads.
     /// </summary>
     public static readonly IReadOnlyList<Card> CardOrder =
     [
-        Card.OneMoreCard, Card.ChorusDamage, Card.Damage, Card.AttackSpeed, Card.Range, Card.VanishCooldown,
+        Card.OneMoreCard, Card.ChorusDamage, Card.Damage, Card.AttackSpeed,
+        Card.Pierce, Card.Ricochet, Card.Burst,
+        Card.Range, Card.VanishCooldown,
     ];
 
     /// <summary>

@@ -51,6 +51,14 @@ internal sealed class Juice(Random random)
     private const float HitBurstTime = 0.25f;
     private const float KillBurstTime = 0.5f;
 
+    // The ring of a card's burst (plan T25) opens from this share of the burst's radius to all of it and goes
+    // out, in this long: a line this thick, in this many straight stretches.
+    private const float RingTime = 0.3f;
+    public const float RingFirstShare = 0.4f;
+    public const float RingLine = 0.15f;
+    public const float RingOpacity = 0.8f;
+    public const int RingStretches = 32;
+
     /// <summary>
     /// The splash is black ink and grey newsprint, and the boards are dark: under it, for the first
     /// <see cref="KillFlashShare"/> of its time, a pale disc this wide and this thick at first, going out.
@@ -170,7 +178,8 @@ internal sealed class Juice(Random random)
         {
             Understudy understudy = simulation.Understudies[i];
             SelfCards cards = understudy.Cards;
-            int has = cards.Damage + cards.AttackSpeed + cards.Range + cards.VanishCooldown + cards.OneMoreCard;
+            int has = cards.Damage + cards.AttackSpeed + cards.Range + cards.VanishCooldown + cards.OneMoreCard
+                + cards.Pierce + cards.Ricochet + cards.Burst;
             if (i == _understudyCards.Count)
             {
                 _understudyCards.Add(has);
@@ -224,6 +233,15 @@ internal sealed class Juice(Random random)
                     Burst(happened.Position, PickUpScraps);
                     break;
 
+                // The burst of a card (plan T25) is a ring on the floor, round the critic the card struck: no
+                // lift, it lies where the rule measures. An understudy's is the dimmer, as its flick is.
+                case TickEventKind.Burst:
+                    _effects.Add((
+                        happened.Thrower == TickEvent.TheMagician ? Effect.Ring : Effect.UnderstudyRing,
+                        happened.Position,
+                        _now));
+                    break;
+
                 case TickEventKind.MagicianHurt:
                     _magicianFlashedAt = FlashNow(_magicianFlashedAt);
                     _trauma = MathF.Min(1f, _trauma + HurtTrauma);
@@ -272,6 +290,7 @@ internal sealed class Juice(Random random)
     {
         Effect.Flick or Effect.UnderstudyFlick => FlickTime,
         Effect.HitBurst => HitBurstTime,
+        Effect.Ring or Effect.UnderstudyRing => RingTime,
         _ => KillBurstTime,
     };
 
@@ -320,6 +339,8 @@ internal sealed class Juice(Random random)
         UnderstudyFlick,
         HitBurst,
         KillBurst,
+        Ring,
+        UnderstudyRing,
     }
 
     private readonly record struct Scrap(Vector2 From, Vector2 Velocity, float BurstAt, float Turn);

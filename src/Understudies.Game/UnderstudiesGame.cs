@@ -665,9 +665,15 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
             }
 
             // The trail: a streak from the middle of the card back along its flight, so that a card that is in the
-            // air for an eighth of a second is seen. It never reaches back past where the card was thrown from.
-            Vector2 back = -Vector2.Normalize(flown)
-                * MathF.Min(Juice.TrailLength, Vector2.Distance(below, card.ThrownFrom));
+            // air for an eighth of a second is seen. It never reaches back past where the card was thrown from,
+            // or where it last turned (plan T25): the trail of a card that turns bends there with it.
+            Vector2 behind = card.ThrownFrom - below;
+            if (behind == Vector2.Zero)
+            {
+                continue;
+            }
+
+            Vector2 back = Vector2.Normalize(behind) * MathF.Min(Juice.TrailLength, behind.Length());
             FillTurned(
                 heart + (back / 2f),
                 new Vector2(back.Length(), Juice.TrailWidth),
@@ -695,6 +701,26 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
                 float wide = FlickSize * (0.4f + (0.6f * effect.Through)) * (understudys ? Juice.UnderstudyFlickSize : 1f);
                 Color light = understudys ? UnderstudysCardFace * Juice.UnderstudyFlickOpacity : Color.White;
                 FillTurned(effect.Middle, new Vector2(wide), MathF.PI / 4f, light * (1f - effect.Through));
+                continue;
+            }
+
+            // A card's burst is a ring that opens to the radius of the rule and goes out.
+            if (effect.Kind is Juice.Effect.Ring or Juice.Effect.UnderstudyRing)
+            {
+                float radius = Tuning.CardBurstRadius * (Juice.RingFirstShare + ((1f - Juice.RingFirstShare) * effect.Through));
+                Color line = (effect.Kind == Juice.Effect.Ring ? ThrownCardFace : UnderstudysCardFace)
+                    * (Juice.RingOpacity * (1f - effect.Through));
+                float stretch = MathF.Tau / Juice.RingStretches;
+                for (int i = 0; i < Juice.RingStretches; i++)
+                {
+                    float turn = (i + 0.5f) * stretch;
+                    FillTurned(
+                        effect.Middle + (new Vector2(MathF.Cos(turn), MathF.Sin(turn)) * radius),
+                        new Vector2(radius * stretch, Juice.RingLine),
+                        turn + (MathF.PI / 2f),
+                        line);
+                }
+
                 continue;
             }
 

@@ -1,7 +1,7 @@
 namespace Understudies.Core;
 
 /// <summary>
-/// The cards (plan decisions 20 and 26). Five are self cards, which an encore offers: they change the magician
+/// The cards (plan decisions 20, 26 and 29). Eight are self cards, which an encore offers: they change the magician
 /// and, with it, the understudy of the act they were taken in, from that tick of every later act on, and of
 /// every act that begins after. One is a chorus card, which the program
 /// offers: it changes every understudy and not the magician. Any of them may be taken again and adds again; how
@@ -32,6 +32,26 @@ public enum Card
     /// <see cref="Tuning.CardChorusDamage"/> more hit points. The magician's own cards do not.
     /// </summary>
     ChorusDamage,
+
+    /// <summary>
+    /// A self card, The Pierce (plan T25): a thrown card goes on through the critic it strikes, and each strike
+    /// takes <see cref="Tuning.CardPierceLoss"/> over the number of these cards off what it hurts for; it is spent
+    /// when nothing is left. It strikes no critic twice.
+    /// </summary>
+    Pierce,
+
+    /// <summary>
+    /// A self card, The Ricochet (plan T25): a thrown card that strikes turns to the nearest critic it has not
+    /// struck within <see cref="Tuning.CardRicochetReach"/> of the one it struck, once for each of these cards.
+    /// </summary>
+    Ricochet,
+
+    /// <summary>
+    /// A self card, The Burst (plan T25): where a thrown card strikes, every other critic within
+    /// <see cref="Tuning.CardBurstRadius"/> of the one struck takes <see cref="Tuning.CardBurstShare"/> of what
+    /// the card hurts for, for each of these cards.
+    /// </summary>
+    Burst,
 }
 
 /// <summary>
@@ -45,7 +65,10 @@ public readonly record struct SelfCards(
     int AttackSpeed = 0,
     int Range = 0,
     int VanishCooldown = 0,
-    int OneMoreCard = 0)
+    int OneMoreCard = 0,
+    int Pierce = 0,
+    int Ricochet = 0,
+    int Burst = 0)
 {
     /// <summary>These and one more self card. A chorus card is nobody's own.</summary>
     internal SelfCards With(Card card) => card switch
@@ -55,6 +78,9 @@ public readonly record struct SelfCards(
         Card.Range => this with { Range = Range + 1 },
         Card.VanishCooldown => this with { VanishCooldown = VanishCooldown + 1 },
         Card.OneMoreCard => this with { OneMoreCard = OneMoreCard + 1 },
+        Card.Pierce => this with { Pierce = Pierce + 1 },
+        Card.Ricochet => this with { Ricochet = Ricochet + 1 },
+        Card.Burst => this with { Burst = Burst + 1 },
         _ => this,
     };
 }

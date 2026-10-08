@@ -85,5 +85,9 @@
   "cardAttackSpeed": 0.2,
   "cardRange": 1.5,
   "cardVanishCooldown": 0.25,
-  "cardChorusDamage": 0.5
+  "cardChorusDamage": 0.5,
+  "cardPierceLoss": 0.5,
+  "cardRicochetReach": 4,
+  "cardBurstRadius": 2,
+  "cardBurstShare": 0.5
 }
