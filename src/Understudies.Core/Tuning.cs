@@ -131,6 +131,10 @@ namespace Understudies.Core;
 /// The share of what a card hurts for that its burst takes off each of those critics, for one burst card: two
 /// make it twice the share.
 /// </param>
+/// <param name="CardMaxCopies">
+/// How many of one self card the magician may hold (plan T41, decision 31): an encore does not offer a card it
+/// holds this many of. With nothing, or less, there is no limit.
+/// </param>
 public sealed record Tuning(
     float ActLength,
     int ActsInPerformance,
@@ -181,7 +185,8 @@ public sealed record Tuning(
     float CardPierceLoss,
     float CardRicochetReach,
     float CardBurstRadius,
-    float CardBurstShare)
+    float CardBurstShare,
+    int CardMaxCopies)
 {
     // ponytail: the serializer reads the types by reflection; a trimmed or AOT build needs a source-generated context.
     private static readonly JsonSerializerOptions Options = new()

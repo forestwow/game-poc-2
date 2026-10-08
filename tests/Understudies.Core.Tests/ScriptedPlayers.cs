@@ -25,6 +25,15 @@ namespace Understudies.Core.Tests;
 /// would pay).
 /// </param>
 /// <param name="StateHash">The simulation's state hash at that moment.</param>
+/// <param name="Cards">The self cards the magician had when the act was over (plan T41).</param>
+/// <param name="MostCardsAThrow">The most cards the magician threw on one tick of the act.</param>
+/// <param name="UnderstudyKills">The enemies that fell to a card an understudy threw.</param>
+/// <param name="ShortOffers">The encores of the act that offered fewer than three cards.</param>
+/// <param name="Unspent">The applause no encore was paid with when the act was over.</param>
+/// <param name="NextCost">
+/// What the next encore cost then: with <paramref name="Unspent"/> no less than this, an encore was earned and
+/// none opened.
+/// </param>
 internal readonly record struct ActRecord(
     int Entries,
     int Applause,
@@ -39,7 +48,13 @@ internal readonly record struct ActRecord(
     int KillsWithin3,
     int KillsWithin5,
     int KillsWithin8,
-    ulong StateHash);
+    ulong StateHash,
+    SelfCards Cards,
+    int MostCardsAThrow,
+    int UnderstudyKills,
+    int ShortOffers,
+    int Unspent,
+    int NextCost);
 
 /// <summary>A scripted performance played to its end: the ovation or the close.</summary>
 /// <param name="Ended"><see cref="Phase.Ovation"/> or <see cref="Phase.Closed"/>.</param>
@@ -395,10 +410,14 @@ internal static class ScriptedPlayers
         var entered = new List<int>();
         int ticksPlayed = 0;
         int[] kills = new int[4];
+        int understudyKills = 0;
+        int mostCardsAThrow = 0;
+        int shortOffers = 0;
         while (true)
         {
             ticksPlayed += simulation.Phase == Phase.Act ? 1 : 0;
             simulation.Step(player(simulation));
+            int thrown = 0;
             mostCritics = Math.Max(mostCritics, simulation.Critics.Count);
             foreach (Critic critic in simulation.Critics)
             {
@@ -410,7 +429,15 @@ internal static class ScriptedPlayers
 
             foreach (TickEvent happened in simulation.Events)
             {
-                if (happened.Kind == TickEventKind.Kill && happened.Thrower == TickEvent.TheMagician)
+                if (happened.Kind == TickEventKind.Throw && happened.Thrower == TickEvent.TheMagician)
+                {
+                    mostCardsAThrow = Math.Max(mostCardsAThrow, ++thrown);
+                }
+                else if (happened.Kind == TickEventKind.Kill && happened.Thrower != TickEvent.TheMagician)
+                {
+                    understudyKills++;
+                }
+                else if (happened.Kind == TickEventKind.Kill)
                 {
                     int age = ticksPlayed - entered[happened.CriticId];
                     kills[0] += age <= 3 * Simulation.TicksPerSecond ? 1 : 0;
@@ -442,6 +469,7 @@ internal static class ScriptedPlayers
 
             if (simulation.Phase == Phase.Encore)
             {
+                shortOffers += simulation.Offer.Count < 3 ? 1 : 0;
                 int place = Choose(simulation.Offer, order);
                 taken.Add(simulation.Offer[place]);
                 simulation.Pick(place);
@@ -452,7 +480,10 @@ internal static class ScriptedPlayers
                 continue;
             }
 
-            // The program's one card, where the act has a program: one with an encore in it.
+            // The program's one card, where the act has a program: one with an encore in it. What is left of the
+            // act's applause is read first: nothing here spends it, and GoOn clears it.
+            int unspent = simulation.EncoreApplause;
+            int nextCost = simulation.EncoreCost;
             simulation.Pick(0);
             encores.Add(taken);
             acts.Add(new ActRecord(
@@ -469,7 +500,13 @@ internal static class ScriptedPlayers
                 kills[0],
                 kills[1],
                 kills[2],
-                simulation.ComputeStateHash()));
+                simulation.ComputeStateHash(),
+                simulation.MagicianCards,
+                mostCardsAThrow,
+                understudyKills,
+                shortOffers,
+                unspent,
+                nextCost));
             if (simulation.Phase != Phase.BetweenActs)
             {
                 return new Performance(simulation.Phase, acts, encores);
@@ -478,7 +515,7 @@ internal static class ScriptedPlayers
             simulation.GoOn();
             taken = [];
             inReach.Clear();
-            dropped = fellInReach = walkedTo = mostCritics = 0;
+            dropped = fellInReach = walkedTo = mostCritics = understudyKills = mostCardsAThrow = shortOffers = 0;
             kills = new int[4];
         }
     }
