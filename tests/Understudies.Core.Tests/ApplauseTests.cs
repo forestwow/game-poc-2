@@ -290,7 +290,9 @@ public class ApplauseTests
             _ => default,
         });
 
-        // The act that is over still says what it earned.
+        // The act that is over still says what it earned, in its program and when a card is taken.
+        Assert.That(simulation.Phase, Is.EqualTo(Phase.Program));
+        simulation.Pick(0);
         Assert.That(simulation.Phase, Is.EqualTo(Phase.BetweenActs));
         Assert.That(simulation.ActApplause, Is.EqualTo(1));
         Assert.That(simulation.ActApplauseBand, Is.EqualTo(ApplauseBand.Second));
@@ -326,6 +328,7 @@ public class ApplauseTests
         Assert.That(simulation.ActApplauseShare, Is.EqualTo(0.25f));
 
         // The second act counts its own two critics, and not the six of the performance.
+        simulation.Pick(0);
         simulation.GoOn();
         PlayTheActAndPickUp(simulation, pieces: 1);
         Assert.That(simulation.ActApplause, Is.EqualTo(1));
@@ -346,7 +349,8 @@ public class ApplauseTests
 
         PlayTheActAndPickUp(simulation, pieces);
 
-        Assert.That(simulation.Phase, Is.EqualTo(Phase.BetweenActs));
+        // The act is over: in its program, when it has earned one.
+        Assert.That(simulation.Phase, Is.EqualTo(pieces == 0 ? Phase.BetweenActs : Phase.Program));
         Assert.That((simulation.ActApplause, simulation.ActEntriesMade), Is.EqualTo((pieces, 20)));
         Assert.That(simulation.ActApplauseBand, Is.EqualTo(band));
     }

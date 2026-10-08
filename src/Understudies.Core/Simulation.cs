@@ -15,16 +15,26 @@ public sealed class Simulation(Tuning tuning, ulong seed, IReadOnlyList<IReadOnl
     public const int TicksPerSecond = 60;
 
     private readonly Rng _doorPlaces = Rng.ForStream(seed, RngStream.DoorPlaces);
+    private readonly Rng _program = Rng.ForStream(seed, RngStream.Program);
     private readonly List<Critic> _critics = [];
     private readonly List<ThrownCard> _thrownCards = [];
     private readonly List<Cloud> _clouds = [];
     private readonly List<Understudy> _understudies = [];
     private readonly List<Applause> _applause = [];
+    private readonly List<Card> _offer = [];
 
     // The recording of the act that is played: where the magician stood after each of its ticks so far, and each
     // Vanish of it. It stops when the magician falls: its last place is where the magician fell.
     private List<Vector2> _route = [];
     private List<(int Tick, Vector2 Place)> _vanishes = [];
+
+    // The self cards the act that is played began with: its recording's, and its understudy's. A card taken when
+    // the act is over is the magician's at once and the next act's recording's.
+    private SelfCards _recordingCards;
+
+    // Whom one throw is at, the nearest first. It is read within the throw that fills it: what it holds after
+    // that is nobody's, and the next throw empties it before it looks for its own.
+    private readonly List<Critic> _targets = [];
     private readonly List<TickEvent> _events = [];
     private int _ticksPlayed;
 
@@ -68,9 +78,9 @@ public sealed class Simulation(Tuning tuning, ulong seed, IReadOnlyList<IReadOnl
 
     /// <summary>
     /// Where the performance stands. A closed show is closed whatever its act's timer says; every act begins with
-    /// its curtain; an act whose time has run out is over, whether the magician stands or has fallen, and after
-    /// the last act of the performance comes the ovation. Only in an act does <see cref="Step"/> change anything
-    /// but the curtain's own time.
+    /// its curtain; an act whose time has run out is over, whether the magician stands or has fallen; while it has
+    /// cards on offer the program is up; and after the last act of the performance comes the ovation. Only in an
+    /// act does <see cref="Step"/> change anything but the curtain's own time and the program's.
     /// </summary>
     // ponytail: the phase is read off the other state and not kept, so a reload of the tuning with another number of
     // acts can move it without a tick (an ovation back to between two acts). Keep it as state if that ever matters.
@@ -78,6 +88,7 @@ public sealed class Simulation(Tuning tuning, ulong seed, IReadOnlyList<IReadOnl
         ShowClosed ? Phase.Closed
         : _curtainTicksLeft > 0 ? Phase.Curtain
         : ActTicksLeft > 0 ? Phase.Act
+        : _offer.Count > 0 ? Phase.Program
         : Act < Tuning.ActsInPerformance ? Phase.BetweenActs
         : Phase.Ovation;
 
@@ -107,7 +118,7 @@ public sealed class Simulation(Tuning tuning, ulong seed, IReadOnlyList<IReadOnl
     /// tick's share, not yet 0, when the very next tick would take a press again.
     /// </summary>
     public float VanishCooldownLeft =>
-        _ticksToNextVanish == 0 ? 0f : MathF.Min(1f, (float)_ticksToNextVanish / Ticks(Tuning.VanishCooldown));
+        _ticksToNextVanish == 0 ? 0f : MathF.Min(1f, (float)_ticksToNextVanish / VanishCooldownTicks);
 
     /// <summary>Nothing hurts the magician now: a moment that starts with a Vanish.</summary>
     public bool MagicianIsInvulnerable => _ticksInvulnerable > 0;
@@ -155,6 +166,61 @@ public sealed class Simulation(Tuning tuning, ulong seed, IReadOnlyList<IReadOnl
         : ActApplauseShare >= Tuning.ApplauseFirstThreshold ? ApplauseBand.First
         : ApplauseBand.UnderTheFirst;
 
+    /// <summary>
+    /// The cards the program offers, from the leftmost: what the applause of the act just over paid for (plan
+    /// decisions 15 and 21). No piece picked up, no card and no program; a share under the first threshold, one
+    /// self card and no choice; the first threshold, a choice of two self cards; the second, a choice of three
+    /// cards, of which one may be the chorus card. No card is offered twice in one program. It is empty in every
+    /// phase but <see cref="Phase.Program"/>, and after the last act nothing is offered.
+    /// </summary>
+    public IReadOnlyList<Card> Offer => _offer;
+
+    /// <summary>
+    /// What the program has left of its time, in ticks: all of <see cref="Tuning.ProgramTime"/> when the act is
+    /// over, and the tick that would leave none takes the leftmost card. A program of no time is still up when
+    /// the act is over, and waits for one tick: the first <see cref="Step"/> takes the leftmost card. Nothing
+    /// outside the program.
+    /// </summary>
+    public int ProgramTicksLeft { get; private set; }
+
+    /// <summary>
+    /// The self cards the magician has taken in this performance: it throws and vanishes by the tuning's numbers
+    /// as these change them.
+    /// </summary>
+    public SelfCards MagicianCards { get; private set; }
+
+    /// <summary>
+    /// How many chorus cards were taken in this performance: each adds to the cards of every understudy, on top
+    /// of the understudy's own self cards, and to nothing of the magician's.
+    /// </summary>
+    public int ChorusCards { get; private set; }
+
+    /// <summary>
+    /// In the program, takes the card at <paramref name="place"/> of <see cref="Offer"/>, the leftmost being 0:
+    /// the program is over and the stage is between two acts, until <see cref="GoOn"/>. Outside the program, and
+    /// for a place the offer does not have, this does nothing.
+    /// </summary>
+    public void Pick(int place)
+    {
+        // Outside the program the offer is empty, and has no place.
+        if (place < 0 || place >= _offer.Count)
+        {
+            return;
+        }
+
+        if (_offer[place] == Card.ChorusDamage)
+        {
+            ChorusCards++;
+        }
+        else
+        {
+            MagicianCards = MagicianCards.With(_offer[place]);
+        }
+
+        _offer.Clear();
+        ProgramTicksLeft = 0;
+    }
+
     /// <summary>What happened in the last tick, in the order it happened. The next tick starts the list afresh.</summary>
     public IReadOnlyList<TickEvent> Events => _events;
 
@@ -185,7 +251,8 @@ public sealed class Simulation(Tuning tuning, ulong seed, IReadOnlyList<IReadOnl
 
     /// <summary>
     /// Plays one tick of an act. While the curtain is up the tick only counts the curtain's time: nothing moves,
-    /// strikes or is released, the act's own time stands and the input is not taken, nor kept for later. Between
+    /// strikes or is released, the act's own time stands and the input is not taken, nor kept for later. In the
+    /// program the tick only counts the program's time, and the one that ends it takes the leftmost card. Between
     /// two acts and when the performance is over the world stands: the tick reports nothing and changes nothing.
     /// </summary>
     public void Step(MagicianInput input)
@@ -194,6 +261,16 @@ public sealed class Simulation(Tuning tuning, ulong seed, IReadOnlyList<IReadOnl
         if (Phase == Phase.Curtain)
         {
             _curtainTicksLeft--;
+            return;
+        }
+
+        if (Phase == Phase.Program)
+        {
+            if (--ProgramTicksLeft <= 0)
+            {
+                Pick(0);
+            }
+
             return;
         }
 
@@ -237,15 +314,15 @@ public sealed class Simulation(Tuning tuning, ulong seed, IReadOnlyList<IReadOnl
         // magician that a blow of this tick has felled does not.
         if (!ShowClosed && !MagicianHasFallen)
         {
-            _ticksToNextThrow = ThrowACard(MagicianPosition, _ticksToNextThrow, byTheMagician: true);
+            _ticksToNextThrow = ThrowACard(MagicianPosition, _ticksToNextThrow, MagicianCards, byTheMagician: true);
         }
 
         foreach (Understudy understudy in _understudies)
         {
             if (understudy.IsOnStage && !ShowClosed)
             {
-                understudy.TicksToNextThrow =
-                    ThrowACard(understudy.Position, understudy.TicksToNextThrow, byTheMagician: false);
+                understudy.TicksToNextThrow = ThrowACard(
+                    understudy.Position, understudy.TicksToNextThrow, understudy.Cards, byTheMagician: false);
             }
         }
 
@@ -257,12 +334,19 @@ public sealed class Simulation(Tuning tuning, ulong seed, IReadOnlyList<IReadOnl
         // The act's time is counted last: its last tick is played in full, and the act is over when that tick is,
         // whatever is on the stage. A blow of that very tick may still have closed the show.
         ActTicksLeft--;
+
+        // An act that is over and has another after it is paid in cards for its applause. Not one that closed the
+        // show on its last tick, nor the last act of the performance.
+        if (Phase == Phase.BetweenActs)
+        {
+            OfferCards();
+        }
     }
 
     /// <summary>
     /// Between two acts, begins the next one, with its curtain: the magician is whole and on its mark, facing the
     /// audience, with the Vanish ready. Everything else on the stage is as the last act left it, the critics too
-    /// (plan decision 17). In any other phase this does nothing.
+    /// (plan decision 17). In any other phase this does nothing: a program waits for its <see cref="Pick"/>.
     /// </summary>
     public void GoOn()
     {
@@ -274,7 +358,9 @@ public sealed class Simulation(Tuning tuning, ulong seed, IReadOnlyList<IReadOnl
         // The act just over is an understudy from now on, and the next act's recording starts empty. Every
         // understudy stands at the start of its route, with its throw ready: for the view there is nothing between
         // that place and where the last act left it.
-        _understudies.Add(new Understudy(Act, _route, _vanishes));
+        // It keeps the cards its act was played with (plan decision 20), and not the one taken since.
+        _understudies.Add(new Understudy(Act, _route, _vanishes, _recordingCards));
+        _recordingCards = MagicianCards;
         _route = [];
         _vanishes = [];
         _actTicksPlayed = 0;
@@ -347,6 +433,15 @@ public sealed class Simulation(Tuning tuning, ulong seed, IReadOnlyList<IReadOnl
             }
         }
 
+        void AddCards(SelfCards cards)
+        {
+            hasher.AddInt(cards.Damage);
+            hasher.AddInt(cards.AttackSpeed);
+            hasher.AddInt(cards.Range);
+            hasher.AddInt(cards.VanishCooldown);
+            hasher.AddInt(cards.OneMoreCard);
+        }
+
         hasher.AddInt(_ticksPlayed);
         hasher.AddInt(_actTicksPlayed);
 
@@ -380,6 +475,7 @@ public sealed class Simulation(Tuning tuning, ulong seed, IReadOnlyList<IReadOnl
             AddPoint(card.Position);
             AddPoint(card.Direction);
             hasher.AddFloat(card.RangeLeft);
+            hasher.AddFloat(card.Damage);
             hasher.AddInt(card.ThrownByMagician ? 1 : 0);
         }
 
@@ -408,6 +504,7 @@ public sealed class Simulation(Tuning tuning, ulong seed, IReadOnlyList<IReadOnl
         foreach (Understudy understudy in _understudies)
         {
             hasher.AddInt(understudy.Act);
+            AddCards(understudy.Cards);
             AddPoint(understudy.Position);
             hasher.AddInt(understudy.TicksToNextThrow);
             hasher.AddInt(understudy.IsOnStage ? 1 : 0);
@@ -415,14 +512,71 @@ public sealed class Simulation(Tuning tuning, ulong seed, IReadOnlyList<IReadOnl
         }
 
         AddRecording(_route, _vanishes);
+        AddCards(_recordingCards);
         hasher.AddInt(_ticksToNextThrow);
+
+        // The cards taken, and a program that is up: what it offers and how long it still waits.
+        AddCards(MagicianCards);
+        hasher.AddInt(ChorusCards);
+        hasher.AddInt(_offer.Count);
+        foreach (Card card in _offer)
+        {
+            hasher.AddInt((int)card);
+        }
+
+        hasher.AddInt(ProgramTicksLeft);
 
         // How far through the act's entries the show is. The plan itself is not in the hash: it follows from the
         // seed and the tuning, which two shows that are compared share.
         hasher.AddInt(ActEntriesMade);
         hasher.AddInt(_criticsEntered);
         hasher.AddULong(_doorPlaces.State);
+        hasher.AddULong(_program.State);
         return hasher.Value;
+    }
+
+    /// <summary>
+    /// The time from one Vanish of the magician to its next, in ticks: the tuning's cooldown, shortened by the
+    /// magician's cards.
+    /// </summary>
+    private int VanishCooldownTicks =>
+        Ticks(Tuning.VanishCooldown / (1f + (MagicianCards.VanishCooldown * Tuning.CardVanishCooldown)));
+
+    /// <summary>
+    /// Makes the offer of the act just over, by its band. Each place takes a self card that is still in the pile,
+    /// any as likely as another; in an offer of the second band a place is first given its chance of being the
+    /// chorus card, while the offer has none.
+    /// </summary>
+    private void OfferCards()
+    {
+        ApplauseBand band = ActApplauseBand;
+        int places = band switch
+        {
+            ApplauseBand.None => 0,
+            ApplauseBand.UnderTheFirst => 1,
+            ApplauseBand.First => 2,
+            _ => 3,
+        };
+        List<Card> pile = [Card.Damage, Card.AttackSpeed, Card.Range, Card.VanishCooldown, Card.OneMoreCard];
+        for (int place = 0; place < places; place++)
+        {
+            if (band == ApplauseBand.Second
+                && !_offer.Contains(Card.ChorusDamage)
+                && _program.NextFloat() < Tuning.CardChorusChance)
+            {
+                _offer.Add(Card.ChorusDamage);
+                continue;
+            }
+
+            int drawn = _program.NextInt(pile.Count);
+            _offer.Add(pile[drawn]);
+            pile.RemoveAt(drawn);
+        }
+
+        if (places > 0)
+        {
+            ProgramTicksLeft = Ticks(Tuning.ProgramTime);
+        }
     }
 
     private void ThinTheClouds() => _clouds.RemoveAll(cloud => --cloud.TicksLeft <= 0);
@@ -463,7 +617,7 @@ public sealed class Simulation(Tuning tuning, ulong seed, IReadOnlyList<IReadOnl
         {
             // A blink and not a run: it is the tick's whole move, with no step of the walk added.
             step = _facing * Tuning.VanishDistance;
-            _ticksToNextVanish = Ticks(Tuning.VanishCooldown);
+            _ticksToNextVanish = VanishCooldownTicks;
             _ticksInvulnerable = Ticks(Tuning.VanishInvulnerableTime);
             _events.Add(new TickEvent(TickEventKind.Vanish, from));
             LeaveACloud(from);
@@ -570,7 +724,7 @@ public sealed class Simulation(Tuning tuning, ulong seed, IReadOnlyList<IReadOnl
             // The card is spent on the first critic it touches, which need not be the one it was thrown at.
             if (touched is not null)
             {
-                touched.HitPoints -= Tuning.ThrownCardDamage;
+                touched.HitPoints -= card.Damage;
                 bool fell = touched.HitPoints <= 0f;
                 if (fell)
                 {
@@ -766,11 +920,12 @@ public sealed class Simulation(Tuning tuning, ulong seed, IReadOnlyList<IReadOnl
     }
 
     /// <summary>
-    /// The throw of whoever stands at <paramref name="from"/>, the magician or an understudy: one rule and one set
-    /// of numbers for both. It is given the thrower's countdown to its next throw and gives back what that is
+    /// The throw of whoever stands at <paramref name="from"/>, the magician or an understudy: one rule for both,
+    /// on the tuning's numbers as the thrower's own <paramref name="cards"/> change them, and for an understudy
+    /// the chorus cards too. It is given the thrower's countdown to its next throw and gives back what that is
     /// after this tick.
     /// </summary>
-    private int ThrowACard(Vector2 from, int ticksToNextThrow, bool byTheMagician)
+    private int ThrowACard(Vector2 from, int ticksToNextThrow, SelfCards cards, bool byTheMagician)
     {
         // The throw is ready a cooldown after the last one, and stays ready while there is nobody to throw at.
         if (ticksToNextThrow > 0)
@@ -783,50 +938,70 @@ public sealed class Simulation(Tuning tuning, ulong seed, IReadOnlyList<IReadOnl
             return ticksToNextThrow;
         }
 
-        // At the nearest critic whose centre is in range; of two as near, at the one that entered first.
-        Critic? target = null;
-        float nearest = float.PositiveInfinity;
-        foreach (Critic critic in _critics)
+        float range = Tuning.ThrowRange + (cards.Range * Tuning.CardRange);
+        float damage = Tuning.ThrownCardDamage
+            + (cards.Damage * Tuning.CardDamage)
+            + (byTheMagician ? 0f : ChorusCards * Tuning.CardChorusDamage);
+
+        // One card, and one more for each card of that name, each at a critic of its own: the first at the nearest
+        // whose centre is in range, the next at the nearest of the rest, and of two as near at the one that entered
+        // first. With fewer critics in range than cards the rest of the cards are not thrown.
+        // ponytail: every critic is looked at once for each card of the throw. A throw of many cards at a full
+        // stage sorts the critics in range once instead.
+        _targets.Clear();
+        for (int thrown = 0; thrown <= cards.OneMoreCard; thrown++)
         {
-            Direction(critic.Position - from, out float distance);
-            if (distance <= Tuning.ThrowRange && distance < nearest)
+            Critic? target = null;
+            float nearest = float.PositiveInfinity;
+            foreach (Critic critic in _critics)
             {
-                target = critic;
-                nearest = distance;
+                Direction(critic.Position - from, out float distance);
+                if (distance <= range && distance < nearest && !_targets.Contains(critic))
+                {
+                    target = critic;
+                    nearest = distance;
+                }
             }
+
+            if (target is null)
+            {
+                break;
+            }
+
+            _targets.Add(target);
+
+            // The card is thrown ahead of its target, at where the two meet if the target goes on as in its last step:
+            // `to` away now and `step` further every tick, it is met after t ticks by a card that flies `speed` a tick
+            // when |to + step x t| = speed x t. A target that stands has no step and is aimed at where it stands. The
+            // step is this tick's own, made before anybody throws: nothing of an earlier tick is read here.
+            // ponytail: the lead is of the first order, and the card flies straight. A target that stops, turns or is
+            // pushed while the card is in the air (a stagehand that reaches the box office, a critic that turns on the
+            // magician, a cloud) has left the meeting place by as much as it strays in that time, and is missed when
+            // that is more than its radius: at most its speed x throwRange / thrownCardSpeed, 2 units for the
+            // committed stagehand. A target near the end of the range that walks away is met past the range, where the
+            // card has fallen. And a card first flies on the tick after its throw, so its target is up to one of its
+            // own steps behind the aim: 0.13 of a unit for the committed stagehand, whose radius is 0.4. A slower card or a longer range makes both worse; a card that turns in the air is what
+            // mends them.
+            Vector2 to = target.Position - from;
+            Vector2 step = target.Position - target.PreviousPosition;
+            float speed = Tuning.ThrownCardSpeed / TicksPerSecond;
+            float closing = (to.X * step.X) + (to.Y * step.Y);
+            float faster = (speed * speed) - ((step.X * step.X) + (step.Y * step.Y));
+
+            // A card no faster than its target need never meet it: that one too is aimed at where it stands.
+            float ticks = faster > 0f
+                ? (closing + MathF.Sqrt((closing * closing) + (faster * nearest * nearest))) / faster
+                : 0f;
+            Vector2 direction = Direction(to + (step * ticks), out _);
+            _thrownCards.Add(new ThrownCard(from, direction, range, damage, byTheMagician));
+            _events.Add(new TickEvent(TickEventKind.Throw, from));
         }
 
-        if (target is null)
-        {
-            return 0;
-        }
-
-        // The card is thrown ahead of its target, at where the two meet if the target goes on as in its last step:
-        // `to` away now and `step` further every tick, it is met after t ticks by a card that flies `speed` a tick
-        // when |to + step x t| = speed x t. A target that stands has no step and is aimed at where it stands. The
-        // step is this tick's own, made before anybody throws: nothing of an earlier tick is read here.
-        // ponytail: the lead is of the first order, and the card flies straight. A target that stops, turns or is
-        // pushed while the card is in the air (a stagehand that reaches the box office, a critic that turns on the
-        // magician, a cloud) has left the meeting place by as much as it strays in that time, and is missed when
-        // that is more than its radius: at most its speed x throwRange / thrownCardSpeed, 2 units for the
-        // committed stagehand. A target near the end of the range that walks away is met past the range, where the
-        // card has fallen. And a card first flies on the tick after its throw, so its target is up to one of its
-        // own steps behind the aim: 0.13 of a unit for the committed stagehand, whose radius is 0.4. A slower card or a longer range makes both worse; a card that turns in the air is what
-        // mends them.
-        Vector2 to = target.Position - from;
-        Vector2 step = target.Position - target.PreviousPosition;
-        float speed = Tuning.ThrownCardSpeed / TicksPerSecond;
-        float closing = (to.X * step.X) + (to.Y * step.Y);
-        float faster = (speed * speed) - ((step.X * step.X) + (step.Y * step.Y));
-
-        // A card no faster than its target need never meet it: that one too is aimed at where it stands.
-        float ticks = faster > 0f
-            ? (closing + MathF.Sqrt((closing * closing) + (faster * nearest * nearest))) / faster
-            : 0f;
-        Vector2 direction = Direction(to + (step * ticks), out _);
-        _thrownCards.Add(new ThrownCard(from, direction, Tuning.ThrowRange, byTheMagician));
-        _events.Add(new TickEvent(TickEventKind.Throw, from));
-        return Ticks(Tuning.ThrowCooldown);
+        // An attack speed card adds its share to the rate of the throw: the time to the next is the cooldown over
+        // one and those shares.
+        return _targets.Count == 0
+            ? 0
+            : Ticks(Tuning.ThrowCooldown / (1f + (cards.AttackSpeed * Tuning.CardAttackSpeed)));
     }
 
     /// <summary>The file gives seconds and the rules count whole ticks: the nearest number of them.</summary>

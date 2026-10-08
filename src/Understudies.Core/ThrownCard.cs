@@ -5,8 +5,9 @@ namespace Understudies.Core;
 /// <summary>A card in the air: a point over the floor that flies the way it was thrown.</summary>
 public sealed class ThrownCard
 {
-    internal ThrownCard(Vector2 position, Vector2 direction, float rangeLeft, bool thrownByMagician)
+    internal ThrownCard(Vector2 position, Vector2 direction, float rangeLeft, float damage, bool thrownByMagician)
     {
+        Damage = damage;
         ThrownFrom = position;
         Position = position;
         PreviousPosition = position;
@@ -29,6 +30,9 @@ public sealed class ThrownCard
 
     /// <summary>One unit long.</summary>
     internal Vector2 Direction { get; }
+
+    /// <summary>The hit points it takes off the critic it touches: its thrower's, when it was thrown.</summary>
+    internal float Damage { get; }
 
     /// <summary>How far the card may still fly.</summary>
     internal float RangeLeft { get; set; }
