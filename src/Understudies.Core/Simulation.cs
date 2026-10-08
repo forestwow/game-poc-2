@@ -32,7 +32,8 @@ public sealed class Simulation(Tuning tuning, ulong seed, IReadOnlyList<IReadOnl
     // the act is over is the magician's at once and the next act's recording's.
     private SelfCards _recordingCards;
 
-    // Whom one throw is at, the nearest first. It is filled and read within one throw, and holds nothing between two.
+    // Whom one throw is at, the nearest first. It is read within the throw that fills it: what it holds after
+    // that is nobody's, and the next throw empties it before it looks for its own.
     private readonly List<Critic> _targets = [];
     private readonly List<TickEvent> _events = [];
     private int _ticksPlayed;
@@ -176,7 +177,9 @@ public sealed class Simulation(Tuning tuning, ulong seed, IReadOnlyList<IReadOnl
 
     /// <summary>
     /// What the program has left of its time, in ticks: all of <see cref="Tuning.ProgramTime"/> when the act is
-    /// over, and the tick that would leave none takes the leftmost card. Nothing outside the program.
+    /// over, and the tick that would leave none takes the leftmost card. A program of no time is still up when
+    /// the act is over, and waits for one tick: the first <see cref="Step"/> takes the leftmost card. Nothing
+    /// outside the program.
     /// </summary>
     public int ProgramTicksLeft { get; private set; }
 
