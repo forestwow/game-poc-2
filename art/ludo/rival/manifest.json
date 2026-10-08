@@ -1,0 +1,86 @@
+{
+  "tool": "ludo.ai, through its CLI (ludo 0.1.6)",
+  "ticket": "T29, the rival's understudy",
+  "credits": 3.5,
+  "note": "raw/ keeps the stills as returned. The first two came back small in the frame (49 sprite pixels tall, less than the magician), so two more were asked to fill it. The walk is kept only under the name the game reads: three rows of three frames of 60 x 68, a file pixel to a sprite pixel. A job that returned two pictures is listed twice with the credits of the whole job.",
+  "game_files": {
+    "rival-down.png": "the animation of raw/rival-big-v1.png"
+  },
+  "generations_made": [
+    {
+      "returned": "rival-v1.png",
+      "command": "ludo image create",
+      "settings": {
+        "image_type": "sprite",
+        "perspective": "High Angle",
+        "aspect_ratio": "ar_1_1",
+        "art_style": "16-Bit",
+        "prompt": "A surreal theatre prop that walks: a flat cardboard cut-out of a rival stage magician, clearly flat and two-dimensional like a shop standee, printed with a smug moustached man in a purple tailcoat and top hat with one arm raised, with a visible wooden stand and strut behind it and a slight bend in the cardboard, torn and taped at one corner, and two small real feet under it. Large and wide. Pixel art game sprite with a thick dark outline and a small limited palette, standing upright and facing the viewer, seen from the front and slightly from above as characters are in a top-down action RPG. Full body, single subject, centred, no text, no ground, no shadow.",
+        "n": 2
+      },
+      "job_id": "4081cf7e-c650-4dba-ac02-fe2259624852",
+      "created_at": "2026-10-08T13:19:24.015Z",
+      "credits_of_the_job": 1
+    },
+    {
+      "returned": "rival-v2.png",
+      "command": "ludo image create",
+      "settings": {
+        "image_type": "sprite",
+        "perspective": "High Angle",
+        "aspect_ratio": "ar_1_1",
+        "art_style": "16-Bit",
+        "prompt": "A surreal theatre prop that walks: a flat cardboard cut-out of a rival stage magician, clearly flat and two-dimensional like a shop standee, printed with a smug moustached man in a purple tailcoat and top hat with one arm raised, with a visible wooden stand and strut behind it and a slight bend in the cardboard, torn and taped at one corner, and two small real feet under it. Large and wide. Pixel art game sprite with a thick dark outline and a small limited palette, standing upright and facing the viewer, seen from the front and slightly from above as characters are in a top-down action RPG. Full body, single subject, centred, no text, no ground, no shadow.",
+        "n": 2
+      },
+      "job_id": "4081cf7e-c650-4dba-ac02-fe2259624852",
+      "created_at": "2026-10-08T13:19:24.015Z",
+      "credits_of_the_job": 1
+    },
+    {
+      "returned": "rival-big-v1.png",
+      "command": "ludo image create",
+      "settings": {
+        "image_type": "sprite",
+        "perspective": "High Angle",
+        "aspect_ratio": "ar_1_1",
+        "art_style": "16-Bit",
+        "prompt": "A surreal theatre prop that walks, drawn very large so that it fills the whole frame from the top edge to the bottom edge: a wide flat cardboard cut-out of a rival stage magician, clearly flat and two-dimensional like a shop standee, printed with a smug moustached man in a purple tailcoat and top hat with one arm raised, the brown cardboard showing as a broad border all round him, a strip of tape across one corner, and two small real feet in black shoes under the bottom edge. Broad and heavy, wider than a person. Pixel art game sprite with a thick dark outline and a small limited palette, facing the viewer, seen from the front and slightly from above as characters are in a top-down action RPG. Single subject, centred, no text, no ground, no shadow.",
+        "n": 2
+      },
+      "job_id": "c9a688d8-97ed-4928-9286-94975f9062c8",
+      "created_at": "2026-10-08T13:19:58.197Z",
+      "credits_of_the_job": 1
+    },
+    {
+      "returned": "rival-big-v2.png",
+      "command": "ludo image create",
+      "settings": {
+        "image_type": "sprite",
+        "perspective": "High Angle",
+        "aspect_ratio": "ar_1_1",
+        "art_style": "16-Bit",
+        "prompt": "A surreal theatre prop that walks, drawn very large so that it fills the whole frame from the top edge to the bottom edge: a wide flat cardboard cut-out of a rival stage magician, clearly flat and two-dimensional like a shop standee, printed with a smug moustached man in a purple tailcoat and top hat with one arm raised, the brown cardboard showing as a broad border all round him, a strip of tape across one corner, and two small real feet in black shoes under the bottom edge. Broad and heavy, wider than a person. Pixel art game sprite with a thick dark outline and a small limited palette, facing the viewer, seen from the front and slightly from above as characters are in a top-down action RPG. Single subject, centred, no text, no ground, no shadow.",
+        "n": 2
+      },
+      "job_id": "c9a688d8-97ed-4928-9286-94975f9062c8",
+      "created_at": "2026-10-08T13:19:58.197Z",
+      "credits_of_the_job": 1
+    },
+    {
+      "returned": "rival-walk-1.png",
+      "command": "ludo sprite animate",
+      "settings": {
+        "initial_image": "rival-big-v1.png",
+        "motion_prompt": "the flat stiff cardboard sheet waddles forward towards the viewer, rocking from side to side",
+        "model": "forge-pixel",
+        "duration": 1,
+        "frames": 9,
+        "frame_size": 64
+      },
+      "job_id": "1244f0d8-042e-4716-bca6-4a20d8a24719",
+      "created_at": "2026-10-08T13:20:39.660Z",
+      "credits_of_the_job": 1.5
+    }
+  ]
+}

@@ -48,6 +48,13 @@ internal static class Shows
     /// <summary>The second kind of enemy, which is the stagehand.</summary>
     public static EnemyKind Stagehand(this Tuning tuning) => tuning.EnemyKinds[1];
 
+    /// <summary>The third kind of enemy, which is the rival's understudy.</summary>
+    public static EnemyKind Rival(this Tuning tuning) => tuning.EnemyKinds[2];
+
+    /// <summary>The tuning with every kind's strike on the box office taking this much.</summary>
+    public static Tuning WithStrikesOf(this Tuning tuning, float damage) =>
+        tuning with { EnemyKinds = [.. tuning.EnemyKinds.Select(kind => kind with { StrikeDamage = damage })] };
+
     /// <summary>The tuning with its first kind of enemy changed, and that kind alone on its list.</summary>
     public static Tuning WithCritic(this Tuning tuning, Func<EnemyKind, EnemyKind> change) =>
         tuning with { EnemyKinds = [change(tuning.Critic())] };

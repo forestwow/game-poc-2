@@ -616,12 +616,11 @@ public class CardTests
         // The box office stands against the second door with one hit point. A critic enters there on the tick
         // before the act's last, touching it, and strikes on the last: the show closes with an encore taken in
         // the act and another act to come.
-        Tuning tuning = Scene with
+        Tuning tuning = Scene.WithStrikesOf(1f) with
         {
             BoxOfficePosition = OtherDoor + new Vector2(0f, 2f),
             BoxOfficeSize = 4f,
             BoxOfficeHitPoints = 1f,
-            CriticStrikeDamage = 1f,
 
             // The box office has come to within the committed radius of where the scene's critic falls: the
             // scene is about the act's last tick, and its encore is earned as everywhere else in these tests.

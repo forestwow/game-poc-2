@@ -172,10 +172,7 @@ public class CriticTests
     public void Step_ACriticAtTheBoxOffice_StrikesItOncePerCooldown()
     {
         const int cooldown = Simulation.TicksPerSecond / 2;
-        Tuning tuning = Tuning with
-        {
-            BoxOfficeHitPoints = 100f, CriticStrikeDamage = 3f, CriticBlowCooldown = 0.5f,
-        };
+        Tuning tuning = Tuning.WithStrikesOf(3f) with { BoxOfficeHitPoints = 100f, CriticBlowCooldown = 0.5f };
         var simulation = Shows.WithOneCritic(tuning);
         Assert.That(simulation.BoxOfficeHitPoints, Is.EqualTo(100f));
 
@@ -194,6 +191,131 @@ public class CriticTests
 
         Run(simulation, ticks: cooldown);
         Assert.That(simulation.BoxOfficeHitPoints, Is.EqualTo(91f));
+    }
+
+    [Test]
+    public void Step_AStrikeOnTheBoxOffice_TakesWhatTheStrikersOwnKindSays()
+    {
+        // Two kinds that are the critic but for their strike: one of each enters, a second apart, and each
+        // strike takes its own kind's number.
+        Tuning tuning = Tuning with
+        {
+            BoxOfficeHitPoints = 100f,
+            CriticBlowCooldown = 60f,
+            EnemyKinds =
+            [
+                Tuning.Critic() with { StrikeDamage = 1f },
+                Tuning.Critic() with { Name = "heavy", StrikeDamage = 3f },
+            ],
+        };
+        var simulation = new Simulation(
+            tuning,
+            seed: 1,
+            [[new PlannedEntry(Tick: 0, Door: 0, Kind: 1), new PlannedEntry(Simulation.TicksPerSecond, Door: 0, Kind: 0)]]);
+
+        RunUntil(simulation, () => simulation.BoxOfficeHitPoints < 100f);
+        Assert.That(simulation.BoxOfficeHitPoints, Is.EqualTo(97f), "the heavy one's strike");
+
+        RunUntil(simulation, () => simulation.BoxOfficeHitPoints < 97f);
+        Assert.That(simulation.BoxOfficeHitPoints, Is.EqualTo(96f), "the critic's strike");
+    }
+
+    /// <summary>
+    /// Four acts of a second, in each of which one enemy of each of two kinds enters on the first tick and nobody
+    /// falls or strikes: the first kind is the critic, and the second is tougher by five for every act after
+    /// its own first, which is the second.
+    /// </summary>
+    private Tuning TougherByAct => Tuning.WithStrikesOf(0f) with
+    {
+        ActLength = 1f,
+        ActsInPerformance = 4,
+        EnemyKinds =
+        [
+            Tuning.Critic() with { HitPoints = 3f, HitPointsPerAct = 0f, FromAct = 1 },
+            Tuning.Critic() with { Name = "tougher", HitPoints = 10f, HitPointsPerAct = 5f, FromAct = 2 },
+        ],
+    };
+
+    private static Simulation OneOfEachInEveryAct(Tuning tuning) => new(
+        tuning,
+        seed: 1,
+        [.. Enumerable.Repeat<IReadOnlyList<PlannedEntry>>([new PlannedEntry(0, Door: 0, Kind: 0), new PlannedEntry(0, Door: 0, Kind: 1)], 4)]);
+
+    [Test]
+    public void Step_AnEnemyEnters_WithItsKindsHitPointsAndItsKindsGrowthForEveryActAfterTheKindsFirst()
+    {
+        Simulation simulation = OneOfEachInEveryAct(TougherByAct);
+        var entered = new List<(float Critic, float Tougher)>();
+
+        for (int act = 1; act <= 4; act++)
+        {
+            simulation.Step(default);
+            entered.Add((simulation.Critics[^2].HitPoints, simulation.Critics[^1].HitPoints));
+            RunUntil(simulation, () => simulation.Phase != Phase.Act);
+            simulation.GoOn();
+        }
+
+        // The kind's own first act has the base, and an act before it (which only a plan given by hand has)
+        // has no less. A kind with no growth is what it was in every act.
+        Assert.That(entered.Select(pair => pair.Tougher), Is.EqualTo(new[] { 10f, 10f, 15f, 20f }));
+        Assert.That(entered.Select(pair => pair.Critic), Is.EqualTo(new[] { 3f, 3f, 3f, 3f }));
+
+        // Those of the earlier acts are still on the stage with what they entered with.
+        Assert.That(simulation.Critics.Select(critic => critic.HitPoints), Is.EqualTo(new[] { 3f, 10f, 3f, 10f, 3f, 15f, 3f, 20f }));
+    }
+
+    [Test]
+    public void Step_TheGrowthIsChangedBetweenTwoActs_WhoeverIsOnTheStageKeepsItsHitPointsAndTheNextEntersOnTheNewNumber()
+    {
+        Simulation simulation = OneOfEachInEveryAct(TougherByAct);
+        for (int act = 1; act <= 2; act++)
+        {
+            RunUntil(simulation, () => simulation.Phase != Phase.Act);
+            simulation.GoOn();
+        }
+
+        // As a kind's hit points do: the number is read when an enemy enters, from the tuning of then.
+        simulation.Tuning = TougherByAct with
+        {
+            EnemyKinds = [TougherByAct.EnemyKinds[0], TougherByAct.EnemyKinds[1] with { HitPointsPerAct = 100f }],
+        };
+        simulation.Step(default);
+
+        Assert.That(simulation.Critics.Select(critic => critic.HitPoints), Is.EqualTo(new[] { 3f, 10f, 3f, 10f, 3f, 110f }));
+    }
+
+    [Test]
+    public void Step_ARivalAndACriticOnOnePoint_ArePushedApartHalfTheOverlapEach_HoweverWideEitherIs()
+    {
+        // The push-apart knows no weight. Both stand still and enter on one tick at a door of no width, on one
+        // point: the next tick parts them until their circles touch, each by half of that, the wide one too.
+        EnemyKind critic = Tuning.Critic() with { Speed = 0f };
+        EnemyKind rival = Tuning.Rival() with { Speed = 0f };
+        Tuning tuning = Tuning with { StageDoorWidth = 0f, EnemyKinds = [critic, rival] };
+        var simulation = new Simulation(
+            tuning, seed: 1, [[new PlannedEntry(Tick: 0, Door: 0, Kind: 1), new PlannedEntry(Tick: 0, Door: 0, Kind: 0)]]);
+        Vector2 door = tuning.StageDoors[0].Position;
+        float half = (critic.Radius + rival.Radius) / 2f;
+        Assert.That(rival.Radius, Is.GreaterThan(critic.Radius));
+
+        Run(simulation, ticks: 2);
+
+        Assert.That(Vector2.Distance(simulation.Critics[0].Position, door), Is.EqualTo(half).Within(Tolerance), "the rival");
+        Assert.That(Vector2.Distance(simulation.Critics[1].Position, door), Is.EqualTo(half).Within(Tolerance), "the critic");
+    }
+
+    [Test]
+    public void Step_TheCommittedRivalAtTheBoxOffice_StrikesItHarderThanACritic_ByItsOwnNumber()
+    {
+        Assert.That(Tuning.Rival().StrikeDamage, Is.GreaterThan(Tuning.Critic().StrikeDamage));
+        Simulation simulation = Shows.WithOneOfKind(Tuning, kind: 2);
+
+        RunUntil(simulation, () => simulation.BoxOfficeHitPoints < Tuning.BoxOfficeHitPoints);
+
+        Assert.That(simulation.BoxOfficeHitPoints, Is.EqualTo(Tuning.BoxOfficeHitPoints - Tuning.Rival().StrikeDamage));
+        Assert.That(
+            Vector2.Distance(simulation.Critics[0].Position, Tuning.BoxOfficePosition),
+            Is.EqualTo((Tuning.BoxOfficeSize / 2f) + Tuning.Rival().Radius).Within(Tolerance));
     }
 
     [Test]
@@ -220,7 +342,7 @@ public class CriticTests
     public void Step_TheBoxOfficesHitPointsRunOut_TheShowCloses()
     {
         // Two strikes are not enough and the third is more than enough.
-        Tuning tuning = Tuning with { BoxOfficeHitPoints = 5f, CriticStrikeDamage = 2f };
+        Tuning tuning = Tuning.WithStrikesOf(2f) with { BoxOfficeHitPoints = 5f };
         var simulation = Shows.WithOneCritic(tuning);
 
         RunUntil(simulation, () => simulation.BoxOfficeHitPoints <= 1f);
@@ -263,7 +385,7 @@ public class CriticTests
     public void Step_AfterTheShowCloses_LeavesNoEventsBehind()
     {
         // The first strike is more than enough: the tick that closes the show reports it.
-        Tuning tuning = Tuning with { BoxOfficeHitPoints = 1f, CriticStrikeDamage = 2f };
+        Tuning tuning = Tuning.WithStrikesOf(2f) with { BoxOfficeHitPoints = 1f };
         var simulation = Shows.WithOneCritic(tuning);
         RunUntil(simulation, () => simulation.ShowClosed);
         Assert.That(simulation.Events.Select(e => e.Kind), Is.EqualTo(new[] { TickEventKind.BoxOfficeStruck }));
@@ -325,7 +447,7 @@ public class CriticTests
     /// </summary>
     private Simulation ACrowd()
     {
-        Simulation simulation = Shows.WithACriticEvery(Simulation.TicksPerSecond, Tuning with { CriticStrikeDamage = 0f });
+        Simulation simulation = Shows.WithACriticEvery(Simulation.TicksPerSecond, Tuning.WithStrikesOf(0f));
         Run(simulation, ticks: 40 * Simulation.TicksPerSecond);
         return simulation;
     }

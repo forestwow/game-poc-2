@@ -390,11 +390,10 @@ public class VanishTests
     {
         // The critic stops 17.5 units below the door; the magician waits two units to the side of there. A strike
         // every 30 ticks, and a stun of 45.
-        Tuning tuning = ACriticWalksDown with
+        Tuning tuning = ACriticWalksDown.WithStrikesOf(1f) with
         {
             MagicianMark = Door + new Vector2(2f, 17.5f),
             BoxOfficeHitPoints = 100f,
-            CriticStrikeDamage = 1f,
             CriticBlowCooldown = 0.5f,
             VanishStunTime = 0.75f,
         };
@@ -471,12 +470,11 @@ public class VanishTests
         // critics, most of them at the side of the box office the magician's mark is on, and none turns on the
         // magician. The cloud lies on them, and those it does not reach walk on into their backs. No curtain: the
         // forty seconds are counted from the first tick of the act.
-        Tuning tuning = CommittedTuning.Parse() with
+        Tuning tuning = CommittedTuning.Parse().WithStrikesOf(0f) with
         {
             CurtainTime = 0f,
             ThrowRange = 0f,
             CriticTurnRadius = 0f,
-            CriticStrikeDamage = 0f,
             VanishCloudRadius = 2.5f,
             VanishCloudTime = 1f,
             VanishStunTime = 1.5f,

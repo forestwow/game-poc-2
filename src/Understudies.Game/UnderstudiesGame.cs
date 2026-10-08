@@ -225,7 +225,8 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
         _pixel.SetData([Color.White]);
 
         // A walk is a sheet of three rows of three frames, a file pixel to a sprite pixel. The side view faces
-        // right. The stagehand has one walk, toward the viewer, and the box office is one picture as the tool
+        // right. The stagehand and the rival's understudy have one walk each, toward the viewer (a cut-out has no
+        // back and no side, so it is not mirrored), and the box office is one picture as the tool
         // returned it: twelve file pixels to one of its own, drawn six to a sprite pixel so that it is as wide as
         // its four units.
         _sheets[(int)Figure.Magician] =
@@ -233,6 +234,7 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
         _sheets[(int)Figure.Critic] =
             [ReadSheet("critic-down.png", 3), ReadSheet("critic-up.png", 3), ReadSheet("critic-side.png", 3)];
         _sheets[(int)Figure.Stagehand] = [ReadSheet("stagehand-down.png", 3)];
+        _sheets[(int)Figure.Rival] = [ReadSheet("rival-down.png", 3)];
         _sheets[(int)Figure.BoxOffice] = [ReadSheet("box-office.png", 1, block: 6f)];
 
         // The set (plan T07d). The doors are stills like the box office and drawn at its pixel size, a footlight at
@@ -562,9 +564,8 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
         foreach (var body in _juice.Bodies)
         {
             // A critic that fell lies where it fell and fades away, under the feet of whoever stands there.
-            // ponytail: a fallen stagehand lies there as a critic. A kill says where and not whose: when it says
-            // the kind too, the body is drawn as that kind.
-            DrawFigure(Figure.Critic, body.Position, white: body.White, fallen: true, opacity: body.Opacity);
+            // Whatever it was: the juice kept its kind from when it stood.
+            DrawFigure(FigureOf(body.Kind), body.Position, white: body.White, fallen: true, opacity: body.Opacity);
         }
 
         _spriteBatch.End();
@@ -629,9 +630,7 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
         foreach (Critic critic in _simulation.Critics)
         {
             Vector2 feet = Vector2.Lerp(critic.PreviousPosition, critic.Position, alpha);
-            // ponytail: the view knows the kinds by their places in enemyKinds, the critic first and the stagehand
-            // second. A third kind is drawn as a stagehand until it has a figure of its own.
-            Figure figure = critic.Kind == 0 ? Figure.Critic : Figure.Stagehand;
+            Figure figure = FigureOf(critic.Kind);
             // A critic that stands is at its work: it faces the box office.
             Vector2 step = critic.Position - critic.PreviousPosition;
             DrawFigure(
@@ -641,7 +640,7 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
                 white: _juice.CriticWhite(critic.Id),
                 toward: step != Vector2.Zero ? step : Tuning.BoxOfficePosition - critic.Position,
                 walking: step != Vector2.Zero,
-                speed: Tuning.EnemyKinds[critic.Kind].Speed,
+                speed: Tuning.EnemyKinds[Math.Min(critic.Kind, Tuning.EnemyKinds.Count - 1)].Speed,
                 beat: critic.Id);
         }
 
@@ -1076,6 +1075,17 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
         }
     }
 
+    /// <summary>The figure an enemy of a kind is drawn as.</summary>
+    // ponytail: the view knows the kinds by their places in enemyKinds, the critic first, the stagehand second and
+    // the rival's understudy third. A fourth kind is drawn as a stagehand until it has a figure of its own; the
+    // kinds need names to be looked up by when the list is reordered.
+    private static Figure FigureOf(int kind) => kind switch
+    {
+        0 => Figure.Critic,
+        2 => Figure.Rival,
+        _ => Figure.Stagehand,
+    };
+
     /// <summary>How long a sprite pixel is in world units in the frame being drawn.</summary>
     private float SpritePixel => MathF.Max(1f, MathF.Round(_scale / SpritePixelsPerUnit)) / _scale;
 
@@ -1237,6 +1247,7 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
         Magician,
         Critic,
         Stagehand,
+        Rival,
         BoxOffice,
         ShutDoor,
         OpenDoor,

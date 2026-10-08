@@ -31,14 +31,13 @@ public class WaveTests
     /// throws at them, they turn on nobody and their strikes take nothing, so every one that enters is still there.
     /// The curtain has no length, which is no curtain: these tests count their ticks from the first tick of an act.
     /// </summary>
-    private Tuning ShortActs => Tuning with
+    private Tuning ShortActs => Tuning.WithStrikesOf(0f) with
     {
         CurtainTime = 0f,
         ActLength = 10f,
         ActQuietEnd = 1f,
         ThrowRange = 0f,
         CriticTurnRadius = 0f,
-        CriticStrikeDamage = 0f,
     };
 
     [Test]
@@ -90,6 +89,33 @@ public class WaveTests
                     stagehands,
                     act < from ? Is.Zero : Is.InRange(1, (plan[act - 1].Count - 1) / 2),
                     $"seed {seed}, act {act}");
+            }
+        }
+    }
+
+    [Test]
+    public void Plan_TheCommittedRival_ChangesNoActBeforeItsOwn_AndIsBoughtInEveryActFromIt()
+    {
+        // A kind that an act may not buy yet takes no part in that act's draws: the plan with the rival's
+        // understudy is, up to its act, the plan without it, entry for entry.
+        int from = Tuning.Rival().FromAct;
+        Assert.That(from, Is.GreaterThanOrEqualTo(4), "acts one to three are as they were");
+        Tuning without = Tuning with { EnemyKinds = [Tuning.Critic(), Tuning.Stagehand()] };
+        foreach (ulong seed in Seeds)
+        {
+            IReadOnlyList<IReadOnlyList<PlannedEntry>> plan = Waves.Plan(Tuning, seed);
+            IReadOnlyList<IReadOnlyList<PlannedEntry>> planWithout = Waves.Plan(without, seed);
+
+            for (int act = 1; act <= plan.Count; act++)
+            {
+                if (act < from)
+                {
+                    Assert.That(plan[act - 1], Is.EqualTo(planWithout[act - 1]), $"seed {seed}, act {act}");
+                }
+                else
+                {
+                    Assert.That(plan[act - 1].Select(entry => entry.Kind), Has.Some.EqualTo(2), $"seed {seed}, act {act}");
+                }
             }
         }
     }

@@ -33,7 +33,7 @@ public class FallTests
     /// quarter of a unit a tick and throws at nobody. The curtain has no length, which is no curtain: these tests
     /// count their ticks from the first tick of an act.
     /// </summary>
-    private Tuning Scene { get; } = CommittedTuning.Parse().WithCritic(critic => critic with { Speed = 60f, Radius = 0.5f }) with
+    private Tuning Scene { get; } = CommittedTuning.Parse().WithCritic(critic => critic with { Speed = 60f, Radius = 0.5f, StrikeDamage = 1f }) with
     {
         CurtainTime = 0f,
         ActLength = 2f,
@@ -51,7 +51,6 @@ public class FallTests
         VanishDistance = 6f,
         ThrowRange = 0f,
         CriticTurnRadius = 3f,
-        CriticStrikeDamage = 1f,
         CriticTouchDamage = 1f,
         CriticBlowCooldown = 0.5f,
     };

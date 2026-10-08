@@ -950,7 +950,7 @@ public sealed class Simulation(Tuning tuning, ulong seed, IReadOnlyList<IReadOnl
             }
             else
             {
-                BoxOfficeHitPoints = MathF.Max(0f, BoxOfficeHitPoints - Tuning.CriticStrikeDamage);
+                BoxOfficeHitPoints = MathF.Max(0f, BoxOfficeHitPoints - kind.StrikeDamage);
                 _events.Add(new TickEvent(TickEventKind.BoxOfficeStruck, critic.Position));
             }
 
@@ -1102,7 +1102,11 @@ public sealed class Simulation(Tuning tuning, ulong seed, IReadOnlyList<IReadOnl
         float along = (_doorPlaces.NextFloat() - 0.5f) * Tuning.StageDoorWidth;
         Vector2 position = door + (inASide ? new Vector2(0f, along) : new Vector2(along, 0f));
         var critic = new Critic(_criticsEntered++, entry.Kind, position);
-        critic.HitPoints = KindOf(critic).HitPoints;
+
+        // A kind grows tougher by the act (plan T29): what one enters with is worked out here, from the act's
+        // number and the tuning of now, and kept by the critic as its hit points, so nothing else is state.
+        EnemyKind kind = KindOf(critic);
+        critic.HitPoints = kind.HitPoints + (kind.HitPointsPerAct * Math.Max(0, Act - kind.FromAct));
         _critics.Add(critic);
     }
 }

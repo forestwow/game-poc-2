@@ -101,7 +101,11 @@ internal sealed class Juice(Random random)
 
     // How many self cards each understudy had when it was last looked at, in the order of their acts.
     private readonly List<int> _understudyCards = [];
-    private readonly List<(Vector2 Position, float FellAt)> _bodies = [];
+
+    // The kind of every critic on the stage, by its id, as it was last fed: a kill names its critic, which is
+    // gone from the stage by then, and its body is drawn as what it was. A critic that falls is taken out.
+    private readonly Dictionary<int, int> _criticKinds = [];
+    private readonly List<(Vector2 Position, int Kind, float FellAt)> _bodies = [];
     private readonly List<Scrap> _scraps = [];
     private readonly List<(Effect Kind, Vector2 Middle, float At)> _effects = [];
 
@@ -137,11 +141,11 @@ internal sealed class Juice(Random random)
     public float CriticWhite(int id) => _criticFlashedAt.TryGetValue(id, out float flashedAt) ? White(flashedAt) : 0f;
 
     /// <summary>
-    /// The critics that fell a moment ago: where each lies, how far to white it is drawn (the blow that felled it
-    /// flashes too), and how much of it is left to see.
+    /// The critics that fell a moment ago: where each lies, its kind by the kind's place in the tuning, how far to
+    /// white it is drawn (the blow that felled it flashes too), and how much of it is left to see.
     /// </summary>
-    public IEnumerable<(Vector2 Position, float White, float Opacity)> Bodies =>
-        _bodies.Select(body => (body.Position, White(body.FellAt), 1f - ((_now - body.FellAt) / BodyTime)));
+    public IEnumerable<(Vector2 Position, int Kind, float White, float Opacity)> Bodies =>
+        _bodies.Select(body => (body.Position, body.Kind, White(body.FellAt), 1f - ((_now - body.FellAt) / BodyTime)));
 
     /// <summary>The scraps in the air: the middle of each, how it is turned, and how much of it is left to see.</summary>
     public IEnumerable<(Vector2 Middle, float Turn, float Opacity)> Scraps => _scraps.Select(scrap =>
@@ -200,7 +204,11 @@ internal sealed class Juice(Random random)
                 // A fallen critic is a body, which flashes by the time it fell: its own flash is kept no longer.
                 case TickEventKind.Kill:
                     _criticFlashedAt.Remove(happened.CriticId);
-                    _bodies.Add((happened.Position, _now));
+
+                    // Every critic was on the stage when some earlier tick was fed, since it enters last in its
+                    // tick: one the juice never saw (fed a show under way) lies as the first kind.
+                    _criticKinds.Remove(happened.CriticId, out int kind);
+                    _bodies.Add((happened.Position, kind, _now));
                     Burst(happened.Position, KillScraps);
                     Show(Effect.KillBurst, happened.Position);
                     break;
@@ -226,6 +234,12 @@ internal sealed class Juice(Random random)
                     _trauma = MathF.Min(1f, _trauma + StrikeTrauma);
                     break;
             }
+        }
+
+        // After the events: who stands now is whose fall a later tick may report.
+        foreach (Critic critic in simulation.Critics)
+        {
+            _criticKinds[critic.Id] = critic.Kind;
         }
     }
 

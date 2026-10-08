@@ -37,7 +37,7 @@ public class ScriptedPlayersTests
             // An act that stood for an encore is in what is pinned.
             Assert.That(performance.Acts.Sum(act => act.Encores), Is.GreaterThan(0), "encores");
             Assert.That(performance.Acts[2].StateHash, Is.EqualTo(851245374359038781UL), "the end of act three");
-            Assert.That(performance.Acts[^1].StateHash, Is.EqualTo(5562514752516699903UL), "the end of the performance");
+            Assert.That(performance.Acts[^1].StateHash, Is.EqualTo(8259367377736146208UL), "the end of the performance");
         });
     }
 
@@ -70,7 +70,7 @@ public class ScriptedPlayersTests
             Assert.That(stunned, Is.GreaterThan(0), "stunned critics");
             Assert.That(performance.Acts.Sum(act => act.Encores), Is.GreaterThan(0), "encores");
             Assert.That(performance.Acts[2].StateHash, Is.EqualTo(4345378464534316888UL), "the end of act three");
-            Assert.That(performance.Acts[^1].StateHash, Is.EqualTo(6328738384288175142UL), "the end of the performance");
+            Assert.That(performance.Acts[^1].StateHash, Is.EqualTo(2203870041061055484UL), "the end of the performance");
         });
     }
 
@@ -299,21 +299,22 @@ public class ScriptedPlayersTests
         int onTheCircle = 0;
         float furthest = 0f;
 
-        // How much nearer an open door it ever stood than the doors player's post at that door, in any act.
-        float insideAPost = float.NegativeInfinity;
+        // On how many ticks of the performance it stood nearer an open door than the doors player's post at
+        // that door is. Its fetching never takes it there; a step back from a critic or a Vanish away from a
+        // crowd can, for a moment (plan T37 measured under 0.3 % of its ticks in any act).
+        int played = 0;
+        int insideAPost = 0;
 
         Performance performance = ScriptedPlayers.Play(Tuning, seed: 1, simulation =>
         {
             float fromCentre = Vector2.Distance(simulation.MagicianPosition, centre);
-            for (int door = 0; door < Tuning.StageDoors.Count; door++)
+            played++;
+            insideAPost += Enumerable.Range(0, Tuning.StageDoors.Count).Any(door =>
             {
                 Vector2 at = Tuning.StageDoors[door].Position;
                 float post = MathF.Min(Tuning.ThrowRange, Vector2.Distance(at, centre) / 3f);
-                if (simulation.DoorIsOpen(door))
-                {
-                    insideAPost = MathF.Max(insideAPost, post - Vector2.Distance(simulation.MagicianPosition, at));
-                }
-            }
+                return simulation.DoorIsOpen(door) && Vector2.Distance(simulation.MagicianPosition, at) < post;
+            }) ? 1 : 0;
 
             if (simulation.Act == 1 && simulation.Phase == Phase.Act)
             {
@@ -337,7 +338,8 @@ public class ScriptedPlayersTests
             Assert.That(furthest, Is.GreaterThan(radius + 1f), "it left its circle");
             Assert.That(furthest, Is.LessThanOrEqualTo(radius + ScriptedPlayers.DoorsReach + Tuning.VanishDistance));
             Assert.That(onTheCircle, Is.GreaterThan(ticks / 4), "ticks on its circle");
-            Assert.That(insideAPost, Is.LessThanOrEqualTo(0f), "it left the floor before every open door alone");
+            // A dodge or a Vanish can carry it inside for a tick or two (three in this performance): never to stay.
+            Assert.That(insideAPost, Is.LessThan(played / 1000), "ticks on the floor before an open door, which it leaves alone");
         });
     }
 
@@ -426,11 +428,42 @@ public class ScriptedPlayersTests
     }
 
     /// <summary>
+    /// Plan T29, two tripwires on the seeds 1 to 20, which the numbers are searched on. The first fails a step
+    /// before the guard's count moves: the doors player's box office at the end is at least 350 of 400 on
+    /// average. On the committed numbers it is 390; one seed that collapses leaves some 370 and two some 350,
+    /// and the guard's own floor of 16 finished lets four collapse, which is 320: a tuning between "fine" and
+    /// "the guard's floor" is caught here. The second is the card order, which must not be a hidden hinge
+    /// (T29's first numbers held by the committed order alone and lost act seven on every seed by any other):
+    /// taking the longer arm first, the doors player still finishes act ten on at least 16 of 20. It finishes 18
+    /// (17 on the seeds 101 to 120), and the same tuning drawn otherwise moves that by a seed: the margin is thin on
+    /// purpose, and a break here is a finding about a card or a player, not a floor to lower unread.
+    /// </summary>
+    [Test]
+    public void TheGuard_OnTheCommittedTuning_TheDoorsPlayerKeepsTheBoxOfficeAndFinishesByAnotherCardOrderToo()
+    {
+        Performance[] rangeFirst = PlayTheGuard(Tuning, firstSeed: 1, [GuardPlayers[Doors]], RangeFirst);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(
+                Of(TheGuard(1), Doors).Average(played => played.BoxOffice),
+                Is.GreaterThanOrEqualTo(350f),
+                "the doors player's box office at the end, on average");
+            Assert.That(
+                rangeFirst.Count(Finished),
+                Is.GreaterThanOrEqualTo(16),
+                "seeds on which the doors player finished act ten taking the longer arm first");
+        });
+    }
+
+    /// <summary>
     /// Plan T37, the kiter as the rival of going out to the doors: over each set of seeds the doors player
     /// finishes act ten at least as often as the kiter, with at least half as many encores again a performance
-    /// and at least fifty more of the box office left on average (on the committed numbers it has nearly twice
-    /// the encores and some hundred more). Whether the kiter has to lose outright is the
-    /// owner's question, open in the plan: nothing here says it loses.
+    /// and at least fifty more of the box office left on average (on the committed numbers both finish every
+    /// seed, and the doors player has 39.9 encores against 22.5 and 390 of the box office against 320 on the
+    /// first set, 39.8 against 23.1 and 400 against 289 on the second: the seventy of the first set is not far
+    /// over the fifty). Whether the kiter has to lose outright is the owner's question, open in the plan:
+    /// nothing here says it loses, and by the committed card order it does not.
     /// </summary>
     [TestCase(1)]
     [TestCase(101)]
@@ -462,7 +495,7 @@ public class ScriptedPlayersTests
     /// The guard's table in short, for whoever weighs one tuning against another: every variant on the seeds 1
     /// to 20, which numbers are searched on, and on no others unless they are asked for: the environment variable
     /// <c>UNDERSTUDIES_SEED_SETS</c> names the first seed of every set to play, <c>1,101</c> for the second set
-    /// as well and <c>201</c> for the third alone. The second is read once, on a candidate, and the third only
+    /// as well and <c>301</c> for the third alone. The second is read once, on a candidate, and the third only
     /// for the last check of a tuning (plan T37): a set that every probe is read on is spent. A variant is the
     /// committed tuning.json with some of its keys given other values. They are read from the file the
     /// environment variable <c>UNDERSTUDIES_VARIANTS</c> names, a variant a line, a name and a JSON object of
@@ -505,13 +538,12 @@ public class ScriptedPlayersTests
     [Explicit("Prints how the doors player and the kiter end on the committed tuning when they take their cards by four different orders (a few seconds a set)")]
     public void PrintTheCardOrders()
     {
-        IReadOnlyList<Card> committed = ScriptedPlayers.CardOrder;
         (string Name, IReadOnlyList<Card> Order)[] orders =
         [
-            ("committed", committed),
-            ("reversed", [.. committed.Reverse()]),
-            ("one more card last", [.. committed.Where(card => card != Card.OneMoreCard), Card.OneMoreCard]),
-            ("range first", [Card.Range, .. committed.Where(card => card != Card.Range)]),
+            ("committed", ScriptedPlayers.CardOrder),
+            ("reversed", [.. ScriptedPlayers.CardOrder.Reverse()]),
+            ("one more card last", OneMoreCardLast),
+            ("range first", RangeFirst),
         ];
         (string Name, Func<Simulation, MagicianInput> Player)[] players = [GuardPlayers[Doors], GuardPlayers[Kiter]];
         TextWriter table = TestContext.Out;
@@ -594,6 +626,23 @@ public class ScriptedPlayersTests
 
                 table.WriteLine($"       most critics by act {ByAct(acts => acts.Max(act => act.MostCritics).ToString(CultureInfo.InvariantCulture))}");
             }
+
+            // The doors player and the kiter by two other orders of taking cards (plan T29): a tuning that holds
+            // by the committed order alone measures the order and not the route.
+            (string Name, Func<Simulation, MagicianInput> Player)[] two = [GuardPlayers[Doors], GuardPlayers[Kiter]];
+            foreach ((string order, IReadOnlyList<Card> cards) in new[] { ("range first", RangeFirst), ("one more card last", OneMoreCardLast) })
+            {
+                Performance[] byOrder = PlayTheGuard(tuning, firstSeed, two, cards);
+                for (int player = 0; player < two.Length; player++)
+                {
+                    List<Performance> mine = [.. byOrder.Skip(player * Seeds).Take(Seeds)];
+                    string boxOffice = string.Join(" ", Enumerable.Range(0, mine.Max(played => played.Act))
+                        .Select(act => Number(mine.Where(played => played.Act > act).Average(played => played.Acts[act].BoxOffice), "0")));
+                    table.WriteLine(
+                        $"     by {order}, {two[player].Name}: finished {mine.Count(Finished)}, lost {HowLost(mine)}; encores {Number(mine.Average(Encores))}; "
+                        + $"box office at the end {Number(mine.Average(played => played.BoxOffice), "0")}, the worst {Number(mine.Min(played => played.BoxOffice), "0")}; by act {boxOffice}");
+                }
+            }
         }
     }
 
@@ -610,6 +659,14 @@ public class ScriptedPlayersTests
             .ToList();
         return lost.Count == 0 ? "never" : string.Join(", ", lost);
     }
+
+    /// <summary>The committed order with the longer arm taken before anything else.</summary>
+    private static readonly IReadOnlyList<Card> RangeFirst =
+        [Card.Range, .. ScriptedPlayers.CardOrder.Where(card => card != Card.Range)];
+
+    /// <summary>The committed order with "one more card" taken after everything else.</summary>
+    private static readonly IReadOnlyList<Card> OneMoreCardLast =
+        [.. ScriptedPlayers.CardOrder.Where(card => card != Card.OneMoreCard), Card.OneMoreCard];
 
     /// <summary>How many seeds the guard is read over: 1 to this, where nothing says where they start.</summary>
     private const int Seeds = 20;

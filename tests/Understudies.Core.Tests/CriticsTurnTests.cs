@@ -25,7 +25,7 @@ public class CriticsTurnTests
     /// The curtain has no length, which is no curtain: these tests count their ticks from the first
     /// tick of an act, and the curtain has tests of its own.
     /// </summary>
-    private Tuning Scene { get; } = CommittedTuning.Parse().WithCritic(critic => critic with { Speed = 60f, Radius = 0.5f }) with
+    private Tuning Scene { get; } = CommittedTuning.Parse().WithCritic(critic => critic with { Speed = 60f, Radius = 0.5f, StrikeDamage = 1f }) with
     {
         CurtainTime = 0f,
         StageDoors = [new StageDoor(Door, 1)],
@@ -38,7 +38,6 @@ public class CriticsTurnTests
         MagicianHitPoints = 10f,
         ThrowRange = 0f,
         CriticTurnRadius = 3f,
-        CriticStrikeDamage = 1f,
         CriticTouchDamage = 2f,
         CriticBlowCooldown = 0.5f,
     };
@@ -92,6 +91,30 @@ public class CriticsTurnTests
 
         Assert.That(simulation.MagicianHitPoints, Is.EqualTo(10f));
         Assert.That(simulation.BoxOfficeHitPoints, Is.LessThan(100f));
+    }
+
+    [Test]
+    public void Step_ARivalWithTheMagicianInItsWay_WalksOnToTheBoxOfficeAndNeverHurtsTheMagician()
+    {
+        // The rival's understudy as the committed file has it, on the scene's way down the stage, and the
+        // magician standing right on that way, six units below the door: the rival walks through it, as slowly
+        // as it walks, takes nothing from it and strikes the box office.
+        EnemyKind rival = CommittedTuning.Parse().Rival();
+        Tuning tuning = Scene with
+        {
+            MagicianMark = Door + new Vector2(0f, 6f),
+            EnemyKinds = [Scene.Critic(), CommittedTuning.Parse().Stagehand(), rival],
+        };
+        Simulation simulation = Shows.WithOneOfKind(tuning, kind: 2);
+
+        while (simulation.BoxOfficeHitPoints == 100f && simulation.Phase == Phase.Act)
+        {
+            simulation.Step(default);
+            Assert.That(simulation.Critics[0].Position.X, Is.EqualTo(Door.X));
+        }
+
+        Assert.That(simulation.MagicianHitPoints, Is.EqualTo(10f));
+        Assert.That(simulation.BoxOfficeHitPoints, Is.EqualTo(100f - rival.StrikeDamage));
     }
 
     [Test]
@@ -269,12 +292,11 @@ public class CriticsTurnTests
         // office, where one that has turned is left. The Vanish goes nowhere, so its cloud lies on them with the
         // magician still in their midst. A stunned critic has not turned: it is put back out of the box office.
         // No curtain: the forty seconds are counted from the first tick of the act.
-        Tuning tuning = CommittedTuning.Parse() with
+        Tuning tuning = CommittedTuning.Parse().WithStrikesOf(0f) with
         {
             CurtainTime = 0f,
             ThrowRange = 0f,
             VanishDistance = 0f,
-            CriticStrikeDamage = 0f,
             CriticTouchDamage = 0f,
         };
         Simulation simulation = Shows.WithACriticEvery(Simulation.TicksPerSecond, tuning);
