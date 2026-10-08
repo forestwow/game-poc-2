@@ -177,9 +177,11 @@ public sealed class Simulation(Tuning tuning, ulong seed, IReadOnlyList<IReadOnl
     public int EncoreCost => Tuning.EncoreFirstCost + (Tuning.EncoreCostGrowth * EncoresTaken);
 
     /// <summary>
-    /// The cards on offer, from the leftmost. In an encore, three different self cards; in the program, which
-    /// comes after an act in which an encore was taken, when the act has another after it and has not closed the
-    /// show, the chorus card alone. It is empty in every other phase.
+    /// The cards on offer, from the leftmost. In an encore, three different self cards of those the magician
+    /// holds fewer than <see cref="Tuning.CardMaxCopies"/> of: two or one when no more are left, and the chorus
+    /// card alone when none is (plan T41). In the program, which comes after an act in which an encore was
+    /// taken, when the act has another after it and has not closed the show, the chorus card alone. It is empty
+    /// in every other phase.
     /// </summary>
     public IReadOnlyList<Card> Offer => _offer;
 
@@ -226,7 +228,9 @@ public sealed class Simulation(Tuning tuning, ulong seed, IReadOnlyList<IReadOnl
             ActEncores++;
 
             // An encore stands the act, so the act's count is still that of its next tick: the first the magician
-            // plays with the card, and the tick on which its understudy gains it (plan T24).
+            // plays with the card, and the tick on which its understudy gains it (plan T24). A chorus card that
+            // an encore gave (plan T41) is recorded like any other and gives that understudy nothing on its tick:
+            // it is nobody's own, and counts for every understudy from this pick on.
             _encores.Add((_actTicksPlayed, _offer[place]));
         }
 
@@ -568,8 +572,9 @@ public sealed class Simulation(Tuning tuning, ulong seed, IReadOnlyList<IReadOnl
         }
 
         // No test tells EncoresTaken, ActEncores, the encore stream's state or the offer's cards apart from the rest
-        // of the hash: as the rule stands EncoresTaken is the number of the magician's self cards, the stream and
-        // the offer follow from the seed and that number, and ActEncores is the number of the recording's encores.
+        // of the hash: as the rule stands EncoresTaken is the number of the encores of every recording, the stream
+        // and the offer follow from the seed and the cards those encores gave, and ActEncores is the number of
+        // the recording's encores.
         // Plan T24 broke none of those. Of what it added, the tick of a recorded encore and its card each have a
         // test (the same encore on two ticks; two encores of one act taken in two orders). The number of a
         // recording's encores and the cards an understudy begins with are told apart only together with those,
@@ -626,7 +631,11 @@ public sealed class Simulation(Tuning tuning, ulong seed, IReadOnlyList<IReadOnl
         Ticks(Tuning.VanishCooldown / (1f + (MagicianCards.VanishCooldown * Tuning.CardVanishCooldown)));
 
     /// <summary>
-    /// Opens an encore: three self cards, each any of those still in the pile, as likely as another.
+    /// Opens an encore: three self cards, each any of those still in the pile, as likely as another. A card the
+    /// magician holds <see cref="Tuning.CardMaxCopies"/> of is not in the pile (plan T41, decision 31), so with
+    /// fewer than three kinds left the encore offers fewer, and with none left it offers the chorus card alone:
+    /// applause is never worth nothing. A draw is from the pile as it is, so what an encore offers follows from
+    /// the seed, from how many encores were opened before it and, once a kind is out, from the cards taken.
     /// </summary>
     private void OfferAnEncore()
     {
@@ -635,11 +644,21 @@ public sealed class Simulation(Tuning tuning, ulong seed, IReadOnlyList<IReadOnl
             Card.Damage, Card.AttackSpeed, Card.Range, Card.VanishCooldown, Card.OneMoreCard,
             Card.Pierce, Card.Ricochet, Card.Burst,
         ];
-        for (int place = 0; place < 3; place++)
+        if (Tuning.CardMaxCopies > 0)
+        {
+            pile.RemoveAll(card => MagicianCards.Of(card) >= Tuning.CardMaxCopies);
+        }
+
+        for (int place = 0; place < 3 && pile.Count > 0; place++)
         {
             int drawn = _encore.NextInt(pile.Count);
             _offer.Add(pile[drawn]);
             pile.RemoveAt(drawn);
+        }
+
+        if (_offer.Count == 0)
+        {
+            _offer.Add(Card.ChorusDamage);
         }
 
         OfferTicksLeft = Ticks(Tuning.EncoreTime);

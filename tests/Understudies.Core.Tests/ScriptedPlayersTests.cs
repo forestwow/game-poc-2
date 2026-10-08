@@ -36,8 +36,8 @@ public class ScriptedPlayersTests
 
             // An act that stood for an encore is in what is pinned.
             Assert.That(performance.Acts.Sum(act => act.Encores), Is.GreaterThan(0), "encores");
-            Assert.That(performance.Acts[2].StateHash, Is.EqualTo(9787319584506315531UL), "the end of act three");
-            Assert.That(performance.Acts[^1].StateHash, Is.EqualTo(17624584197219898077UL), "the end of the performance");
+            Assert.That(performance.Acts[2].StateHash, Is.EqualTo(162178741610036784UL), "the end of act three");
+            Assert.That(performance.Acts[^1].StateHash, Is.EqualTo(4023339526767687653UL), "the end of the performance");
         });
     }
 
@@ -70,7 +70,7 @@ public class ScriptedPlayersTests
             Assert.That(stunned, Is.GreaterThan(0), "stunned critics");
             Assert.That(performance.Acts.Sum(act => act.Encores), Is.GreaterThan(0), "encores");
             Assert.That(performance.Acts[2].StateHash, Is.EqualTo(14979360235718945559UL), "the end of act three");
-            Assert.That(performance.Acts[^1].StateHash, Is.EqualTo(5480085658794934295UL), "the end of the performance");
+            Assert.That(performance.Acts[^1].StateHash, Is.EqualTo(6100973595553144623UL), "the end of the performance");
         });
     }
 
@@ -435,13 +435,16 @@ public class ScriptedPlayersTests
     /// <summary>
     /// Plan T29, two tripwires on the seeds 1 to 20, which the numbers are searched on. The first fails a step
     /// before the guard's count moves: the doors player's box office at the end is at least 350 of 400 on
-    /// average. On the committed numbers it is 392; one seed that collapses leaves some 370 and two some 350,
-    /// and the guard's own floor of 16 finished lets four collapse, which is 320: a tuning between "fine" and
-    /// "the guard's floor" is caught here. The second is the card order, which must not be a hidden hinge
-    /// (T29's first numbers held by the committed order alone and lost act seven on every seed by any other):
-    /// taking the longer arm first, the doors player still finishes act ten on at least 16 of 20. Since plan T25
-    /// it finishes 20 (and 20 on the seeds 101 to 120), where it finished 18 and 17 before the three cards that
-    /// change what a card does: a break here is a finding about a card or a player, not a floor to lower unread.
+    /// average. It was 392 before plan T41, when one seed that collapsed left some 370 and two some 350, and the
+    /// guard's own floor of 16 finished lets four collapse, which is 320: a tuning between "fine" and "the
+    /// guard's floor" is caught here. Since plan T41 it is 370, and no seed collapses: the headliner of acts
+    /// eight to ten takes some thirty off every performance (284 at the worst), so the floor is twenty away and
+    /// is now what a late threat is tuned against: plan T41 says what a stronger one would ask of it. The
+    /// second is the card order, which must not be a hidden hinge (T29's first numbers held by the committed
+    /// order alone and lost act seven on every seed by any other): taking the longer arm first, the doors
+    /// player still finishes act ten on at least 16 of 20. It finishes 20 (19 on the seeds 101 to 120, 20 on
+    /// 301 to 320), with 256 of the box office: a break here is a finding about a card or a player, not a
+    /// floor to lower unread.
     /// </summary>
     [Test]
     public void TheGuard_OnTheCommittedTuning_TheDoorsPlayerKeepsTheBoxOfficeAndFinishesByAnotherCardOrderToo()
@@ -464,11 +467,13 @@ public class ScriptedPlayersTests
     /// <summary>
     /// Plan T37, the kiter as the rival of going out to the doors: over each set of seeds the doors player
     /// finishes act ten at least as often as the kiter, with at least half as many encores again a performance
-    /// and at least fifty more of the box office left on average (on the committed numbers both finish every
-    /// seed, and the doors player has 40.2 encores against 18.5 and 392 of the box office against 337 on the
-    /// first set, 40.9 against 17.9 and 395 against 330 on the second: the fifty-five of the first set is barely
-    /// over the fifty, and plan T25 says what the order of the cards has to do with it). Whether the kiter has to lose outright is the owner's question, open in the plan:
-    /// nothing here says it loses, and by the committed card order it does not.
+    /// and at least fifty more of the box office left on average. Since plan T41 the doors player finishes
+    /// every seed and the kiter 5 of 20 on the first set and 7 on the second, most of its losses in act eight,
+    /// when the headliner comes; the doors player has 35.2 encores against 17.8 and 370 of the box office
+    /// against 55 on the first set, 34.5 against 20.2 and 370 against 82 on the second. The encores are the
+    /// thin one now (34.5 where 30.3 are asked). With the limit on copies and no headliner the comparison failed:
+    /// 395 against 349. Whether the kiter has to lose outright is the owner's question, open in the plan:
+    /// nothing here says it loses, though on the committed numbers it now does on most seeds.
     /// </summary>
     [TestCase(1)]
     [TestCase(101)]
@@ -500,7 +505,7 @@ public class ScriptedPlayersTests
     /// The guard's table in short, for whoever weighs one tuning against another: every variant on the seeds 1
     /// to 20, which numbers are searched on, and on no others unless they are asked for: the environment variable
     /// <c>UNDERSTUDIES_SEED_SETS</c> names the first seed of every set to play, <c>1,101</c> for the second set
-    /// as well and <c>301</c> for the third alone. The second is read once, on a candidate, and the third only
+    /// as well and <c>401</c> for the next alone. The second is read once, on a candidate, and the next only
     /// for the last check of a tuning (plan T37): a set that every probe is read on is spent. A variant is the
     /// committed tuning.json with some of its keys given other values. They are read from the file the
     /// environment variable <c>UNDERSTUDIES_VARIANTS</c> names, a variant a line, a name and a JSON object of
@@ -508,7 +513,13 @@ public class ScriptedPlayersTests
     /// starts with # is none. Without the variable it is the committed tuning alone. Beside the guard's players it
     /// plays the doors player with no applause in the first act, the roamer, and the orbit on two circles wider
     /// than the guard's: none of the four counts for the guard. For every player but the orbit it prints by act
-    /// what share of the magician's own kills fell within three, five and eight seconds of entering.
+    /// what share of the magician's own kills fell within three, five and eight seconds of entering. Then the doors
+    /// player and the kiter by five other orders of taking cards ("range first", "one more card last", and each of
+    /// plan T25's three cards first), with the spread over the six; and for the doors player by every order what
+    /// plan T41 weighs a limit on copies by: by act the encores, the most cards of one throw, the cards held of
+    /// each kind, its own kills and its understudies', and the encores that had fewer than three cards to offer
+    /// or were earned and did not open. With the environment variable <c>UNDERSTUDIES_GUARD_ONLY</c> set the four
+    /// players outside the guard are not played, which is some three times as quick.
     /// </summary>
     [Test]
     [Explicit("Prints the guard in short for every variant of the tuning in the file UNDERSTUDIES_VARIANTS names, on the seeds 1 to 20 and on the sets UNDERSTUDIES_SEED_SETS names (a few seconds a variant and set)")]
@@ -599,7 +610,7 @@ public class ScriptedPlayersTests
         // The doors player with no applause in the first act, and so no encore in it: whether a player with no
         // card yet lives through the second act. The simulation takes new numbers between two ticks.
         Tuning noApplause = tuning with { ApplauseTime = 0f };
-        (string Name, Func<Simulation, MagicianInput> Player)[] players =
+        (string Name, Func<Simulation, MagicianInput> Player)[] players = Environment.GetEnvironmentVariable("UNDERSTUDIES_GUARD_ONLY") is not null ? GuardPlayers :
         [
             .. GuardPlayers,
             ("doors, no applause in act one", simulation =>
@@ -656,23 +667,73 @@ public class ScriptedPlayersTests
                 table.WriteLine($"       most critics by act {ByAct(acts => acts.Max(act => act.MostCritics).ToString(CultureInfo.InvariantCulture))}");
             }
 
-            // The doors player and the kiter by two other orders of taking cards (plan T29): a tuning that holds
-            // by the committed order alone measures the order and not the route.
+            // The doors player and the kiter by other orders of taking cards (plan T29, and plan T41 for the three
+            // new cards first): a tuning that holds by the committed order alone measures the order and not the
+            // route. The doors player's cards are printed by act under every order, the committed one first.
             (string Name, Func<Simulation, MagicianInput> Player)[] two = [GuardPlayers[Doors], GuardPlayers[Kiter]];
-            foreach ((string order, IReadOnlyList<Card> cards) in new[] { ("range first", RangeFirst), ("one more card last", OneMoreCardLast) })
+            var doorsByOrder = new List<List<Performance>> { Of(Doors) };
+            var kiterByOrder = new List<List<Performance>> { Of(Kiter) };
+            PrintTheCards(table, "the committed order", Of(Doors));
+            foreach ((string order, IReadOnlyList<Card> cards) in new[]
+            {
+                ("range first", RangeFirst), ("one more card last", OneMoreCardLast),
+                ("pierce first", First(Card.Pierce)), ("ricochet first", First(Card.Ricochet)), ("burst first", First(Card.Burst)),
+            })
             {
                 Performance[] byOrder = PlayTheGuard(tuning, firstSeed, two, cards);
                 for (int player = 0; player < two.Length; player++)
                 {
                     List<Performance> mine = [.. byOrder.Skip(player * Seeds).Take(Seeds)];
+                    (player == 0 ? doorsByOrder : kiterByOrder).Add(mine);
                     string boxOffice = string.Join(" ", Enumerable.Range(0, mine.Max(played => played.Act))
                         .Select(act => Number(mine.Where(played => played.Act > act).Average(played => played.Acts[act].BoxOffice), "0")));
                     table.WriteLine(
                         $"     by {order}, {two[player].Name}: finished {mine.Count(Finished)}, lost {HowLost(mine)}; encores {Number(mine.Average(Encores))}; "
                         + $"box office at the end {Number(mine.Average(played => played.BoxOffice), "0")}, the worst {Number(mine.Min(played => played.BoxOffice), "0")}; by act {boxOffice}");
                 }
+
+                PrintTheCards(table, order, doorsByOrder[^1]);
             }
+
+            // How far the order moves a player (plan T41): the fewest and the most over the six orders.
+            foreach ((string who, List<List<Performance>> orders) in new[] { ("doors", doorsByOrder), ("kiter", kiterByOrder) })
+            {
+                table.WriteLine(
+                    $"     the spread over the six orders, {who}: finished {orders.Min(mine => mine.Count(Finished))} to {orders.Max(mine => mine.Count(Finished))}; "
+                    + $"box office at the end {Number(orders.Min(mine => mine.Average(played => played.BoxOffice)), "0")} to {Number(orders.Max(mine => mine.Average(played => played.BoxOffice)), "0")}; "
+                    + $"encores {Number(orders.Min(mine => mine.Average(Encores)))} to {Number(orders.Max(mine => mine.Average(Encores)))}");
+            }
+
+            table.WriteLine(
+                $"     orders by which the kiter ends ahead of the doors player (finished, or the box office): "
+                + $"{Enumerable.Range(0, doorsByOrder.Count).Count(order => kiterByOrder[order].Count(Finished) > doorsByOrder[order].Count(Finished) || kiterByOrder[order].Average(played => played.BoxOffice) > doorsByOrder[order].Average(played => played.BoxOffice))} of {doorsByOrder.Count}");
         }
+    }
+
+    /// <summary>
+    /// What a player had and did with it, by act (plan T41): the encores it took, the cards it threw at once at the
+    /// most, the self cards it held of each kind when the act was over, who made the kills, and whether an encore
+    /// had fewer than three cards to offer or was earned and did not open. Averages over the performances that
+    /// played the act.
+    /// </summary>
+    private static void PrintTheCards(TextWriter table, string order, List<Performance> mine)
+    {
+        string ByAct(Func<List<ActRecord>, string> of) => string.Join(" ", Enumerable.Range(0, mine.Max(played => played.Act))
+            .Select(act => of([.. mine.Where(played => played.Act > act).Select(played => played.Acts[act])])));
+        table.WriteLine($"       doors by {order}: encores by act {ByAct(acts => Number(acts.Average(act => act.Encores)))}");
+        table.WriteLine($"         most cards a throw  {ByAct(acts => Number(acts.Average(act => act.MostCardsAThrow)))}");
+        table.WriteLine(
+            "         cards held (damage/attack speed/range/vanish/one more/pierce/ricochet/burst) "
+            + ByAct(acts => string.Join("/", new Func<SelfCards, int>[]
+            {
+                cards => cards.Damage, cards => cards.AttackSpeed, cards => cards.Range, cards => cards.VanishCooldown,
+                cards => cards.OneMoreCard, cards => cards.Pierce, cards => cards.Ricochet, cards => cards.Burst,
+            }.Select(kind => Number(acts.Average(act => kind(act.Cards)), "0.#")))));
+        table.WriteLine($"         kills, its own/understudies' {ByAct(acts => $"{Number(acts.Average(act => act.Kills), "0")}/{Number(acts.Average(act => act.UnderstudyKills), "0")}")}");
+        table.WriteLine(
+            $"         encores that offered fewer than three {ByAct(acts => Number(acts.Average(act => act.ShortOffers)))}; "
+            + $"acts that ended with an encore earned and not opened {ByAct(acts => acts.Count(act => act.NextCost > 0 && act.Unspent >= act.NextCost).ToString(CultureInfo.InvariantCulture))}; "
+            + $"applause unspent {ByAct(acts => Number(acts.Average(act => act.Unspent)))}");
     }
 
     /// <summary>

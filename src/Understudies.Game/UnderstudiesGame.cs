@@ -189,6 +189,10 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
     private static readonly Color VanishBar = new(150, 214, 236);
     private static readonly Color CloudPuff = new(236, 232, 244);
     private static readonly Color CriticStunnedBody = new(168, 180, 212);
+
+    // The headliner (plan T41) is the rival's cut-out washed with this, so that the one of three hundred hit
+    // points and more is told from the one of thirty.
+    private static readonly Color HeadlinerWash = new(226, 58, 72);
     private static readonly Color ThrownCardFace = new(250, 246, 236);
     private static readonly Color ScrapOfPaper = new(244, 238, 222);
     private static readonly Color Words = new(236, 228, 210);
@@ -625,7 +629,8 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
         {
             // A critic that fell lies where it fell and fades away, under the feet of whoever stands there.
             // Whatever it was: the juice kept its kind from when it stood.
-            DrawFigure(FigureOf(body.Kind), body.Position, white: body.White, fallen: true, opacity: body.Opacity);
+            DrawFigure(
+                FigureOf(body.Kind), body.Position, white: body.White, fallen: true, opacity: body.Opacity, tint: WashOf(body.Kind));
         }
 
         _spriteBatch.End();
@@ -700,6 +705,7 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
                 feet,
                 pale: critic.IsStunned,
                 white: _juice.CriticWhite(critic.Id),
+                tint: WashOf(critic.Kind),
                 toward: step != Vector2.Zero ? step : Tuning.BoxOfficePosition - critic.Position,
                 walking: step != Vector2.Zero,
                 speed: Tuning.EnemyKinds[Math.Min(critic.Kind, Tuning.EnemyKinds.Count - 1)].Speed,
@@ -1310,11 +1316,16 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
             Copy(sheet.Image, Color.White * opacity, depth);
         }
 
-        // A tint can only darken a sprite, so the smoke on the magician and a stunned critic's pallor are washed
-        // over it as the flash is.
-        if ((pale ? CriticStunnedBody : tint) is { } wash)
+        // A tint can only darken a sprite, so the smoke on the magician, a headliner's red and a stunned critic's
+        // pallor are washed over it as the flash is: the pallor over the red, so a stunned headliner is still one.
+        if (tint is { } wash)
         {
             Copy(sheet.White, wash * (0.5f * opacity), over);
+        }
+
+        if (pale)
+        {
+            Copy(sheet.White, CriticStunnedBody * (0.5f * opacity), over);
         }
 
         if (white > 0f)
@@ -1324,15 +1335,19 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
     }
 
     /// <summary>The figure an enemy of a kind is drawn as.</summary>
-    // ponytail: the view knows the kinds by their places in enemyKinds, the critic first, the stagehand second and
-    // the rival's understudy third. A fourth kind is drawn as a stagehand until it has a figure of its own; the
-    // kinds need names to be looked up by when the list is reordered.
+    // ponytail: the view knows the kinds by their places in enemyKinds, the critic first, the stagehand second,
+    // the rival's understudy third and the headliner fourth, which is the rival's cut-out with a wash
+    // (`WashOf`) until it has a picture of its own. A fifth kind is drawn as a stagehand; the kinds need names
+    // to be looked up by when the list is reordered.
     private static Figure FigureOf(int kind) => kind switch
     {
         0 => Figure.Critic,
-        2 => Figure.Rival,
+        2 or 3 => Figure.Rival,
         _ => Figure.Stagehand,
     };
+
+    /// <summary>The colour washed over an enemy of a kind: the headliner's, and none for the others.</summary>
+    private static Color? WashOf(int kind) => kind == 3 ? HeadlinerWash : null;
 
     /// <summary>
     /// How long a walking figure's sprite pixel is in world units in the frame being drawn: the figures' measure,

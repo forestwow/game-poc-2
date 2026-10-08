@@ -229,7 +229,7 @@ internal sealed partial class UnderstudiesGame
                 Write(
                     Face.Sentence,
                     SmallWordsHeight,
-                    $"x{Held(card)}",
+                    chorus || Tuning.CardMaxCopies <= 0 ? $"x{Held(card)}" : $"x{Held(card)} of {Tuning.CardMaxCopies}",
                     topLeft + new Vector2(PanelSize.X - 0.4f, PanelBand / 2f),
                     1f,
                     ink,
@@ -362,23 +362,26 @@ internal sealed partial class UnderstudiesGame
         // the tuning's over the cards held and the burst's share the tuning's times them, so each says the number
         // it would be with this one taken, and the sentence is true of the card that is offered.
         int withThis = Held(card) + 1;
+
+        // "Each copy again" is not said of the last copy the limit lets the magician hold (plan T41).
+        string again = withThis == Tuning.CardMaxCopies ? string.Empty : " Each copy again.";
         return card switch
         {
             Card.Damage => (
                 "Card Sharp",
-                Say($"Thrown cards hurt for {Tuning.CardDamage:0.##} more. Each copy again."),
+                Say($"Thrown cards hurt for {Tuning.CardDamage:0.##} more.{again}"),
                 "Honed on the edge of a bad review."),
             Card.AttackSpeed => (
                 "Sleight of Hand",
-                Say($"Throws come {Tuning.CardAttackSpeed * 100f:0.#}% more often. Each copy again."),
+                Say($"Throws come {Tuning.CardAttackSpeed * 100f:0.#}% more often.{again}"),
                 "The hand is quicker than the critic."),
             Card.Range => (
                 "Long Arm",
-                Say($"Cards reach {Tuning.CardRange:0.##} further. Each copy again."),
+                Say($"Cards reach {Tuning.CardRange:0.##} further.{again}"),
                 "Reach the back row. They paid less; they deserve a card too."),
             Card.VanishCooldown => (
                 "Quick Smoke",
-                Say($"The Vanish comes back {Tuning.CardVanishCooldown * 100f:0.#}% faster. Each copy again."),
+                Say($"The Vanish comes back {Tuning.CardVanishCooldown * 100f:0.#}% faster.{again}"),
                 "The smoke clears. You do not."),
             Card.OneMoreCard => (
                 "One More for the Lady",
