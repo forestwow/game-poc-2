@@ -1,8 +1,8 @@
 {
   "tool": "ludo.ai, through its CLI (ludo 0.1.6)",
-  "what": "A second round of the art spike (plan T07b), after the owner said the paper cut-outs looked like a default and asked for a look that mixes abstraction and imagination. A magician and a critic in four directions, for the owner to pick from. Nothing here is read by the game. Then, at the owner's word, a box office in each direction and an upright critic for the collage (collage-critic-b), so that each direction has the three things of the ticket.",
-  "generations": 15,
-  "credits": 7.5,
+  "what": "A second round of the art spike (plan T07b), after the owner said the paper cut-outs looked like a default and asked for a look that mixes abstraction and imagination. A magician and a critic in four directions, for the owner to pick from. Nothing here is read by the game. Then, at the owner's word, a box office in each direction and an upright critic for the collage (collage-critic-b), so that each direction has the three things of the ticket. Then, at the owner's word, a fifth direction: pixel art, with the figures of the collage.",
+  "generations": 18,
+  "credits": 9.0,
   "note": "failed/ has the first try of the collage direction, which came back as silhouettes because the prompt asked for a strong silhouette; the second try has its own prompt.",
   "generations_made": [
     {
@@ -206,7 +206,49 @@
       "credits": 0.5,
       "job_id": "0ff91da7-99a4-464c-beff-d6c78813f722",
       "created_at": "2026-10-08T09:08:05.191Z"
+    },
+    {
+      "file": "pixel-magician.png",
+      "command": "ludo image create",
+      "settings": {
+        "image_type": "sprite",
+        "perspective": "Top-Down",
+        "aspect_ratio": "ar_1_1",
+        "art_style": "16-Bit",
+        "prompt": "A surreal stage magician standing upright: black tailcoat with a red-lined cape, white gloves holding a fan of playing cards, and instead of a head a white dove sitting in an upturned top hat. Pixel art game sprite with a thick dark outline and a small limited palette, seen from the front and slightly from above as in a top-down action RPG. Full body, single subject, no text, no ground."
+      },
+      "credits": 0.5,
+      "job_id": "e06641bb-6556-480c-9efa-b477ca831e7c",
+      "created_at": "2026-10-08T09:20:00.763Z"
+    },
+    {
+      "file": "pixel-critic.png",
+      "command": "ludo image create",
+      "settings": {
+        "image_type": "sprite",
+        "perspective": "Top-Down",
+        "aspect_ratio": "ar_1_1",
+        "art_style": "16-Bit",
+        "prompt": "A surreal theatre critic standing upright: a squat figure in a grey overcoat, whose head is one huge blue eyeball wearing a small bowler hat, holding a notebook and a quill. Pixel art game sprite with a thick dark outline and a small limited palette, seen from the front and slightly from above as in a top-down action RPG. Full body, single subject, no text, no ground."
+      },
+      "credits": 0.5,
+      "job_id": "dafa7587-f1df-4401-8c6e-0c8d3920f3a5",
+      "created_at": "2026-10-08T09:20:07.522Z"
+    },
+    {
+      "file": "pixel-box-office.png",
+      "command": "ludo image create",
+      "settings": {
+        "image_type": "sprite",
+        "perspective": "Top-Down",
+        "aspect_ratio": "ar_1_1",
+        "art_style": "16-Bit",
+        "prompt": "A surreal theatre box office booth, a squat ticket kiosk about as wide as it is tall: weathered wood, a red and cream striped awning, and instead of a ticket window a huge open mouth with red lips framed by red velvet curtains. Pixel art game sprite with a thick dark outline and a small limited palette, seen from the front and slightly from above as in a top-down action RPG. Full body, single subject, no text, no ground."
+      },
+      "credits": 0.5,
+      "job_id": "d5e7bb3d-14c4-47d5-abc2-b4c83cc4e530",
+      "created_at": "2026-10-08T09:20:11.045Z"
     }
   ],
-  "game_files": "shadow/, collage/, deco/ and dream/ each hold magician.png, critic.png and box-office.png: the pictures of that direction scaled with `sips -Z` to 256, 192 and 384 on the longest side (the collage critic is collage-critic-b). A capture reads one with `--art ludo/styles/<direction>`; the frames are in art/frames/styles/."
+  "game_files": "shadow/, collage/, deco/ and dream/ each hold magician.png, critic.png and box-office.png: the pictures of that direction scaled with `sips -Z` to 256, 192 and 384 on the longest side (the collage critic is collage-critic-b). A capture reads one with `--art ludo/styles/<direction>`; the frames are in art/frames/styles/. pixel/ holds the three pixel pictures as returned (768 pixels, one sprite pixel is 12 of them): scaling them would smooth them."
 }
