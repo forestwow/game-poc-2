@@ -32,8 +32,10 @@ internal sealed class Juice(Random random)
     private const int KillScraps = 12;
     private const int VanishScraps = 8;
 
-    // A piece of applause that is picked up puffs this many.
+    // A piece of applause that is picked up puffs this many, and one that a scalper eats (plan T57) this many:
+    // torn tickets, where the piece lay.
     private const int PickUpScraps = 6;
+    private const int EatenScraps = 10;
 
     // A scrap starts at up to ScrapSpeed and at no less than ScrapSlowestShare of it, and loses speed at ScrapDrag
     // a second, so the fastest gets ScrapSpeed / ScrapDrag far. It is gone after ScrapTime, fading over the second
@@ -231,6 +233,10 @@ internal sealed class Juice(Random random)
 
                 case TickEventKind.ApplausePickedUp:
                     Burst(happened.Position, PickUpScraps);
+                    break;
+
+                case TickEventKind.ApplauseEaten:
+                    Burst(happened.Position, EatenScraps);
                     break;
 
                 // The burst of a card (plan T25) is a ring on the floor, round the critic the card struck: no

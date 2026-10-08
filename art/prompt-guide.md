@@ -17,6 +17,9 @@ A figure is an ordinary theatre person or thing with one part that is something 
 - `Top-Down` gives a view straight down onto the hat: not used.
 - A wide prop (the rival's understudy, a cut-out on a board) comes back smaller than a person unless it is asked to "fill the whole frame from the top edge to the bottom edge": `art/ludo/rival/manifest.json` has both tries.
 
+- "Where his face should be a fan of tickets, with a flat cap on top" came back as a man in a cap with a pale ruff, which reads as a fur collar: a part that replaces the head is asked for with "no head" first, then what stands "straight up out of his collar", with a thing it is held like ("a hand of playing cards") and what it is not ("no face, no hat, no hair, no fur"). `art/ludo/scalper/manifest.json` has both tries.
+- A figure with a wide part is not made smaller by `--frame-size`: 32 is the smallest, and the scalper's sheet came back in frames of 50 by 62 for it (the stagehand's are 26 by 46).
+
 ## The other views
 
 `ludo sprite rotate --image <still> --camera-rotation 180` (the back) and `90` (the side, facing right; the game mirrors it for the left). Half a credit each, and the figure holds.
