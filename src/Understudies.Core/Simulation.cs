@@ -488,6 +488,9 @@ public sealed class Simulation(Tuning tuning, ulong seed, IReadOnlyList<IReadOnl
             hasher.AddInt(cards.Range);
             hasher.AddInt(cards.VanishCooldown);
             hasher.AddInt(cards.OneMoreCard);
+            hasher.AddInt(cards.Pierce);
+            hasher.AddInt(cards.Ricochet);
+            hasher.AddInt(cards.Burst);
         }
 
         hasher.AddInt(_ticksPlayed);
@@ -524,6 +527,21 @@ public sealed class Simulation(Tuning tuning, ulong seed, IReadOnlyList<IReadOnl
             AddPoint(card.Direction);
             hasher.AddFloat(card.RangeLeft);
             hasher.AddFloat(card.Damage);
+
+            // What the card still does when it strikes (plan T25). What a strike takes off it and the share of
+            // its burst each have a test that tells them apart (two tunings, one card in the air). A turn left and
+            // the critics struck have none that tells them apart from the rest: as the rules stand a turn left is
+            // the thrower's ricochet cards less the turns made, each of which changed the direction, and a critic
+            // struck lost hit points to the card and took some off it or spent a turn of it. Whatever changes that
+            // adds the test.
+            hasher.AddFloat(card.PierceLoss);
+            hasher.AddInt(card.TurnsLeft);
+            hasher.AddFloat(card.BurstShare);
+            hasher.AddInt(card.Struck.Count);
+            foreach (int id in card.Struck)
+            {
+                hasher.AddInt(id);
+            }
 
             // Whether the magician threw it decides the applause; which understudy did decides nothing and is
             // only told in the events, so it stays out until a rule reads it.
@@ -607,7 +625,11 @@ public sealed class Simulation(Tuning tuning, ulong seed, IReadOnlyList<IReadOnl
     /// </summary>
     private void OfferAnEncore()
     {
-        List<Card> pile = [Card.Damage, Card.AttackSpeed, Card.Range, Card.VanishCooldown, Card.OneMoreCard];
+        List<Card> pile =
+        [
+            Card.Damage, Card.AttackSpeed, Card.Range, Card.VanishCooldown, Card.OneMoreCard,
+            Card.Pierce, Card.Ricochet, Card.Burst,
+        ];
         for (int place = 0; place < 3; place++)
         {
             int drawn = _encore.NextInt(pile.Count);
@@ -768,41 +790,63 @@ public sealed class Simulation(Tuning tuning, ulong seed, IReadOnlyList<IReadOnl
             // Straight on, a tick's worth or what is left of the throw's range.
             ThrownCard card = _thrownCards[i];
             float step = MathF.Min(Tuning.ThrownCardSpeed / TicksPerSecond, card.RangeLeft);
-            Critic? touched = FirstCriticOnThePath(card.Position, card.Direction, step);
             card.PreviousPosition = card.Position;
-            card.Position += card.Direction * step;
-            card.RangeLeft -= step;
 
-            // The card is spent on the first critic it touches, which need not be the one it was thrown at.
-            if (touched is not null)
+            // Every critic the step comes to, the first first: a card is spent on the first critic it touches,
+            // which need not be the one it was thrown at, unless its thrower's cards say otherwise (plan T25).
+            // Each turn of the loop strikes a critic the card had not struck, so it ends.
+            bool spent = false;
+            while (!spent && FirstCriticOnThePath(card, step, out float entry) is { } touched)
             {
-                touched.HitPoints -= card.Damage;
-                bool fell = touched.HitPoints <= 0f;
-                if (fell)
+                // The damage of this strike, before the strike takes anything off the card: the burst's share is
+                // of it too. The critics of the burst are not struck by the card: it may strike them yet.
+                float damage = card.Damage;
+                card.Struck.Add(touched.Id);
+                Hurt(touched, damage, card);
+                if (card.BurstShare > 0f)
                 {
-                    _critics.Remove(touched);
+                    _events.Add(new TickEvent(TickEventKind.Burst, touched.Position, card.Thrower));
+                    float radius = Tuning.CardBurstRadius;
+                    for (int other = 0; other < _critics.Count; other++)
+                    {
+                        Critic critic = _critics[other];
+                        Vector2 apart = critic.Position - touched.Position;
+                        if (critic != touched && (apart.X * apart.X) + (apart.Y * apart.Y) <= radius * radius
+                            && Hurt(critic, damage * card.BurstShare, card))
+                        {
+                            other--;
+                        }
+                    }
                 }
 
-                _events.Add(new TickEvent(
-                    fell ? TickEventKind.Kill : TickEventKind.Hit, touched.Position, card.Thrower, touched.Id));
-
-                // The audience cheers the star and never the cardboard: applause is left where a critic falls to
-                // a card the magician itself threw, whoever hurt the critic before. A piece with no time is no
-                // piece.
-                int ticks = Ticks(Tuning.ApplauseTime);
-                // And none by the box office: a critic that falls within the radius of its middle leaves nothing,
-                // so that what is thrown from beside the box office at what has come to it earns no encore.
-                Vector2 fromBoxOffice = touched.Position - Tuning.BoxOfficePosition;
-                bool byTheBoxOffice = (fromBoxOffice.X * fromBoxOffice.X) + (fromBoxOffice.Y * fromBoxOffice.Y)
-                    < Tuning.ApplauseBoxOfficeRadius * Tuning.ApplauseBoxOfficeRadius;
-                if (fell && card.ThrownByMagician && ticks > 0 && !byTheBoxOffice)
+                // A card with a turn left turns first, to the nearest critic it has not struck that stands within
+                // the reach of the one it struck, and the turn takes nothing off it. It turns where it touched
+                // the critic's circle and flies the rest of its step the new way, as far as the reach at least.
+                // ponytail: it is aimed at where that critic stands and not ahead of it as a throw is (the last
+                // step of a critic is not state at this point of a tick), so a stagehand at a run more than two
+                // units off is missed. Keep the critics' steps in the state and lead the turn when that is seen.
+                if (card.TurnsLeft > 0 && NearestNotStruck(touched.Position, card) is { } next)
                 {
-                    _applause.Add(new Applause(touched.Position, ticks));
-                    _events.Add(new TickEvent(TickEventKind.ApplauseDropped, touched.Position, CriticId: touched.Id));
+                    card.TurnsLeft--;
+                    card.Position += card.Direction * entry;
+                    card.RangeLeft = MathF.Max(card.RangeLeft - entry, Tuning.CardRicochetReach);
+                    step = MathF.Min(step - entry, card.RangeLeft);
+                    card.ThrownFrom = card.Position;
+                    card.Direction = Direction(next.Position - card.Position, out _);
+                }
+
+                // With none it goes on through the critic, and the strike takes its loss off the card: all it
+                // has, unless its thrower had a pierce card.
+                else
+                {
+                    card.Damage -= card.PierceLoss;
+                    spent = card.Damage <= 0f;
                 }
             }
 
-            if (touched is not null || card.RangeLeft <= 0f)
+            card.Position += card.Direction * step;
+            card.RangeLeft -= step;
+            if (spent || card.RangeLeft <= 0f)
             {
                 _thrownCards.RemoveAt(i--);
             }
@@ -810,18 +854,85 @@ public sealed class Simulation(Tuning tuning, ulong seed, IReadOnlyList<IReadOnl
     }
 
     /// <summary>
-    /// The critic whose circle a card comes to first on its way from <paramref name="start"/>,
-    /// <paramref name="length"/> units along <paramref name="direction"/>. The whole path is looked at and not only
-    /// its end, so a card fast enough to jump over a critic in one tick touches it all the same.
+    /// A card takes <paramref name="damage"/> off a critic, by its strike or by its burst: the critic falls when
+    /// it has nothing left, which is the answer. The hit or the kill names the card's thrower and the critic.
     /// </summary>
-    private Critic? FirstCriticOnThePath(Vector2 start, Vector2 direction, float length)
+    private bool Hurt(Critic critic, float damage, ThrownCard card)
     {
-        Critic? first = null;
-        float firstEntry = float.PositiveInfinity;
+        critic.HitPoints -= damage;
+        bool fell = critic.HitPoints <= 0f;
+        if (fell)
+        {
+            _critics.Remove(critic);
+        }
+
+        _events.Add(new TickEvent(
+            fell ? TickEventKind.Kill : TickEventKind.Hit, critic.Position, card.Thrower, critic.Id));
+
+        // The audience cheers the star and never the cardboard: applause is left where a critic falls to
+        // a card the magician itself threw, whoever hurt the critic before. A piece with no time is no
+        // piece.
+        int ticks = Ticks(Tuning.ApplauseTime);
+
+        // And none by the box office: a critic that falls within the radius of its middle leaves nothing,
+        // so that what is thrown from beside the box office at what has come to it earns no encore.
+        Vector2 fromBoxOffice = critic.Position - Tuning.BoxOfficePosition;
+        bool byTheBoxOffice = (fromBoxOffice.X * fromBoxOffice.X) + (fromBoxOffice.Y * fromBoxOffice.Y)
+            < Tuning.ApplauseBoxOfficeRadius * Tuning.ApplauseBoxOfficeRadius;
+        if (fell && card.ThrownByMagician && ticks > 0 && !byTheBoxOffice)
+        {
+            _applause.Add(new Applause(critic.Position, ticks));
+            _events.Add(new TickEvent(TickEventKind.ApplauseDropped, critic.Position, CriticId: critic.Id));
+        }
+
+        return fell;
+    }
+
+    /// <summary>
+    /// The critic a card turns to from the one it struck at <paramref name="from"/>: the nearest whose middle is
+    /// within the ricochet's reach of that place and which the card has not struck, and of two as near the one
+    /// that entered first. Nobody when there is none.
+    /// </summary>
+    private Critic? NearestNotStruck(Vector2 from, ThrownCard card)
+    {
+        Critic? nearest = null;
+        float reach = Tuning.CardRicochetReach;
+        float nearestSquared = reach * reach;
         foreach (Critic critic in _critics)
         {
+            Vector2 apart = critic.Position - from;
+            float squared = (apart.X * apart.X) + (apart.Y * apart.Y);
+            if (!card.Struck.Contains(critic.Id) && (nearest is null ? squared <= nearestSquared : squared < nearestSquared))
+            {
+                nearest = critic;
+                nearestSquared = squared;
+            }
+        }
+
+        return nearest;
+    }
+
+    /// <summary>
+    /// The critic whose circle a card comes to first on its way from where it is, <paramref name="length"/> units
+    /// the way it flies, of those it has not struck, and how far along that way: <paramref name="firstEntry"/>.
+    /// The whole path is looked at and not only its end, so a card fast enough to jump over a critic in one tick
+    /// touches it all the same.
+    /// </summary>
+    private Critic? FirstCriticOnThePath(ThrownCard card, float length, out float firstEntry)
+    {
+        Critic? first = null;
+        Vector2 direction = card.Direction;
+        firstEntry = float.PositiveInfinity;
+        foreach (Critic critic in _critics)
+        {
+            // A card that goes on is still inside the circle of the critic it went through.
+            if (card.Struck.Contains(critic.Id))
+            {
+                continue;
+            }
+
             // How far along the path the critic's centre is, and how far to the side of it.
-            Vector2 toCritic = critic.Position - start;
+            Vector2 toCritic = critic.Position - card.Position;
             float along = (toCritic.X * direction.X) + (toCritic.Y * direction.Y);
             float aside = (toCritic.X * direction.Y) - (toCritic.Y * direction.X);
             float radius = KindOf(critic).Radius;
@@ -1007,6 +1118,11 @@ public sealed class Simulation(Tuning tuning, ulong seed, IReadOnlyList<IReadOnl
         // first. With fewer critics in range than cards the rest of the cards are not thrown.
         // ponytail: every critic is looked at once for each card of the throw. A throw of many cards at a full
         // stage sorts the critics in range once instead.
+        // What each card of the throw does when it strikes (plan T25), from the tuning of now, as its damage is:
+        // a strike takes all of a card that does not go through, and the loss over the thrower's pierce cards
+        // off one that does.
+        float pierceLoss = cards.Pierce == 0 ? damage : Tuning.CardPierceLoss / cards.Pierce;
+        float burstShare = cards.Burst * Tuning.CardBurstShare;
         _targets.Clear();
         for (int thrown = 0; thrown <= cards.OneMoreCard; thrown++)
         {
@@ -1052,7 +1168,8 @@ public sealed class Simulation(Tuning tuning, ulong seed, IReadOnlyList<IReadOnl
                 ? (closing + MathF.Sqrt((closing * closing) + (faster * nearest * nearest))) / faster
                 : 0f;
             Vector2 direction = Direction(to + (step * ticks), out _);
-            _thrownCards.Add(new ThrownCard(from, direction, range, damage, thrower));
+            _thrownCards.Add(
+                new ThrownCard(from, direction, range, damage, thrower, pierceLoss, cards.Ricochet, burstShare));
             _events.Add(new TickEvent(TickEventKind.Throw, from, thrower));
         }
 
