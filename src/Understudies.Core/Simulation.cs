@@ -144,8 +144,10 @@ public sealed class Simulation(Tuning tuning, ulong seed, IReadOnlyList<IReadOnl
 
     /// <summary>
     /// Which of the tuning's two thresholds <see cref="ActApplauseShare"/> has reached; a share exactly on a
-    /// threshold has reached it. When the act is over, all its enemies have entered and this is what the act
-    /// earned, until <see cref="GoOn"/>.
+    /// threshold has reached it. It is <see cref="ApplauseBand.None"/> only when no piece was picked up: a piece
+    /// from an enemy an earlier act left, in an act nobody has entered, is a share of nothing and the lowest
+    /// band all the same. When the act is over this is what the act earned, until <see cref="GoOn"/>: against
+    /// all its enemies when the plan is a drawn one, which has no entry past the act's end.
     /// </summary>
     public ApplauseBand ActApplauseBand =>
         ActApplause == 0 ? ApplauseBand.None
@@ -230,8 +232,8 @@ public sealed class Simulation(Tuning tuning, ulong seed, IReadOnlyList<IReadOnl
         WalkTheCritics();
 
         // The magician throws first, then each understudy in the order of their acts: the cards fly in the order
-        // they were thrown, so of the cards that reach one critic on one tick the magician's own lands first, and
-        // a fall it could have had is its own. Once a blow of this tick has closed the show nobody throws, and a
+        // they were thrown, so of the cards thrown on one tick that reach one critic together the magician's own
+        // lands first, and that fall is its own. A card an understudy threw a tick earlier flies before it. Once a blow of this tick has closed the show nobody throws, and a
         // magician that a blow of this tick has felled does not.
         if (!ShowClosed && !MagicianHasFallen)
         {
@@ -580,7 +582,8 @@ public sealed class Simulation(Tuning tuning, ulong seed, IReadOnlyList<IReadOnl
                 // The audience cheers the star and never the cardboard: applause is left where a critic falls to
                 // a card the magician itself threw, whoever hurt the critic before. A piece with no time is no
                 // piece.
-                if (fell && card.ThrownByMagician && Ticks(Tuning.ApplauseTime) is > 0 and int ticks)
+                int ticks = Ticks(Tuning.ApplauseTime);
+                if (fell && card.ThrownByMagician && ticks > 0)
                 {
                     _applause.Add(new Applause(touched.Position, ticks));
                     _events.Add(new TickEvent(TickEventKind.ApplauseDropped, touched.Position));

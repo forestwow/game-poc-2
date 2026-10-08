@@ -173,6 +173,42 @@ public class ApplauseTests
     }
 
     [Test]
+    public void Step_APieceIsDropped_ItIsNotPickedUpOnThatTick()
+    {
+        // The magician stands at the door, with the place of the fall in its reach all along: it picks up after
+        // it moves and before the cards fly, so what a card of this tick drops waits for the next.
+        Simulation simulation = Shows.WithOneCritic(PointBlank);
+
+        StepUntil(simulation, TickEventKind.Kill);
+        Assert.That(simulation.ApplauseOnTheFloor, Has.Count.EqualTo(1));
+        Assert.That(simulation.ActApplause, Is.Zero);
+
+        simulation.Step(default);
+        Assert.That(simulation.ApplauseOnTheFloor, Is.Empty);
+        Assert.That(simulation.ActApplause, Is.EqualTo(1));
+    }
+
+    // A piece that lies for thirty ticks, a tenth of a unit out of reach of a magician that then takes one step
+    // to it. After twenty-eight ticks the step finds the piece with one tick left after it. After twenty-nine the
+    // piece was still seen, with its last tick left, and the step's own tick takes it away before the magician
+    // has moved: it can be picked up on one tick fewer than it is seen.
+    [TestCase(28, 1, TestName = "Step_APieceWithTwoTicksLeft_IsPickedUp")]
+    [TestCase(29, 0, TestName = "Step_APieceOnItsLastTick_IsGoneBeforeTheMagicianReachesIt")]
+    public void Step_APieceFadesBeforeTheMagicianPicksUp(int ticksStood, int pieces)
+    {
+        Simulation simulation = Shows.WithOneCritic(
+            Scene with { MagicianMark = Door + new Vector2(0f, 1.1f), ApplauseTime = 0.5f });
+        StepUntil(simulation, TickEventKind.Kill);
+        Run(simulation, ticksStood);
+        Assert.That(simulation.ApplauseOnTheFloor, Has.Count.EqualTo(1));
+
+        simulation.Step(Up);
+
+        Assert.That(simulation.ApplauseOnTheFloor, Is.Empty);
+        Assert.That(simulation.ActApplause, Is.EqualTo(pieces));
+    }
+
+    [Test]
     public void Step_AnUnderstudyWalksOverAPiece_LeavesIt()
     {
         // The first act, with nobody on the stage: half a second on the mark, then up to the door and on the spot
@@ -293,6 +329,24 @@ public class ApplauseTests
         Assert.That(simulation.Phase, Is.EqualTo(Phase.BetweenActs));
         Assert.That((simulation.ActApplause, simulation.ActEntriesMade), Is.EqualTo((pieces, 20)));
         Assert.That(simulation.ActApplauseBand, Is.EqualTo(band));
+    }
+
+    [Test]
+    public void ActApplauseBand_APieceInAnActNobodyEntered_IsUnderTheFirstAndNotNone()
+    {
+        // Nobody throws in the first act, and its one critic is still at the door when the second begins: an act
+        // with no critic of its own, in which the magician stands at the door, fells that one and picks its piece
+        // up. A share of nothing, and still more than no applause: only an act that picked up nothing has none.
+        Simulation simulation = Shows.WithOneCritic(PointBlank with { ThrowRange = 0f });
+        PlayTheAct(simulation, _ => default);
+        simulation.Tuning = PointBlank;
+        simulation.GoOn();
+
+        Run(simulation, ticks: 4);
+
+        Assert.That((simulation.ActApplause, simulation.ActEntriesMade), Is.EqualTo((1, 0)));
+        Assert.That(simulation.ActApplauseShare, Is.Zero);
+        Assert.That(simulation.ActApplauseBand, Is.EqualTo(ApplauseBand.UnderTheFirst));
     }
 
     [Test]

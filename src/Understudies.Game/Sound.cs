@@ -6,11 +6,11 @@ using Understudies.Core;
 namespace Understudies.Game;
 
 /// <summary>
-/// What a blow sounds like, and a piece of applause picked up: seven short sounds, each played when a tick reports what it is for, and all of them
-/// worked out in code when the game starts. There is no sound file. Like the juice it is the view's own state and
-/// decides no rule, so it may use what the rules may not (<see cref="Random"/>, a dictionary, trigonometry, a
-/// clock), and like the juice it is fed the simulation after every tick (<see cref="Feed"/>: a tick's events are
-/// gone on the next).
+/// What a blow sounds like, and a piece of applause picked up: seven short sounds, each played when a tick
+/// reports what it is for, and all of them worked out in code when the game starts. There is no sound file. Like
+/// the juice it is the view's own state and decides no rule, so it may use what the rules may not
+/// (<see cref="Random"/>, a dictionary, trigonometry, a clock), and like the juice it is fed the simulation after
+/// every tick (<see cref="Feed"/>: a tick's events are gone on the next).
 /// </summary>
 internal sealed class Sound
 {

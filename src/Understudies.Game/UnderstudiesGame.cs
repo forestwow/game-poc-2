@@ -56,10 +56,11 @@ internal sealed class UnderstudiesGame : Microsoft.Xna.Framework.Game
     private const float ApplauseLift = 0.8f;
     private const float ApplauseFaintest = 0.25f;
 
-    // The act's applause is a bar at the foot of the back wall, under the words and in the middle. Its second
-    // notch is this far along it: the bar is full a little past the share that earns the most.
+    // The act's applause is a bar in the middle of the back wall, ApplauseBarGap above its foot. Its second notch
+    // is this far along it: the bar is full a little past the share that earns the most.
     private static readonly Vector2 ApplauseBar = new(14f, 0.45f);
     private const float ApplauseBarSecondNotchAt = 0.7f;
+    private const float ApplauseBarGap = 0.2f;
     private const float ApplauseNotchWidth = 0.12f;
     private const float ApplauseNotchPast = 0.18f;
 
@@ -524,7 +525,8 @@ internal sealed class UnderstudiesGame : Microsoft.Xna.Framework.Game
         float fullBar = MathF.Max(0.01f, Tuning.ApplauseSecondThreshold / ApplauseBarSecondNotchAt);
         var applauseTopLeft = new Vector2(
             (Tuning.StageSize.X - ApplauseBar.X) / 2f,
-            MathF.Max(Tuning.StageFloorTop, WordsHeight + 0.4f + ApplauseBar.Y + 0.4f) - ApplauseBar.Y - 0.2f);
+            MathF.Max(Tuning.StageFloorTop, WordsHeight + 0.4f + ApplauseBar.Y + (2f * ApplauseBarGap))
+                - ApplauseBarGap - ApplauseBar.Y);
         FillBar(applauseTopLeft, ApplauseBar, _simulation.ActApplauseShare / fullBar, ApplauseGlow);
         foreach (float threshold in new[] { Tuning.ApplauseFirstThreshold, Tuning.ApplauseSecondThreshold })
         {

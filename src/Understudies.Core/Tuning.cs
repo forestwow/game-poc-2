@@ -64,7 +64,10 @@ namespace Understudies.Core;
 /// Seconds from one blow of a critic to its next, whether a blow is a strike on the box office or a touch that hurts
 /// the magician.
 /// </param>
-/// <param name="ApplauseTime">Seconds a piece of applause lies on the floor before it is gone.</param>
+/// <param name="ApplauseTime">
+/// Seconds a piece of applause lies on the floor before it is gone. It can be picked up from the tick after it
+/// is dropped, on one tick fewer than it is seen.
+/// </param>
 /// <param name="ApplausePickUpReach">
 /// The magician picks up a piece whose centre is no further from its own than its radius and this.
 /// </param>

@@ -19,7 +19,9 @@ public sealed class Applause
 
     /// <summary>
     /// What the piece has left of its time, in ticks: all of it on the tick it is dropped, and the tick that would
-    /// leave none takes the piece away. The view dims the piece by it.
+    /// leave none takes the piece away. The view dims the piece by it. A tick takes the pieces' time before the
+    /// magician picks up, and the magician picks up before a card can drop a piece: a piece is not picked up on the
+    /// tick it is dropped, and one that is seen with its last tick left is gone before the magician can reach it.
     /// </summary>
     public int TicksLeft { get; internal set; }
 }
