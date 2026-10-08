@@ -49,8 +49,11 @@
       "turnsOnTheMagician": false
     }
   ],
-  "firstActBudget": 15,
-  "budgetGrowthPerAct": 200,
+  "firstActBudget": 40,
+  "budgetGrowthPerAct": 40,
+  "budgetGrowthRise": 60,
+  "waveBurstShare": 0.25,
+  "waveBurstTime": 10,
   "actQuietEnd": 5,
   "criticTurnRadius": 4,
   "criticStrikeDamage": 1,
@@ -58,6 +61,7 @@
   "criticBlowCooldown": 1,
   "applauseTime": 4,
   "applausePickUpReach": 0.8,
+  "applauseBoxOfficeRadius": 8,
   "encoreFirstCost": 3,
   "encoreCostGrowth": 1,
   "encoreTime": 6,

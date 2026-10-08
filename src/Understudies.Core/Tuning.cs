@@ -54,7 +54,19 @@ namespace Understudies.Core;
 /// The kinds of enemy an act may buy, at least one. A planned entry names its kind by its place in this list.
 /// </param>
 /// <param name="FirstActBudget">What the first act has to buy its enemies with.</param>
-/// <param name="BudgetGrowthPerAct">How much more every act has than the one before it.</param>
+/// <param name="BudgetGrowthPerAct">How much more the second act has than the first: the step from act to act.</param>
+/// <param name="BudgetGrowthRise">
+/// How much bigger that step is in every act after the second: the third act has the step and this more than the
+/// second, the fourth the step and twice this more than the third.
+/// </param>
+/// <param name="WaveBurstShare">
+/// The share of an act's enemies that enter in crowds, from 0 to 1: with 0.25 every fourth. With nothing nobody
+/// does.
+/// </param>
+/// <param name="WaveBurstTime">
+/// Seconds from one crowd to the next, the first as the act begins: an enemy of a crowd enters at the last such
+/// moment before its own time.
+/// </param>
 /// <param name="ActQuietEnd">Seconds at the end of an act in which nobody enters.</param>
 /// <param name="CriticTurnRadius">
 /// A critic of a kind that turns, whose centre is nearer than this to the magician's centre, turns on the magician;
@@ -73,6 +85,10 @@ namespace Understudies.Core;
 /// </param>
 /// <param name="ApplausePickUpReach">
 /// The magician picks up a piece whose centre is no further from its own than its radius and this.
+/// </param>
+/// <param name="ApplauseBoxOfficeRadius">
+/// A critic that falls nearer than this to the centre of the box office leaves no applause. With nothing every
+/// fall leaves its piece.
 /// </param>
 /// <param name="EncoreFirstCost">
 /// The pieces of applause the first encore of a performance costs. The pieces are an act's own: what an act has
@@ -128,6 +144,9 @@ public sealed record Tuning(
     IReadOnlyList<EnemyKind> EnemyKinds,
     int FirstActBudget,
     int BudgetGrowthPerAct,
+    int BudgetGrowthRise,
+    float WaveBurstShare,
+    float WaveBurstTime,
     float ActQuietEnd,
     float CriticTurnRadius,
     float CriticStrikeDamage,
@@ -135,6 +154,7 @@ public sealed record Tuning(
     float CriticBlowCooldown,
     float ApplauseTime,
     float ApplausePickUpReach,
+    float ApplauseBoxOfficeRadius,
     int EncoreFirstCost,
     int EncoreCostGrowth,
     float EncoreTime,

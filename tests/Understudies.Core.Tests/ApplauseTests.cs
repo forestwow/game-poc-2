@@ -120,6 +120,43 @@ public class ApplauseTests
         Assert.That(Count(events, TickEventKind.Kill), Is.EqualTo(1));
         Assert.That(Count(events, TickEventKind.ApplauseDropped), Is.Zero);
         Assert.That(simulation.ApplauseOnTheFloor, Is.Empty);
+
+        // And that far from the box office, where the magician's own card would have left a piece.
+        Assert.That(Vector2.Distance(Door, Scene.BoxOfficePosition), Is.GreaterThan(Scene.ApplauseBoxOfficeRadius));
+    }
+
+    // No applause by the box office (plan decision 27). The box office stands eight units straight below the
+    // door, where the critic enters, stands and falls: the fall is eight from its middle, to the last digit.
+    [TestCase(8.5f, 0, TestName = "Step_ACriticFallsNearerToTheBoxOfficeThanTheRadius_NothingIsDropped")]
+    [TestCase(8f, 1, TestName = "Step_ACriticFallsExactlyOnTheRadius_OnePieceIsDropped")]
+    [TestCase(7.5f, 1, TestName = "Step_ACriticFallsOutsideTheRadius_OnePieceIsDropped")]
+    [TestCase(0f, 1, TestName = "Step_WithNoRadius_ACriticThatFallsByTheBoxOffice_LeavesItsPiece")]
+    public void Step_ACriticFallsByTheBoxOffice_TheRadiusDecides(float radius, int pieces)
+    {
+        Tuning tuning = Scene with { BoxOfficePosition = Door + new Vector2(0f, 8f), ApplauseBoxOfficeRadius = radius };
+        Simulation simulation = Shows.WithOneCritic(tuning);
+
+        StepUntil(simulation, TickEventKind.Kill);
+
+        // The fall is a fall either way: only the piece is missing.
+        Assert.That(simulation.Events[0], Is.EqualTo(new TickEvent(TickEventKind.Kill, Door)));
+        Assert.That(simulation.Events, Has.Count.EqualTo(1 + pieces));
+        Assert.That(simulation.ApplauseOnTheFloor, Has.Count.EqualTo(pieces));
+    }
+
+    [Test]
+    public void Step_ACriticFallsTouchingTheBoxOffice_NothingIsDropped_WhoeverStandsWhere()
+    {
+        // The committed radius about a box office the critic touches, with the magician six units away from
+        // the fall: it is the critic's place that counts, and not the magician's.
+        Tuning tuning = Scene with { BoxOfficePosition = Door + new Vector2(0f, 2.5f), BoxOfficeSize = 4f, MagicianMark = Mark + new Vector2(0f, 6f), ThrowRange = 15f };
+        Assert.That(tuning.ApplauseBoxOfficeRadius, Is.InRange(2.5f, 9f), "the committed radius reaches the fall and not the magician");
+        Simulation simulation = Shows.WithOneCritic(tuning);
+
+        StepUntil(simulation, TickEventKind.Kill);
+
+        Assert.That(simulation.Events, Is.EqualTo(new[] { new TickEvent(TickEventKind.Kill, Door) }));
+        Assert.That(simulation.ApplauseOnTheFloor, Is.Empty);
     }
 
     // The magician and the understudy of an act it stood through are on one mark and throw on one tick, the

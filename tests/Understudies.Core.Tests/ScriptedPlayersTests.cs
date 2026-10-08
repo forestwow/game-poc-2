@@ -10,16 +10,17 @@ public class ScriptedPlayersTests
     private Tuning Tuning { get; } = CommittedTuning.Parse();
 
     /// <summary>
-    /// The committed numbers on another budget, with a first act four times as full and acts that grow by less: the tests that play it
-    /// assert what they play it for, a player that is crowded and vanishes and a box office that is struck.
+    /// The committed numbers on another budget, with a first act half as full again and acts that grow by the
+    /// same forty each: the tests that play it assert what they play it for, a player that is crowded and
+    /// vanishes and a box office that is struck.
     /// </summary>
-    private Tuning Crowded => Tuning with { FirstActBudget = 60, BudgetGrowthPerAct = 40 };
+    private Tuning Crowded => Tuning with { FirstActBudget = 60, BudgetGrowthPerAct = 40, BudgetGrowthRise = 0 };
 
     /// <summary>
     /// Plan decision 9's question, whether <c>float</c> gives one result on two machines: two scripted
     /// performances, each pinned at the end of its third act and at its end, here (macOS ARM) and in CI (Linux
     /// x64). The earlier pin says how early a disagreement starts. The first is the doors player on the committed
-    /// numbers, asserted to have an encore in it; the second, the orbit player with a fuller first act, is
+    /// numbers, asserted to have an encore in it; the second, the orbit player on a circle of nine with a fuller first act, is
     /// asserted to have the Vanish and its cloud, stunned critics and blows on the box office in it. A change to tuning.json, to a
     /// rule or to a player changes them: pin them again from the failure's message, and say so in the pull
     /// request. If the two machines ever disagree, that is a finding for the owner and not a test to make pass.
@@ -33,8 +34,8 @@ public class ScriptedPlayersTests
         {
             // An act that stood for an encore is in what is pinned.
             Assert.That(performance.Acts.Sum(act => act.Encores), Is.GreaterThan(0), "encores");
-            Assert.That(performance.Acts[2].StateHash, Is.EqualTo(16361164891260290646UL), "the end of act three");
-            Assert.That(performance.Acts[^1].StateHash, Is.EqualTo(5560979504958570215UL), "the end of the performance");
+            Assert.That(performance.Acts[2].StateHash, Is.EqualTo(10757404512325437534UL), "the end of act three");
+            Assert.That(performance.Acts[^1].StateHash, Is.EqualTo(12382511505745276393UL), "the end of the performance");
         });
     }
 
@@ -45,7 +46,10 @@ public class ScriptedPlayersTests
         int vanishes = 0;
         int blows = 0;
         int stunned = 0;
-        Func<Simulation, MagicianInput> orbit = ScriptedPlayers.Orbit(5f);
+
+        // On a circle of nine, wider than the guard's: on those no fall leaves applause (plan decision 27), and
+        // the orbit does not live to a third act.
+        Func<Simulation, MagicianInput> orbit = ScriptedPlayers.Orbit(9f);
 
         Performance performance = ScriptedPlayers.Play(Crowded, seed: 1, simulation =>
         {
@@ -61,8 +65,8 @@ public class ScriptedPlayersTests
             Assert.That(vanishes, Is.GreaterThan(0), "Vanishes");
             Assert.That(blows, Is.GreaterThan(0), "blows on the box office");
             Assert.That(stunned, Is.GreaterThan(0), "stunned critics");
-            Assert.That(performance.Acts[2].StateHash, Is.EqualTo(1373897778386984640UL), "the end of act three");
-            Assert.That(performance.Acts[^1].StateHash, Is.EqualTo(3802173573116970682UL), "the end of the performance");
+            Assert.That(performance.Acts[2].StateHash, Is.EqualTo(4345378464534316888UL), "the end of act three");
+            Assert.That(performance.Acts[^1].StateHash, Is.EqualTo(6328738384288175142UL), "the end of the performance");
         });
     }
 
@@ -88,7 +92,9 @@ public class ScriptedPlayersTests
         // from the events.
         IReadOnlyList<IReadOnlyList<PlannedEntry>> plan = Waves.Plan(Crowded, seed: 2);
         var boxOfficeAtTheCurtain = new List<float>();
-        Func<Simulation, MagicianInput> orbit = ScriptedPlayers.Orbit(5f);
+
+        // A circle wide enough to earn encores: on the guard's own no fall leaves applause (plan decision 27).
+        Func<Simulation, MagicianInput> orbit = ScriptedPlayers.Orbit(13f);
         Performance performance = ScriptedPlayers.Play(Crowded, seed: 2, simulation =>
         {
             if (simulation.Act > boxOfficeAtTheCurtain.Count)
@@ -329,10 +335,10 @@ public class ScriptedPlayersTests
     /// <summary>
     /// The same table on another budget and nothing else changed, for whoever tunes to the guard.
     /// </summary>
-    [TestCase(15, 160)]
-    [TestCase(15, 220)]
-    [TestCase(60, 120)]
-    [Explicit("Prints the guard's table on the committed tuning with another budget: the first act's, and what every act has more than the one before")]
+    [TestCase(40, 80)]
+    [TestCase(30, 40)]
+    [TestCase(60, 40)]
+    [Explicit("Prints the guard's table on the committed tuning with another budget: the first act's, and what the second has more than the first")]
     public void PrintTheTableOnAnotherBudget(int firstActBudget, int budgetGrowthPerAct) =>
         PrintTheTable(Tuning with { FirstActBudget = firstActBudget, BudgetGrowthPerAct = budgetGrowthPerAct });
 
@@ -479,7 +485,7 @@ public class ScriptedPlayersTests
 
         TextWriter table = TestContext.Out;
         table.WriteLine(
-            $"first act's budget {tuning.FirstActBudget}, {tuning.BudgetGrowthPerAct} more every act; how each performance ended, in which act, the box office left");
+            $"first act's budget {tuning.FirstActBudget}, {tuning.BudgetGrowthPerAct} more in the second and that step {tuning.BudgetGrowthRise} bigger in every act after; how each performance ended, in which act, the box office left");
         table.WriteLine("seed  " + string.Join("  ", players.Select(player => $"{player.Name,-15}")));
         for (int seed = 1; seed <= Seeds; seed++)
         {

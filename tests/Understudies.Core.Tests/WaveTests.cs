@@ -11,12 +11,14 @@ public class WaveTests
 
     /// <summary>
     /// Two kinds that do not divide a budget evenly: one for 3 from the first act, bought twice as readily, and one
-    /// for 5 from the second act. The first act has 20 to spend and every act 7 more than the one before.
+    /// for 5 from the second act. The first act has 20 to spend, the second 7 more, and that step is 2 bigger in
+    /// every act after it.
     /// </summary>
     private Tuning TwoKinds => Tuning with
     {
         FirstActBudget = 20,
         BudgetGrowthPerAct = 7,
+        BudgetGrowthRise = 2,
         EnemyKinds =
         [
             Tuning.Critic() with { Cost = 3, Weight = 2, FromAct = 1 },
@@ -47,9 +49,10 @@ public class WaveTests
             IReadOnlyList<IReadOnlyList<PlannedEntry>> plan = Waves.Plan(TwoKinds, seed);
 
             Assert.That(plan, Has.Count.EqualTo(TwoKinds.ActsInPerformance));
-            for (int act = 1; act <= plan.Count; act++)
+            int budget = 20;
+            int step = 7;
+            for (int act = 1; act <= plan.Count; act++, budget += step, step += 2)
             {
-                int budget = 20 + (7 * (act - 1));
                 int spent = plan[act - 1].Sum(entry => entry.Kind == 0 ? 3 : 5);
 
                 Assert.That(spent, Is.LessThanOrEqualTo(budget), $"seed {seed}, act {act}");
@@ -114,7 +117,7 @@ public class WaveTests
     public void Plan_AnActsEntries_AreNotEvenlySpaced_AndAnotherSeedSpacesThemAnotherWay()
     {
         // Each entry is somewhere in its own stretch of the act, by chance: the gaps between the first act's
-        // twenty-five are of many lengths, and not the one length of a fixed place in every stretch.
+        // forty are of many lengths, and not the one length of a fixed place in every stretch.
         static int[] Ticks(ulong seed, Tuning tuning) => [.. Waves.Plan(tuning, seed)[0].Select(entry => entry.Tick)];
         int[] ticks = Ticks(1, Tuning);
 
@@ -125,7 +128,7 @@ public class WaveTests
     [Test]
     public void Plan_WithTwoDoorsOpen_TheDoorsDoNotTakeTurns_AndAnotherSeedOrdersThemAnotherWay()
     {
-        // The third act has two doors open and forty-one critics. Each door is drawn: some critic enters by the
+        // The third act has two doors open and a hundred and eighty critics. Each door is drawn: some critic enters by the
         // door of the one before it.
         static int[] Doors(ulong seed, Tuning tuning) => [.. Waves.Plan(tuning, seed)[2].Select(entry => entry.Door)];
         int[] doors = Doors(1, Tuning);
@@ -135,14 +138,106 @@ public class WaveTests
     }
 
     [Test]
-    public void Plan_TheBudgetGrowsByTheSameWithEveryAct()
+    public void Plan_WithNoRise_TheBudgetGrowsByTheSameWithEveryAct()
     {
         // The committed critic costs 1: an act has as many of them as its budget.
-        Tuning tuning = Tuning with { FirstActBudget = 10, BudgetGrowthPerAct = 4, ActsInPerformance = 4 };
+        Tuning tuning = Tuning with
+        {
+            FirstActBudget = 10, BudgetGrowthPerAct = 4, BudgetGrowthRise = 0, ActsInPerformance = 4,
+        };
 
         IReadOnlyList<IReadOnlyList<PlannedEntry>> plan = Waves.Plan(tuning, seed: 1);
 
         Assert.That(plan.Select(act => act.Count), Is.EqualTo(new[] { 10, 14, 18, 22 }));
+    }
+
+    [Test]
+    public void Plan_TheStepFromActToAct_IsBiggerByTheRiseInEveryActAfterTheSecond()
+    {
+        // Ten in the first act and four more in the second; the third has seven more than that, the fourth ten
+        // more and the fifth thirteen.
+        Tuning tuning = Tuning with
+        {
+            FirstActBudget = 10, BudgetGrowthPerAct = 4, BudgetGrowthRise = 3, ActsInPerformance = 5,
+        };
+
+        IReadOnlyList<IReadOnlyList<PlannedEntry>> plan = Waves.Plan(tuning, seed: 1);
+
+        Assert.That(plan.Select(act => act.Count), Is.EqualTo(new[] { 10, 14, 21, 31, 44 }));
+    }
+
+    /// <summary>
+    /// Two acts of two hundred critics, a quarter of them in crowds ten seconds apart: seven crowds in the seventy
+    /// seconds of an act in which anybody enters.
+    /// </summary>
+    private Tuning Crowds => Tuning with
+    {
+        FirstActBudget = 200,
+        BudgetGrowthPerAct = 0,
+        BudgetGrowthRise = 0,
+        ActsInPerformance = 2,
+        WaveBurstShare = 0.25f,
+        WaveBurstTime = 10f,
+    };
+
+    [Test]
+    public void Plan_AShareOfAnActsEnemies_EnterInCrowds_AndTheOthersWhenTheyWouldHave()
+    {
+        const int crowdTicks = 10 * Simulation.TicksPerSecond;
+        foreach (ulong seed in Seeds)
+        {
+            IReadOnlyList<IReadOnlyList<PlannedEntry>> alone = Waves.Plan(Crowds with { WaveBurstShare = 0f }, seed);
+            IReadOnlyList<IReadOnlyList<PlannedEntry>> plan = Waves.Plan(Crowds, seed);
+
+            for (int act = 0; act < plan.Count; act++)
+            {
+                // Every fourth of the act's list, with the door and the kind it was drawn, at the moment of the
+                // last crowd before its own tick; the others where they were. Nothing else is drawn for a crowd:
+                // the plan is the plan without crowds, with those moved.
+                PlannedEntry[] moved =
+                [
+                    .. alone[act]
+                        .Select((entry, place) => place % 4 == 3 ? entry with { Tick = entry.Tick - (entry.Tick % crowdTicks) } : entry)
+                        .OrderBy(entry => entry.Tick),
+                ];
+
+                Assert.That(plan[act], Is.EqualTo(moved), $"seed {seed}, act {act + 1}");
+
+                // In the order of their ticks, and inside the seventy seconds, as without crowds.
+                Assert.That(plan[act].Select(entry => entry.Tick), Is.Ordered.And.All.InRange(0, (7 * crowdTicks) - 1));
+
+                // Fifty of the two hundred, in seven crowds: some crowd has five or more on its one tick. Left
+                // to themselves no three of two hundred enter on one tick of four thousand two hundred.
+                Assert.That(plan[act].Count(entry => entry.Tick % crowdTicks == 0), Is.GreaterThanOrEqualTo(50));
+                Assert.That(plan[act].GroupBy(entry => entry.Tick).Max(tick => tick.Count()), Is.GreaterThanOrEqualTo(5));
+                Assert.That(alone[act].GroupBy(entry => entry.Tick).Max(tick => tick.Count()), Is.LessThan(5));
+            }
+        }
+    }
+
+    [Test]
+    public void Plan_WithEveryEnemyInACrowd_NobodyEntersBetweenTwoCrowds()
+    {
+        const int crowdTicks = 10 * Simulation.TicksPerSecond;
+        IReadOnlyList<PlannedEntry> alone = Waves.Plan(Crowds with { WaveBurstShare = 0f }, seed: 1)[0];
+
+        IReadOnlyList<PlannedEntry> plan = Waves.Plan(Crowds with { WaveBurstShare = 1f }, seed: 1)[0];
+
+        // The same enemies by the same doors, in the order they were bought.
+        Assert.That(plan.Select(entry => entry.Tick % crowdTicks), Has.All.Zero);
+        Assert.That(plan.Select(entry => entry.Tick / crowdTicks).Distinct(), Is.EqualTo(new[] { 0, 1, 2, 3, 4, 5, 6 }));
+        Assert.That(plan.Select(entry => (entry.Door, entry.Kind)), Is.EqualTo(alone.Select(entry => (entry.Door, entry.Kind))));
+    }
+
+    [Test]
+    public void Plan_WithNoShareInCrowds_OrNoTimeFromCrowdToCrowd_IsThePlanWithoutCrowds()
+    {
+        static PlannedEntry[] All(IReadOnlyList<IReadOnlyList<PlannedEntry>> plan) => [.. plan.SelectMany(act => act)];
+        PlannedEntry[] alone = All(Waves.Plan(Crowds with { WaveBurstShare = 0f, WaveBurstTime = 0f }, seed: 1));
+
+        Assert.That(All(Waves.Plan(Crowds with { WaveBurstShare = 0f }, seed: 1)), Is.EqualTo(alone));
+        Assert.That(All(Waves.Plan(Crowds with { WaveBurstTime = 0f }, seed: 1)), Is.EqualTo(alone));
+        Assert.That(All(Waves.Plan(Crowds, seed: 1)), Is.Not.EqualTo(alone));
     }
 
     [Test]
@@ -218,8 +313,11 @@ public class WaveTests
     [Test]
     public void Step_EveryEntryOfThePlanEnters_OnItsTickOfItsActAndAtItsDoor()
     {
-        // Six acts: by the sixth all three doors are open.
-        var simulation = new Simulation(ShortActs, seed: 3);
+        // Six acts: by the sixth all three doors are open. Nobody leaves this stage, so the acts are small ones,
+        // twenty critics and ten more in every act: the committed budgets fill it with two thousand, and the
+        // test with their pushing.
+        Tuning tuning = ShortActs with { FirstActBudget = 20, BudgetGrowthPerAct = 10, BudgetGrowthRise = 0 };
+        var simulation = new Simulation(tuning, seed: 3);
         for (int act = 1; act <= 6; act++)
         {
             Assert.That(simulation.Act, Is.EqualTo(act));
@@ -348,10 +446,15 @@ public class WaveTests
         var simulation = new Simulation(ShortActs, seed: 1);
         simulation.Step(default);
 
-        simulation.Tuning = ShortActs with { FirstActBudget = 1, BudgetGrowthPerAct = 0 };
+        simulation.Tuning = ShortActs with
+        {
+            FirstActBudget = 1, BudgetGrowthPerAct = 0, BudgetGrowthRise = 0, WaveBurstShare = 1f, WaveBurstTime = 1f,
+        };
         Play(simulation);
         simulation.GoOn();
 
+        IReadOnlyList<IReadOnlyList<PlannedEntry>> planned = Waves.Plan(ShortActs, seed: 1);
+        Assert.That(simulation.Plan.SelectMany(act => act), Is.EqualTo(planned.SelectMany(act => act)));
         Assert.That(simulation.Plan.Select(act => act.Count).Take(2), Is.EqualTo(new[] { first, second }));
         Assert.That(simulation.Critics, Has.Count.EqualTo(first));
         Assert.That(simulation.ActEntries, Has.Count.EqualTo(second));
