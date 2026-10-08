@@ -25,6 +25,7 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
     private const float SpritePixelsPerUnit = 64f / MagicianHeight;
     private const float WalkFramesPerSecond = 12f;
     private const float ShadowOpacity = 0.3f;
+    private const float FootlightGap = 4f;
     private const float ThrownCardWidth = 0.5f;
     private const float ThrownCardHeight = 0.35f;
 
@@ -82,9 +83,6 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
 
     private static readonly Color Surround = new(24, 18, 28);
     private static readonly Color BackWall = new(52, 40, 62);
-    private static readonly Color Floor = new(96, 74, 58);
-    private static readonly Color OpenDoor = new(222, 180, 104);
-    private static readonly Color ShutDoor = new(66, 50, 42);
     private static readonly Color HitPoints = new(132, 204, 110);
     private static readonly Color HitPointsLost = new(30, 22, 30);
     private static readonly Color Magician = new(250, 226, 120);
@@ -124,7 +122,11 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
     private readonly string _spritesFolder;
 
     // By Figure and then by Facing; a figure with one view has that one alone.
-    private readonly Sheet[][] _sheets = new Sheet[4][];
+    private readonly Sheet[][] _sheets = new Sheet[Enum.GetValues<Figure>().Length][];
+
+    // The set's two pictures that are laid side by side: the boards of the floor and the curtain of the back wall.
+    private Sheet _floor = null!;
+    private Sheet _curtain = null!;
 
     // The view's own time, in seconds: what a walk's frames are counted by.
     private float _walkClock;
@@ -182,13 +184,25 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
         // A walk is a sheet of three rows of three frames, a file pixel to a sprite pixel. The side view faces
         // right. The stagehand has one walk, toward the viewer, and the box office is one picture as the tool
         // returned it: twelve file pixels to one of its own, drawn six to a sprite pixel so that it is as wide as
-        // its four units. ponytail: its pixels are twice the figures'; plan T07d makes the set and may make it anew.
+        // its four units.
         _sheets[(int)Figure.Magician] =
             [ReadSheet("magician-down.png", 3), ReadSheet("magician-up.png", 3), ReadSheet("magician-side.png", 3)];
         _sheets[(int)Figure.Critic] =
             [ReadSheet("critic-down.png", 3), ReadSheet("critic-up.png", 3), ReadSheet("critic-side.png", 3)];
         _sheets[(int)Figure.Stagehand] = [ReadSheet("stagehand-down.png", 3)];
         _sheets[(int)Figure.BoxOffice] = [ReadSheet("box-office.png", 1, block: 6f)];
+
+        // The set (plan T07d). The doors are stills like the box office and drawn at its pixel size, a footlight at
+        // the figures'. The floor's picture is sixteen file pixels to a sprite pixel. The curtain's own pixel is
+        // twelve, and it is drawn four to a sprite pixel, which makes it as tall as the back wall.
+        // ponytail: the box office's and the doors' pixels are so twice the figures' and the curtain's three times.
+        // A still comes back from the tool at one size whatever it shows; pictures made to the figures' measure
+        // (through the tool's animation export, as the walks are) would end it.
+        _sheets[(int)Figure.ShutDoor] = [ReadSheet("door-shut.png", 1, block: 6f)];
+        _sheets[(int)Figure.OpenDoor] = [ReadSheet("door-open.png", 1, block: 6f)];
+        _sheets[(int)Figure.Footlight] = [ReadSheet("footlight.png", 1, block: 12f)];
+        _floor = ReadSheet("floor.png", 1, block: 16f);
+        _curtain = ReadSheet("curtain.png", 1, block: 4f);
 
         if (FontFiles.FirstOrDefault(File.Exists) is { } fontFile)
         {
@@ -437,22 +451,34 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
 
         GraphicsDevice.Clear(Surround);
 
-        // The back wall, the floor below it and what lies flat on the floor.
-        // Every batch that draws a sprite takes its pixels as they are: a sprite is never smoothed.
-        _spriteBatch.Begin(samplerState: SamplerState.PointClamp, transformMatrix: worldToScreen);
-        var floorTopLeft = new Vector2(0f, Tuning.StageFloorTop);
+        // The set: the back wall with its curtain hung to the floor's top, and the boards of the floor below it.
+        // The two pictures are laid side by side, so this batch lets a picture go round at its edges. Every batch
+        // that draws a sprite takes its pixels as they are: a sprite is never smoothed.
+        _spriteBatch.Begin(samplerState: SamplerState.PointWrap, transformMatrix: worldToScreen);
         var across = new Vector2(Tuning.StageSize.X + (2f * past.X), 0f);
         Fill(-past, across with { Y = Tuning.StageFloorTop + past.Y }, BackWall);
-        Fill(floorTopLeft with { X = -past.X }, across with { Y = Tuning.StageSize.Y - Tuning.StageFloorTop + past.Y }, Floor);
+        Lay(
+            _floor,
+            new Vector2(-past.X, Tuning.StageFloorTop),
+            across with { Y = Tuning.StageSize.Y - Tuning.StageFloorTop + past.Y });
+        float curtainHeight = _curtain.First.Height * SpritePixel / _curtain.Block;
+        Lay(_curtain, new Vector2(-past.X, Tuning.StageFloorTop - curtainHeight), across with { Y = curtainHeight });
+        _spriteBatch.End();
+
+        // What lies flat on the floor, and the doors, which are of the set and hide nobody: whoever stands at a
+        // door is drawn over it.
+        _spriteBatch.Begin(samplerState: SamplerState.PointClamp, transformMatrix: worldToScreen);
         for (int i = 0; i < Tuning.StageDoors.Count; i++)
         {
-            // A door is a mat as wide as the door, the half of it that is on the floor: lit when the door is open
-            // in this act, and dim while it is shut.
-            var half = new Vector2(Tuning.StageDoorWidth / 2f);
-            Vector2 topLeft = Vector2.Max(Tuning.StageDoors[i].Position - half, floorTopLeft);
-            Vector2 bottomRight = Vector2.Min(Tuning.StageDoors[i].Position + half, Tuning.StageSize);
-            Fill(topLeft, bottomRight - topLeft, _simulation.DoorIsOpen(i) ? OpenDoor : ShutDoor);
+            // A door's foot is half its width below where its critics enter, and kept within the stage's sides: a
+            // critic comes in on its doorway. It is lit while it is open.
+            Vector2 mouth = Tuning.StageDoors[i].Position;
+            float half = Tuning.StageDoorWidth / 2f;
+            DrawFigure(
+                _simulation.DoorIsOpen(i) ? Figure.OpenDoor : Figure.ShutDoor,
+                new Vector2(Math.Clamp(mouth.X, half, Tuning.StageSize.X - half), mouth.Y + half));
         }
+
 
         foreach (Understudy understudy in _simulation.Understudies)
         {
@@ -503,6 +529,13 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
         // office stands a hair behind its foot line, so whoever stands exactly on that line is in front.
         const float hair = 0.001f;
         DrawFigure(Figure.BoxOffice, boxOfficeFeet - new Vector2(0f, hair), white: _juice.BoxOfficeWhite);
+        // The footlights, along the stage's front edge and in front of all that stands on it. A program writes its
+        // last line there, so they are out while one is read.
+        for (float x = FootlightGap / 2f; x < Tuning.StageSize.X && _simulation.Phase != Phase.Program; x += FootlightGap)
+        {
+            DrawFigure(Figure.Footlight, new Vector2(x, Tuning.StageSize.Y));
+        }
+
         Vector2 magicianFeet = Vector2.Lerp(_simulation.MagicianPreviousPosition, _simulation.MagicianPosition, alpha);
         Vector2 magicianStep = _simulation.MagicianPosition - _simulation.MagicianPreviousPosition;
         if (magicianStep != Vector2.Zero)
@@ -867,8 +900,7 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
         // ponytail: a figure is so up to a third smaller or larger than its units say, with the window's size, and
         // larger still in a window narrower than 1024. A stage drawn to a target of its own at the sprites' measure
         // and scaled whole would end that.
-        float pixel = MathF.Max(1f, MathF.Round(_scale / SpritePixelsPerUnit)) / _scale;
-        float unit = pixel / sheet.Block;
+        float unit = SpritePixel / sheet.Block;
         float width = source.Width * unit;
         var onAPixel = new Vector2(MathF.Round(feet.X * _scale), MathF.Round(feet.Y * _scale)) / _scale;
 
@@ -909,6 +941,34 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
         {
             Copy(sheet.White, Color.White * (white * opacity), over);
         }
+    }
+
+    /// <summary>How long a sprite pixel is in world units in the frame being drawn.</summary>
+    private float SpritePixel => MathF.Max(1f, MathF.Round(_scale / SpritePixelsPerUnit)) / _scale;
+
+    /// <summary>
+    /// A picture laid side by side over a rectangle of the stage, its first copy's corner on the stage's own corner
+    /// across, so that a shaken stage carries its boards with it. For a batch that lets a picture go round, and for
+    /// a picture that fills its file from side to side.
+    /// </summary>
+    private void Lay(Sheet sheet, Vector2 topLeft, Vector2 size)
+    {
+        float unit = SpritePixel / sheet.Block;
+        var source = new Rectangle(
+            sheet.First.X + (int)MathF.Round(topLeft.X / unit),
+            sheet.First.Y,
+            (int)MathF.Ceiling(size.X / unit),
+            (int)MathF.Ceiling(size.Y / unit));
+        _spriteBatch.Draw(
+            sheet.Image,
+            topLeft,
+            source,
+            Color.White,
+            0f,
+            Microsoft.Xna.Framework.Vector2.Zero,
+            unit,
+            SpriteEffects.None,
+            0f);
     }
 
     /// <summary>A sheet of the sprites' folder: its picture, a white copy of it, and where its first frame is.</summary>
@@ -1009,5 +1069,8 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
         Critic,
         Stagehand,
         BoxOffice,
+        ShutDoor,
+        OpenDoor,
+        Footlight,
     }
 }

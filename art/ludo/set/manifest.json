@@ -1,0 +1,157 @@
+{
+  "tool": "ludo.ai, through its CLI (ludo 0.1.6)",
+  "ticket": "T07d, the stage set",
+  "credits": 5,
+  "note": "raw/ keeps every picture as returned; the five the game reads are copies of the picked ones, unchanged. A job that returned two pictures is listed twice with the credits of the whole job. The open door is an edit of the shut one, and the edit did not keep to the pixel grid.",
+  "game_files": {
+    "floor.png": "raw/floor-v2.png (1024 pixels, sixteen to a sprite pixel)",
+    "curtain.png": "raw/curtain-v1.png (twelve to one of its own pixels, drawn four to a sprite pixel)",
+    "door-shut.png": "raw/door-v1.png",
+    "door-open.png": "raw/door-open-v2.png",
+    "footlight.png": "raw/footlight-v2.png"
+  },
+  "generations_made": [
+    {
+      "returned": "footlight-v1.png",
+      "command": "ludo image create",
+      "settings": {
+        "image_type": "sprite",
+        "perspective": "Any perspective",
+        "aspect_ratio": "ar_1_1",
+        "art_style": "16-Bit",
+        "prompt": "One old theatre footlight seen from behind and above, as from the stage: a small brass shell-shaped reflector with a warm glowing yellow bulb inside it. Single small object, centred, no text, no ground, no shadow. Pixel art with a thick dark outline and a small limited palette, 16-bit game style.",
+        "n": 2
+      },
+      "job_id": "228f12a7-ce26-4220-bc73-2c07638e5b4e",
+      "created_at": "2026-10-08T09:47:46.536Z",
+      "credits_of_the_job": 1
+    },
+    {
+      "returned": "footlight-v2.png",
+      "command": "ludo image create",
+      "settings": {
+        "image_type": "sprite",
+        "perspective": "Any perspective",
+        "aspect_ratio": "ar_1_1",
+        "art_style": "16-Bit",
+        "prompt": "One old theatre footlight seen from behind and above, as from the stage: a small brass shell-shaped reflector with a warm glowing yellow bulb inside it. Single small object, centred, no text, no ground, no shadow. Pixel art with a thick dark outline and a small limited palette, 16-bit game style.",
+        "n": 2
+      },
+      "job_id": "228f12a7-ce26-4220-bc73-2c07638e5b4e",
+      "created_at": "2026-10-08T09:47:46.536Z",
+      "credits_of_the_job": 1
+    },
+    {
+      "returned": "door-v1.png",
+      "command": "ludo image create",
+      "settings": {
+        "image_type": "sprite",
+        "perspective": "Any perspective",
+        "aspect_ratio": "ar_1_1",
+        "art_style": "16-Bit",
+        "prompt": "A surreal stage door standing by itself, drawn as a flat front elevation: a shut dark green wooden door in a heavy frame, and above it a sign shaped like a large closed human eye with long lashes. Single object, centred, no people, no text, no ground, no shadow. Pixel art with a thick dark outline and a small limited palette, 16-bit game style.",
+        "n": 2
+      },
+      "job_id": "5d0cd53c-12a4-4b7c-89fd-f0b67cccbae3",
+      "created_at": "2026-10-08T09:47:49.699Z",
+      "credits_of_the_job": 1
+    },
+    {
+      "returned": "door-v2.png",
+      "command": "ludo image create",
+      "settings": {
+        "image_type": "sprite",
+        "perspective": "Any perspective",
+        "aspect_ratio": "ar_1_1",
+        "art_style": "16-Bit",
+        "prompt": "A surreal stage door standing by itself, drawn as a flat front elevation: a shut dark green wooden door in a heavy frame, and above it a sign shaped like a large closed human eye with long lashes. Single object, centred, no people, no text, no ground, no shadow. Pixel art with a thick dark outline and a small limited palette, 16-bit game style.",
+        "n": 2
+      },
+      "job_id": "5d0cd53c-12a4-4b7c-89fd-f0b67cccbae3",
+      "created_at": "2026-10-08T09:47:49.699Z",
+      "credits_of_the_job": 1
+    },
+    {
+      "returned": "floor-v1.png",
+      "command": "ludo image create",
+      "settings": {
+        "image_type": "texture",
+        "perspective": "Top-Down",
+        "art_style": "16-Bit",
+        "prompt": "Seamless top-down floor of an old theatre stage: dark worn wooden boards running left to right, low contrast, muted warm brown, a few nail heads and scuffs, nothing on it. Calm and dark so that characters stand out on it. Pixel art with a thick dark outline and a small limited palette, 16-bit game style.",
+        "n": 2
+      },
+      "job_id": "c82d60fd-b859-406d-bda3-521bd6a48d46",
+      "created_at": "2026-10-08T09:48:01.276Z",
+      "credits_of_the_job": 1
+    },
+    {
+      "returned": "floor-v2.png",
+      "command": "ludo image create",
+      "settings": {
+        "image_type": "texture",
+        "perspective": "Top-Down",
+        "art_style": "16-Bit",
+        "prompt": "Seamless top-down floor of an old theatre stage: dark worn wooden boards running left to right, low contrast, muted warm brown, a few nail heads and scuffs, nothing on it. Calm and dark so that characters stand out on it. Pixel art with a thick dark outline and a small limited palette, 16-bit game style.",
+        "n": 2
+      },
+      "job_id": "c82d60fd-b859-406d-bda3-521bd6a48d46",
+      "created_at": "2026-10-08T09:48:01.276Z",
+      "credits_of_the_job": 1
+    },
+    {
+      "returned": "curtain-v1.png",
+      "command": "ludo image create",
+      "settings": {
+        "image_type": "sprite-tiling-horizontal",
+        "perspective": "Any perspective",
+        "art_style": "16-Bit",
+        "prompt": "A heavy deep red velvet theatre curtain seen flat from the front, hanging in even vertical folds from a gold-trimmed pelmet at the top to a gold fringe at the bottom, filling the whole height of the strip, repeating seamlessly left to right. Pixel art with a thick dark outline and a small limited palette, 16-bit game style.",
+        "n": 2
+      },
+      "job_id": "8052d263-6b3f-4a46-9149-6ad7757c7ca7",
+      "created_at": "2026-10-08T09:48:02.451Z",
+      "credits_of_the_job": 1
+    },
+    {
+      "returned": "curtain-v2.png",
+      "command": "ludo image create",
+      "settings": {
+        "image_type": "sprite-tiling-horizontal",
+        "perspective": "Any perspective",
+        "art_style": "16-Bit",
+        "prompt": "A heavy deep red velvet theatre curtain seen flat from the front, hanging in even vertical folds from a gold-trimmed pelmet at the top to a gold fringe at the bottom, filling the whole height of the strip, repeating seamlessly left to right. Pixel art with a thick dark outline and a small limited palette, 16-bit game style.",
+        "n": 2
+      },
+      "job_id": "8052d263-6b3f-4a46-9149-6ad7757c7ca7",
+      "created_at": "2026-10-08T09:48:02.451Z",
+      "credits_of_the_job": 1
+    },
+    {
+      "returned": "door-open-v1.png",
+      "command": "ludo image edit",
+      "settings": {
+        "image": "door-v1.png",
+        "image_type": "sprite",
+        "prompt": "Keep the exact same door frame, size, position and pixel art style. The door is now wide open: the doorway is filled with bright warm yellow light, and the eye above the door is wide open with a large yellow iris and black pupil. Nothing else changes.",
+        "n": 2
+      },
+      "job_id": "d172a337-9344-43cb-9973-a55d5ce24bbd",
+      "created_at": "2026-10-08T09:49:00.196Z",
+      "credits_of_the_job": 1
+    },
+    {
+      "returned": "door-open-v2.png",
+      "command": "ludo image edit",
+      "settings": {
+        "image": "door-v1.png",
+        "image_type": "sprite",
+        "prompt": "Keep the exact same door frame, size, position and pixel art style. The door is now wide open: the doorway is filled with bright warm yellow light, and the eye above the door is wide open with a large yellow iris and black pupil. Nothing else changes.",
+        "n": 2
+      },
+      "job_id": "d172a337-9344-43cb-9973-a55d5ce24bbd",
+      "created_at": "2026-10-08T09:49:00.196Z",
+      "credits_of_the_job": 1
+    }
+  ]
+}

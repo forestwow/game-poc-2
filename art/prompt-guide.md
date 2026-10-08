@@ -28,6 +28,12 @@ A figure is an ordinary theatre person or thing with one part that is something 
 - The sheet must come back with one file pixel to a sprite pixel, and every figure to one measure: the magician is 64 sprite pixels for its three units, so a figure of two units is about 43. `--frame-size 64` gives the magician that, and `--frame-size 32` a figure of two units (the size names the sprite's width more than its height). A sheet that came back larger is exported again for nothing with `ludo sprite adjust --spritesheet-url <its url> --frame-size 32`.
 - The sheet is three rows of three frames, each frame cropped to the same size within a sheet.
 
+## The set
+
+- The floor: `--image-type texture --perspective "Top-Down" --art-style "16-Bit"`, asked to be calm, dark and low in contrast so that figures stand out on it. It comes back 1024 pixels, sixteen to a sprite pixel, and goes round at every edge.
+- The curtain: `--image-type sprite-tiling-horizontal`, "seen flat from the front ... repeating seamlessly left to right". It goes round left to right; its own pixel is twelve file pixels and it is drawn three times that size to be as tall as the back wall.
+- A door or a lamp is a still like a building (see above). The lit door is `ludo image edit` of the shut one ("keep the exact same door frame, size, position and pixel art style ..."): the edit keeps the shape and loses the pixel grid inside the doorway, which is seen only close up.
+
 ## Into the game
 
-The file goes to `art/ludo/sprites/` under the name `ReadSheet` is given in `UnderstudiesGame.LoadContent`, and the stills that were returned to `art/ludo/sprites/raw/`.
+The file goes to `art/ludo/sprites/` under the name `ReadSheet` is given in `UnderstudiesGame.LoadContent`, and the stills that were returned to `art/ludo/sprites/raw/` (the set's to `art/ludo/set/raw/`).

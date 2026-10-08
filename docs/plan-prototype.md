@@ -134,6 +134,7 @@ The picked tool's recipe is written down in `art/prompt-guide.md`, so that later
 - No test.
 
 **T07d The stage set.** *After the pick.*
+*Allowance:* the ticket was written without a number; the owner said on 2026-10-08 that the limits are not the problem and not to overdo it either. It took ten pictures (5 credits).
 The stage stops being a brown rectangle: a floor, a curtain along the back wall of T07a, footlights along the bottom edge, and the three stage doors drawn as doors, the open one lit; made with the picked tool or composed from its pieces.
 - A captured frame shows the set.
 - No test.
