@@ -249,7 +249,11 @@ public readonly record struct StageDoor(Vector2 Position, int OpensInAct);
 /// <param name="Name">What the file calls the kind. No rule reads it.</param>
 /// <param name="Speed">Units per second.</param>
 /// <param name="Radius">A critic is a circle on the floor.</param>
-/// <param name="HitPoints">What a critic has when it enters.</param>
+/// <param name="HitPoints">What a critic has when it enters, in the kind's first act.</param>
+/// <param name="HitPointsPerAct">
+/// How much more one has when it enters for every act after the kind's first (<paramref name="FromAct"/>): with
+/// nothing the kind is as tough in the last act as in its first.
+/// </param>
 /// <param name="StrikeDamage">The hit points one strike of a critic of the kind takes off the box office.</param>
 /// <param name="Cost">What one takes from an act's budget, 1 or more.</param>
 /// <param name="Weight">
@@ -265,6 +269,7 @@ public readonly record struct EnemyKind(
     float Speed,
     float Radius,
     float HitPoints,
+    float HitPointsPerAct,
     float StrikeDamage,
     int Cost,
     int Weight,

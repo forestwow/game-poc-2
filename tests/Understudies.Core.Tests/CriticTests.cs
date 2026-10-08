@@ -220,6 +220,70 @@ public class CriticTests
         Assert.That(simulation.BoxOfficeHitPoints, Is.EqualTo(96f), "the critic's strike");
     }
 
+    /// <summary>
+    /// Four acts of a second, in each of which one enemy of each of two kinds enters on the first tick and nobody
+    /// falls or strikes: the first kind is the critic, and the second is tougher by five for every act after
+    /// its own first, which is the second.
+    /// </summary>
+    private Tuning TougherByAct => Tuning.WithStrikesOf(0f) with
+    {
+        ActLength = 1f,
+        ActsInPerformance = 4,
+        EnemyKinds =
+        [
+            Tuning.Critic() with { HitPoints = 3f, HitPointsPerAct = 0f, FromAct = 1 },
+            Tuning.Critic() with { Name = "tougher", HitPoints = 10f, HitPointsPerAct = 5f, FromAct = 2 },
+        ],
+    };
+
+    private static Simulation OneOfEachInEveryAct(Tuning tuning) => new(
+        tuning,
+        seed: 1,
+        [.. Enumerable.Repeat<IReadOnlyList<PlannedEntry>>([new PlannedEntry(0, Door: 0, Kind: 0), new PlannedEntry(0, Door: 0, Kind: 1)], 4)]);
+
+    [Test]
+    public void Step_AnEnemyEnters_WithItsKindsHitPointsAndItsKindsGrowthForEveryActAfterTheKindsFirst()
+    {
+        Simulation simulation = OneOfEachInEveryAct(TougherByAct);
+        var entered = new List<(float Critic, float Tougher)>();
+
+        for (int act = 1; act <= 4; act++)
+        {
+            simulation.Step(default);
+            entered.Add((simulation.Critics[^2].HitPoints, simulation.Critics[^1].HitPoints));
+            RunUntil(simulation, () => simulation.Phase != Phase.Act);
+            simulation.GoOn();
+        }
+
+        // The kind's own first act has the base, and an act before it (which only a plan given by hand has)
+        // has no less. A kind with no growth is what it was in every act.
+        Assert.That(entered.Select(pair => pair.Tougher), Is.EqualTo(new[] { 10f, 10f, 15f, 20f }));
+        Assert.That(entered.Select(pair => pair.Critic), Is.EqualTo(new[] { 3f, 3f, 3f, 3f }));
+
+        // Those of the earlier acts are still on the stage with what they entered with.
+        Assert.That(simulation.Critics.Select(critic => critic.HitPoints), Is.EqualTo(new[] { 3f, 10f, 3f, 10f, 3f, 15f, 3f, 20f }));
+    }
+
+    [Test]
+    public void Step_TheGrowthIsChangedBetweenTwoActs_WhoeverIsOnTheStageKeepsItsHitPointsAndTheNextEntersOnTheNewNumber()
+    {
+        Simulation simulation = OneOfEachInEveryAct(TougherByAct);
+        for (int act = 1; act <= 2; act++)
+        {
+            RunUntil(simulation, () => simulation.Phase != Phase.Act);
+            simulation.GoOn();
+        }
+
+        // As a kind's hit points do: the number is read when an enemy enters, from the tuning of then.
+        simulation.Tuning = TougherByAct with
+        {
+            EnemyKinds = [TougherByAct.EnemyKinds[0], TougherByAct.EnemyKinds[1] with { HitPointsPerAct = 100f }],
+        };
+        simulation.Step(default);
+
+        Assert.That(simulation.Critics.Select(critic => critic.HitPoints), Is.EqualTo(new[] { 3f, 10f, 3f, 10f, 3f, 110f }));
+    }
+
     [Test]
     public void Step_ARivalAndACriticOnOnePoint_ArePushedApartHalfTheOverlapEach_HoweverWideEitherIs()
     {

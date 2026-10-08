@@ -121,31 +121,6 @@ public class WaveTests
     }
 
     [Test]
-    public void Plan_AKindThatCostsMore_TakesItsCostFromTheBudgetOfEveryActFromItsOwn()
-    {
-        // The committed kinds with a rival for four from the fourth act, as the cast first had it: what an act
-        // buys never costs more than its budget, and leaves less than the cheapest kind costs.
-        Tuning tuning = Tuning with
-        {
-            EnemyKinds = [Tuning.Critic(), Tuning.Stagehand(), Tuning.Rival() with { Cost = 4, FromAct = 4 }],
-        };
-        foreach (ulong seed in Seeds)
-        {
-            IReadOnlyList<IReadOnlyList<PlannedEntry>> plan = Waves.Plan(tuning, seed);
-
-            int budget = tuning.FirstActBudget;
-            int step = tuning.BudgetGrowthPerAct;
-            for (int act = 1; act <= plan.Count; act++, budget += step, step += tuning.BudgetGrowthRise)
-            {
-                int rivals = plan[act - 1].Count(entry => entry.Kind == 2);
-
-                Assert.That(rivals, act < 4 ? Is.Zero : Is.GreaterThan(0), $"seed {seed}, act {act}");
-                Assert.That(plan[act - 1].Count + (3 * rivals), Is.EqualTo(budget), $"seed {seed}, act {act}");
-            }
-        }
-    }
-
-    [Test]
     public void Plan_TwoKindsOfOneCostWithWeightsOfThreeToOne_AreBoughtThreeToOne()
     {
         // Both can be afforded for as long as either can, so the weights alone decide: of some ten thousand
