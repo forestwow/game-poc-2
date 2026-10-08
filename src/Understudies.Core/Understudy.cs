@@ -20,7 +20,7 @@ public sealed class Understudy
 
     /// <summary>
     /// Where the magician stood after each tick of that act, from its first: as many places as the act was played
-    /// for.
+    /// for, or, when the magician fell in it, as many as it stood for: the last is where it fell.
     /// </summary>
     public IReadOnlyList<Vector2> Route { get; }
 

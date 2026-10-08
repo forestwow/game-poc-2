@@ -283,13 +283,15 @@ public class UnderstudyTests
     [Test]
     public void Step_ABlowClosesTheShow_NothingIsThrownAfterItOnThatTick()
     {
-        // The critic walks a unit a tick at a magician that one touch fells, six units below the door. The magician
-        // has the critic in range and a throw ready on every tick; its cards are slow and none has landed.
-        Tuning tuning = InRangeOnTheMark.WithCritic(critic => critic with { Speed = 60f }) with
+        // The critic walks a unit a tick down at a box office that one strike fells, and that the magician stands
+        // in the middle of, six units below the door. The magician has the critic in range and a throw ready on
+        // every tick; its cards are slow and none has landed.
+        Tuning tuning = InRangeOnTheMark.WithCritic(critic => critic with { Speed = 60f, Radius = 0.5f }) with
         {
-            MagicianHitPoints = 1f,
+            BoxOfficePosition = Door + new Vector2(0f, 6f),
+            BoxOfficeSize = 4f,
+            BoxOfficeHitPoints = 1f,
             ThrowCooldown = 1f / Simulation.TicksPerSecond,
-            CriticTurnRadius = 100f,
         };
         var simulation = Shows.WithOneCritic(tuning);
         simulation.Step(default);
@@ -304,7 +306,8 @@ public class UnderstudyTests
             simulation.Step(default);
         }
 
-        Assert.That(simulation.MagicianHasFallen, Is.True);
+        Assert.That(simulation.BoxOfficeHitPoints, Is.Zero);
+        Assert.That(thrown, Is.GreaterThan(1));
         Assert.That(simulation.ThrownCards, Has.Count.EqualTo(thrown));
         Assert.That(simulation.Events.Select(happened => happened.Kind), Has.None.EqualTo(TickEventKind.Throw));
     }

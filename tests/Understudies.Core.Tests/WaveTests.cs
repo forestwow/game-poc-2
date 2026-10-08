@@ -80,6 +80,49 @@ public class WaveTests
     }
 
     [Test]
+    public void Plan_TwoKindsOfOneCostWithWeightsOfThreeToOne_AreBoughtThreeToOne()
+    {
+        // Both can be afforded for as long as either can, so the weights alone decide: of some ten thousand
+        // purchases over the seeds three in four are of the first kind, and an even draw would make it two.
+        Tuning tuning = Tuning with
+        {
+            EnemyKinds =
+            [
+                Tuning.Critic() with { Cost = 1, Weight = 3, FromAct = 1 },
+                Tuning.Critic() with { Name = "rare", Cost = 1, Weight = 1, FromAct = 1 },
+            ],
+        };
+        var bought = Seeds.SelectMany(seed => Waves.Plan(tuning, seed).SelectMany(act => act)).ToList();
+
+        Assert.That(bought, Has.Count.GreaterThan(10_000));
+        Assert.That((double)bought.Count(entry => entry.Kind == 0) / bought.Count, Is.InRange(0.72, 0.78));
+    }
+
+    [Test]
+    public void Plan_AnActsEntries_AreNotEvenlySpaced_AndAnotherSeedSpacesThemAnotherWay()
+    {
+        // Each entry is somewhere in its own stretch of the act, by chance: the gaps between the first act's
+        // twenty-five are of many lengths, and not the one length of a fixed place in every stretch.
+        static int[] Ticks(ulong seed, Tuning tuning) => [.. Waves.Plan(tuning, seed)[0].Select(entry => entry.Tick)];
+        int[] ticks = Ticks(1, Tuning);
+
+        Assert.That(ticks.Zip(ticks.Skip(1), (earlier, later) => later - earlier).Distinct().Count(), Is.GreaterThan(5));
+        Assert.That(Ticks(2, Tuning), Is.Not.EqualTo(ticks));
+    }
+
+    [Test]
+    public void Plan_WithTwoDoorsOpen_TheDoorsDoNotTakeTurns_AndAnotherSeedOrdersThemAnotherWay()
+    {
+        // The third act has two doors open and forty-one critics. Each door is drawn: some critic enters by the
+        // door of the one before it.
+        static int[] Doors(ulong seed, Tuning tuning) => [.. Waves.Plan(tuning, seed)[2].Select(entry => entry.Door)];
+        int[] doors = Doors(1, Tuning);
+
+        Assert.That(doors.Zip(doors.Skip(1), (earlier, later) => later == earlier), Has.Some.True);
+        Assert.That(Doors(2, Tuning), Is.Not.EqualTo(doors));
+    }
+
+    [Test]
     public void Plan_TheBudgetGrowsByTheSameWithEveryAct()
     {
         // The committed critic costs 1: an act has as many of them as its budget.
