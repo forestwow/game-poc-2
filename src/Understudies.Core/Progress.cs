@@ -129,31 +129,78 @@ public sealed record Progress(IReadOnlyList<NightPlayed> Nights)
     }
 
     /// <summary>
-    /// The progress in a file, and <see cref="None"/> when there is no file, or none that can be read. A file that
-    /// is there and is not the progress (damaged, empty, of another <see cref="Version"/>) never stops the game: it
-    /// is moved aside, to its own name with <see cref="DamagedSuffix"/>, so that the next <see cref="Save"/> does
-    /// not write over it, and the game goes on with no progress. One such file is kept, the last.
+    /// The progress in a file, and <see cref="None"/> when there is no file, or none that can be read: it never
+    /// stops the game. <paramref name="notKept"/> says whether the file may be written from here, which is what
+    /// keeps a player's progress from being written over by a game that did not read it:
+    /// <list type="bullet">
+    /// <item>no file, or no folder: no progress, and the file is this game's to make (null);</item>
+    /// <item>a file that is not the progress (damaged, empty, of an older <see cref="Version"/>): it is moved
+    /// aside, to its own name with <see cref="DamagedSuffix"/>, one such file kept, the last, and the file is
+    /// this game's to make (null);</item>
+    /// <item>a file of a newer version: it is a newer game's and is left as it is (the reason);</item>
+    /// <item>a file that is there and could not be read, or one that could not be moved aside: it is left as it
+    /// is (the reason).</item>
+    /// </list>
+    /// Whoever is given a reason does not <see cref="Save"/> to that path in this run.
     /// </summary>
-    public static Progress Load(string path)
+    public static Progress Load(string path, out string? notKept)
     {
+        notKept = null;
+        string json;
         try
         {
-            string json = File.ReadAllText(path);
-            try
-            {
-                return Parse(json);
-            }
-            catch (JsonException)
-            {
-                File.Move(path, path + DamagedSuffix, overwrite: true);
-            }
+            json = File.ReadAllText(path);
+        }
+        catch (Exception exception) when (exception is FileNotFoundException or DirectoryNotFoundException)
+        {
+            return None;
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
         {
-            // No file, no folder, or one that may not be read or moved: no progress, and nothing more to do here.
+            notKept = $"it could not be read ({exception.Message})";
+            return None;
+        }
+
+        try
+        {
+            return Parse(json);
+        }
+        catch (JsonException)
+        {
+            if (IsOfANewerVersion(json))
+            {
+                notKept = "it is a newer game's";
+                return None;
+            }
+        }
+
+        try
+        {
+            File.Move(path, path + DamagedSuffix, overwrite: true);
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        {
+            notKept = $"it is not the progress and could not be put aside ({exception.Message})";
         }
 
         return None;
+    }
+
+    /// <summary>Whether a text that is not this game's progress says a <see cref="Version"/> after this one.</summary>
+    private static bool IsOfANewerVersion(string json)
+    {
+        try
+        {
+            using JsonDocument text = JsonDocument.Parse(json);
+            return text.RootElement.ValueKind == JsonValueKind.Object
+                && text.RootElement.TryGetProperty("version", out JsonElement version)
+                && version.TryGetInt32(out int number)
+                && number > Version;
+        }
+        catch (JsonException)
+        {
+            return false;
+        }
     }
 
     /// <summary>
@@ -170,6 +217,10 @@ public sealed record Progress(IReadOnlyList<NightPlayed> Nights)
             Directory.CreateDirectory(folder);
         }
 
+        // ponytail: nothing is flushed to the disk before the rename, so a power loss at that moment can leave an
+        // empty file on some file systems: it is then put aside as damaged and the player starts afresh. And two
+        // games running at once share the one name beside the file: the last to write wins. Flush the stream
+        // (FileStream.Flush(true)) and give the name a process id when either is ever seen.
         string beside = path + ".tmp";
         File.WriteAllText(beside, ToJson());
         File.Move(beside, path, overwrite: true);

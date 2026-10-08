@@ -414,7 +414,7 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
             {
                 _plain = plain;
                 _nights = nights;
-                ChooseTheNight(_night ?? nights[0].Number);
+                ChooseTheNight(_night!.Value);
             }
             else
             {
@@ -555,6 +555,7 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
         _taken = 0;
         _takenLeft = 0f;
         _guardLeft = 0f;
+        _opened = null;
         _boxOfficeAtTheActsStart = _simulation.BoxOfficeHitPoints;
         _actKills.Clear();
     }
@@ -1179,8 +1180,8 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
             Phase.BetweenActs when _simulation.ActEncores == 0 =>
                 $"Act {_simulation.Act} is over. No encore, no card for the chorus.",
             Phase.BetweenActs => $"Act {_simulation.Act} is over. The chorus has its card.",
-            Phase.Ovation => "A standing ovation! R starts a new performance.",
-            Phase.Closed => "The box office fell. R starts a new performance.",
+            Phase.Ovation => $"A standing ovation! {TheWayOn}",
+            Phase.Closed => $"The box office fell. {TheWayOn}",
             Phase.Act when _simulation.MagicianHasFallen =>
                 "The magician has fallen. The understudies carry on to the end of the act.",
             _ => null,

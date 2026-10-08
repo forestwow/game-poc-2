@@ -55,7 +55,7 @@ public class ProgressTests
     [TestCase("", TestName = "Parse_AnEmptyText_IsRefused")]
     [TestCase("null", TestName = "Parse_Null_IsRefused")]
     [TestCase("[]", TestName = "Parse_AnotherShape_IsRefused")]
-    [TestCase("""{ "version": 1, "nights": [ { "night": 1, "bestAct": 2, "won": fal""", TestName = "Parse_HalfAThePathIsRefused")]
+    [TestCase("""{ "version": 1, "nights": [ { "night": 1, "bestAct": 2, "won": fal""", TestName = "Parse_HalfAFile_IsRefused")]
     [TestCase("""{ "nights": [] }""", TestName = "Parse_NoVersion_IsRefused")]
     [TestCase("""{ "version": 1 }""", TestName = "Parse_NoNights_IsRefused")]
     [TestCase("""{ "version": 1, "nights": null }""", TestName = "Parse_NightsThatAreNull_AreRefused")]
@@ -155,7 +155,7 @@ public class ProgressTests
 
         progress.Save(ThePath);
 
-        Assert.That(Progress.Load(ThePath).Nights, Is.EqualTo(progress.Nights));
+        Assert.That(Progress.Load(ThePath, out _).Nights, Is.EqualTo(progress.Nights));
         Assert.That(Directory.GetFiles(_folder), Is.EqualTo(new[] { ThePath }));
     }
 
@@ -167,44 +167,123 @@ public class ProgressTests
         Progress.None.With(1, 2, won: false).Save(file);
         Progress.None.With(1, 5, won: true).Save(file);
 
-        Assert.That(Progress.Load(file).Nights, Is.EqualTo(new[] { new NightPlayed(1, 5, true) }));
+        Assert.That(Progress.Load(file, out _).Nights, Is.EqualTo(new[] { new NightPlayed(1, 5, true) }));
     }
 
     [Test]
-    public void Load_WithNoThePathOrNoFolder_IsNoProgress()
+    public void Load_WithNoFile_OrNoFolder_IsNoProgress_AndTheFileMayBeMade()
     {
-        Assert.That(Progress.Load(ThePath).Nights, Is.Empty);
-        Assert.That(Progress.Load(Path.Combine(_folder, "nowhere", "progress.json")).Nights, Is.Empty);
+        Assert.That(Progress.Load(ThePath, out string? noFile).Nights, Is.Empty);
+        Assert.That(Progress.Load(Path.Combine(_folder, "nowhere", "progress.json"), out string? noFolder).Nights, Is.Empty);
+        Assert.That(new[] { noFile, noFolder }, Is.All.Null);
         Assert.That(Directory.GetFileSystemEntries(_folder), Is.Empty);
     }
 
-    [TestCase("", TestName = "Load_AnEmptyThePathIsNoProgressAndIsKeptAside")]
-    [TestCase("""{ "version": 1, "nights": [ { "night": 1, "bestAct": 5, "wo""", TestName = "Load_ADamagedThePathIsNoProgressAndIsKeptAside")]
-    [TestCase("""{ "version": 2, "nights": [], "stars": 4 }""", TestName = "Load_AFileOfAnotherVersion_IsNoProgressAndIsKeptAside")]
+    [TestCase("", TestName = "Load_AnEmptyFile_IsNoProgressAndIsKeptAside")]
+    [TestCase("""{ "version": 1, "nights": [ { "night": 1, "bestAct": 5, "wo""", TestName = "Load_ADamagedFile_IsNoProgressAndIsKeptAside")]
+    [TestCase("""{ "version": 0, "nights": [], "stars": 4 }""", TestName = "Load_AFileOfAnOlderVersion_IsNoProgressAndIsKeptAside")]
     [TestCase("""{ "version": 1, "nights": [ { "night": 1, "bestAct": 0, "won": false } ] }""", TestName = "Load_AFileWithANumberOutOfRange_IsNoProgressAndIsKeptAside")]
     public void Load_WhatIsNotTheProgress(string text)
     {
         File.WriteAllText(ThePath, text);
 
-        Progress read = Progress.Load(ThePath);
+        Progress read = Progress.Load(ThePath, out string? notKept);
 
         // The game goes on with no progress, and what was in the file is not lost to the next save.
         Assert.That(read.Nights, Is.Empty);
+        Assert.That(notKept, Is.Null, "the file is this game's to write");
         read.With(1, 1, won: false).Save(ThePath);
         Assert.That(File.ReadAllText(ThePath + Progress.DamagedSuffix), Is.EqualTo(text));
-        Assert.That(Progress.Load(ThePath).Nights, Is.EqualTo(new[] { new NightPlayed(1, 1, false) }));
+        Assert.That(Progress.Load(ThePath, out _).Nights, Is.EqualTo(new[] { new NightPlayed(1, 1, false) }));
     }
 
     [Test]
-    public void Load_ASecondDamagedThePathIsTheOneKeptAside()
+    public void Load_ASecondDamagedFile_IsTheOneKeptAside()
     {
         File.WriteAllText(ThePath, "the first");
-        Progress.Load(ThePath);
+        Progress.Load(ThePath, out _);
         File.WriteAllText(ThePath, "the second");
 
-        Progress.Load(ThePath);
+        Progress.Load(ThePath, out _);
 
         Assert.That(File.ReadAllText(ThePath + Progress.DamagedSuffix), Is.EqualTo("the second"));
         Assert.That(File.Exists(ThePath), Is.False);
+    }
+
+    [Test]
+    public void Load_AFileOfANewerVersion_IsNoProgress_IsLeftAsItIs_AndIsNotToBeWritten()
+    {
+        const string newer = """{ "version": 2, "nights": [ { "night": 1, "bestAct": 5, "won": true, "stars": 3 } ] }""";
+        File.WriteAllText(ThePath, newer);
+
+        Progress read = Progress.Load(ThePath, out string? notKept);
+
+        Assert.That(read.Nights, Is.Empty);
+        Assert.That(notKept, Is.Not.Null);
+        Assert.That(File.ReadAllText(ThePath), Is.EqualTo(newer));
+        Assert.That(Directory.GetFiles(_folder), Is.EqualTo(new[] { ThePath }));
+    }
+
+    [Test]
+    public void Load_AFileThatCannotBeRead_IsNoProgress_IsLeftAsItIs_AndIsNotToBeWritten()
+    {
+        // A file nobody may read is something only Unix lets a test make.
+        if (OperatingSystem.IsWindows() || Environment.UserName == "root")
+        {
+            Assert.Ignore("Needs a file's Unix mode, and a user the mode holds for.");
+            return;
+        }
+
+        string valid = Progress.None.With(1, 5, won: true).With(2, 3, won: false).ToJson();
+        File.WriteAllText(ThePath, valid);
+        File.SetUnixFileMode(ThePath, UnixFileMode.None);
+
+        Progress read = Progress.Load(ThePath, out string? notKept);
+
+        File.SetUnixFileMode(ThePath, UnixFileMode.UserRead | UnixFileMode.UserWrite);
+        Assert.That(read.Nights, Is.Empty);
+        Assert.That(notKept, Is.Not.Null, "a save here would write one night over two");
+        Assert.That(File.ReadAllText(ThePath), Is.EqualTo(valid));
+    }
+
+    [Test]
+    public void Load_ADamagedFileThatCannotBePutAside_IsLeftAsItIs_AndIsNotToBeWritten()
+    {
+        // In a folder nothing may be made in, the file can be read and not moved.
+        if (OperatingSystem.IsWindows() || Environment.UserName == "root")
+        {
+            Assert.Ignore("Needs a file's Unix mode, and a user the mode holds for.");
+            return;
+        }
+
+        File.WriteAllText(ThePath, "damaged");
+        File.SetUnixFileMode(_folder, UnixFileMode.UserRead | UnixFileMode.UserExecute);
+
+        Progress read = Progress.Load(ThePath, out string? notKept);
+
+        File.SetUnixFileMode(_folder, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
+        Assert.That(read.Nights, Is.Empty);
+        Assert.That(notKept, Is.Not.Null);
+        Assert.That(File.ReadAllText(ThePath), Is.EqualTo("damaged"));
+    }
+
+    [Test]
+    public void Save_GivesAnotherFileTheName_AndDoesNotWriteIntoTheOneThatIsThere()
+    {
+        // On Unix a file that may not be written can still be replaced by another of its name, and cannot be
+        // written into: a save that wrote straight into the file would be refused here.
+        if (OperatingSystem.IsWindows() || Environment.UserName == "root")
+        {
+            Assert.Ignore("Needs a file's Unix mode, and a user the mode holds for.");
+            return;
+        }
+
+        Progress.None.With(1, 2, won: false).Save(ThePath);
+        File.SetUnixFileMode(ThePath, UnixFileMode.UserRead);
+        Assert.That(() => File.WriteAllText(ThePath, "straight into it"), Throws.InstanceOf<UnauthorizedAccessException>());
+
+        Progress.None.With(1, 5, won: true).Save(ThePath);
+
+        Assert.That(Progress.Load(ThePath, out _).Nights, Is.EqualTo(new[] { new NightPlayed(1, 5, true) }));
     }
 }

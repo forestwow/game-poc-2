@@ -98,8 +98,11 @@ internal sealed partial class UnderstudiesGame
     private Tuning _plain;
     private IReadOnlyList<Night> _nights;
     private readonly int? _askedNight;
-    private readonly string? _progressPath;
+    private string? _progressPath;
     private Progress _progress;
+
+    // The night that the show just ended has opened, for the line that says so; null when it opened none.
+    private int? _opened;
 
     // The night that is played or chosen on the menu. Its tuning is the simulation's: StartAgain makes the next
     // show from that, so R plays the same night again. Null for the capture of a show that asked for no night,
@@ -118,20 +121,31 @@ internal sealed partial class UnderstudiesGame
 
     /// <summary>
     /// The player's progress as the file has it, and none for a game that keeps none. The console is told where
-    /// it is kept, and when a file that could not be read was put aside.
+    /// it is kept, and when a file that could not be read was put aside. A file that is there and was not read
+    /// and not put aside (it could not be read, or moved, or is a newer game's) is not this game's to write
+    /// over: the path is given up for this run, and the progress is remembered while the game runs and no longer.
     /// </summary>
     private Progress LoadTheProgress()
     {
-        if (_progressPath is null)
+        if (_progressPath is not { } path)
         {
             return Progress.None;
         }
 
-        bool wasThere = File.Exists(_progressPath);
-        Progress progress = Progress.Load(_progressPath);
-        Console.WriteLine(wasThere && !File.Exists(_progressPath)
-            ? $"Progress not read from {_progressPath}: the file is kept as {_progressPath}{Progress.DamagedSuffix} and the game starts with none"
-            : $"Progress is kept in {_progressPath}");
+        bool wasThere = File.Exists(path);
+        Progress progress = Progress.Load(path, out string? notKept);
+        if (notKept is not null)
+        {
+            Console.Error.WriteLine($"Progress not read from {path}: {notKept}. The file is left as it is, and nothing is kept of this run");
+            _progressPath = null;
+        }
+        else
+        {
+            Console.WriteLine(wasThere && !File.Exists(path)
+                ? $"Progress not read from {path}: the file is kept as {path}{Progress.DamagedSuffix} and the game starts with none"
+                : $"Progress is kept in {path}");
+        }
+
         return progress;
     }
 
@@ -149,7 +163,9 @@ internal sealed partial class UnderstudiesGame
         }
 
         // Remembered while the game runs even where there is no file to keep it in.
+        IReadOnlyList<int> before = Unlocked;
         _progress = _progress.With(night, _simulation.Act, won: _simulation.Phase == Phase.Ovation);
+        _opened = Unlocked.Except(before).Cast<int?>().FirstOrDefault();
         if (_progressPath is null)
         {
             return;
@@ -166,17 +182,25 @@ internal sealed partial class UnderstudiesGame
     }
 
     /// <summary>
-    /// A show is left by Esc or R. One that has ended is recorded already. One given up in its first act is not
-    /// recorded at all: nothing of the night was played through, and "a lost night counts" is said of a night
-    /// lost, not of one opened and shut. From the second act on it is a night played, with the act it was left in.
+    /// A show is left by Esc or R. One that has ended is recorded already. One left while its first act is still
+    /// played is not recorded at all: nothing of the night was played through, and "a lost night counts" is said
+    /// of a night lost, not of one opened and shut. Once the first act is over (its program, the stage between
+    /// the first two acts, and every act after) it is a night played, with the act it was left in.
     /// </summary>
     private void GiveUp()
     {
-        if (_simulation.Phase is not (Phase.Ovation or Phase.Closed) && _simulation.Act > 1)
+        if (_simulation.Act > 1 || _simulation.Phase is Phase.Program or Phase.BetweenActs)
         {
             Remember();
         }
     }
+
+    /// <summary>
+    /// What a show that is over says of the two keys, and before them of the night it has just opened, when it
+    /// has: R plays the same night, and the new one is on the menu.
+    /// </summary>
+    private string TheWayOn =>
+        (_opened is { } night ? $"Night {night} is open. " : "") + "Esc: the nights  ·  R: this night again.";
 
     /// <summary>
     /// The menu, and no show: the one way to it. The show that was played is given up, and the one that stands
