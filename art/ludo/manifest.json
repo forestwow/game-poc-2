@@ -3,7 +3,7 @@
   "ticket": "T07b, the art spike",
   "generations": 11,
   "credits": 14.0,
-  "note": "Every file a generation names is what the tool returned (the PNG; the WebP twin of each was not kept). The three the game reads are the picked ones scaled down with `sips -Z <longest side>` and nothing else: the game trims the empty margin itself. A generation here is one returned result (six jobs made the eleven). The eleventh generation is a walk cycle made from the picked magician, to see whether the tool turns a still into a sprite: the game does not read it (plan T07b asks for no animation: it is beyond the ticket, made when the owner asked whether these were only still pictures).",
+  "note": "Every file a generation names is what the tool returned (the PNG; the WebP twin of each was not kept). The three the game reads are the picked ones scaled down with `sips -Z <longest side>` and nothing else: the game trims the empty margin itself. A generation here is one returned result (six jobs made the eleven). The eleventh generation is a walk cycle made from the picked magician, to see whether the tool turns a still into a sprite: the game does not read it (plan T07b asks for no animation: it is beyond the ticket, made when the owner asked whether these were only still pictures). Plan T07c removed every picture of this round: this file is the record of what was made and spent.",
   "game_files": [
     {
       "file": "magician.png",

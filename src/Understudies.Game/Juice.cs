@@ -15,8 +15,8 @@ namespace Understudies.Game;
 internal sealed class Juice(Random random)
 {
     // Every number of the juice is here, to be turned by hand: none is a rule, so none is in tuning.json. Times are
-    // in seconds and lengths in world units (a critic is one unit wide, and a unit is some 27 pixels of a window
-    // 1280 wide).
+    // in seconds and lengths in world units (a critic is one unit wide, and a unit is some 21 pixels of a window
+    // 1024 wide).
 
     // A figure that was hurt is drawn white for FlashTime, and is not made to flash again for FlashRest after
     // that. A crowd deals many blows a second: what it beats blinks, under three times a second, and does not

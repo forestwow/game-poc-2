@@ -1,15 +1,15 @@
 {
   "tool": "ludo.ai, through its CLI (ludo 0.1.6)",
   "ticket": "T07c, sprites",
-  "credits": 17.5,
-  "note": "raw/ keeps the stills as returned (768 pixels, one sprite pixel is 12 of them). The walk sheets are kept only under the names the game reads: each is 3 x 3 frames at one file pixel a sprite pixel, made by `sprite animate` with the model forge-pixel, the critic's re-exported free with `sprite adjust --frame-size 32`. A job that returned two pictures is listed twice with the credits of the whole job.",
+  "credits": 20.0,
+  "note": "raw/ keeps the stills as returned (768 pixels, one sprite pixel is 12 of them). The walk sheets are kept only under the names the game reads: each is 3 x 3 frames at one file pixel a sprite pixel, made by `sprite animate` with the model forge-pixel, the critic's re-exported free with `sprite adjust --frame-size 32`. A job that returned two pictures is listed twice with the credits of the whole job. The first side walk of the critic (from raw/critic-rot90.png) was replaced after the review.",
   "game_files": {
     "magician-down.png": "magician-walk-down",
     "magician-up.png": "magician-walk-up",
     "magician-side.png": "magician-walk-side",
     "critic-down.png": "critic-walk-down, adjusted",
     "critic-up.png": "critic-walk-up, adjusted",
-    "critic-side.png": "critic-walk-side, adjusted",
+    "critic-side.png": "critic-side-new: the walk of raw/critic-side-eye-v1.png, an edit of the turned critic whose head had come back a face and not an eye",
     "stagehand-down.png": "stagehand-walk-down",
     "box-office.png": "raw/box-office-front-v2.png, as returned"
   },
@@ -352,6 +352,49 @@
       },
       "job_id": "7e52d9cd-969e-49a7-930d-a7fcb4fcf179",
       "created_at": "2026-10-08T09:32:32.934Z",
+      "credits_of_the_job": 1.5
+    },
+    {
+      "returned": "critic-side-eye-v1.png",
+      "command": "ludo image edit",
+      "settings": {
+        "image": "critic-rot90.png",
+        "image_type": "sprite",
+        "reference_image": "critic-v1.png",
+        "prompt": "Keep this exact side view, pose, coat, size and pixel art style. Replace the whole head with one huge white eyeball as large as the head was, with a big blue iris and a black pupil on its right side looking to the right, and a small black bowler hat on top of it, as in the reference. No face, no skin, no hair.",
+        "n": 2
+      },
+      "job_id": "5b4c7285-3b65-47c6-a9b8-ce3ccfd78abd",
+      "created_at": "2026-10-08T09:44:06.604Z",
+      "credits_of_the_job": 1
+    },
+    {
+      "returned": "critic-side-eye-v2.png",
+      "command": "ludo image edit",
+      "settings": {
+        "image": "critic-rot90.png",
+        "image_type": "sprite",
+        "reference_image": "critic-v1.png",
+        "prompt": "Keep this exact side view, pose, coat, size and pixel art style. Replace the whole head with one huge white eyeball as large as the head was, with a big blue iris and a black pupil on its right side looking to the right, and a small black bowler hat on top of it, as in the reference. No face, no skin, no hair.",
+        "n": 2
+      },
+      "job_id": "5b4c7285-3b65-47c6-a9b8-ce3ccfd78abd",
+      "created_at": "2026-10-08T09:44:06.604Z",
+      "credits_of_the_job": 1
+    },
+    {
+      "returned": "critic-side-new-1.png",
+      "command": "ludo sprite animate",
+      "settings": {
+        "initial_image": "critic-side-eye-v1.png",
+        "motion_prompt": "walking to the right",
+        "model": "forge-pixel",
+        "duration": 1,
+        "frames": 9,
+        "frame_size": 32
+      },
+      "job_id": "a19ec5cc-efbc-4007-9c74-57042a03e6fa",
+      "created_at": "2026-10-08T09:44:39.001Z",
       "credits_of_the_job": 1.5
     }
   ]

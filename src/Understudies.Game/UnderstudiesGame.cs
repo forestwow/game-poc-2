@@ -17,10 +17,9 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
     private const int WindowWidth = 1024;
     private const int WindowHeight = 576;
     private const float MagicianHeight = 3f;
-    private const float CriticBodyHeight = 1.4f;
-    private const float CriticHeadSize = 0.6f;
-    private const float StagehandBodyHeight = 0.9f;
-    private const float StagehandHeadSize = 0.5f;
+
+    // The box office's bar is this far above its roof: clear of the critics that stand behind it.
+    private const float BoxOfficeBarLift = 2f;
 
     // The sprites are pixel art drawn to one measure: the magician's 64 pixels are its three units.
     private const float SpritePixelsPerUnit = 64f / MagicianHeight;
@@ -86,7 +85,6 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
     private static readonly Color Floor = new(96, 74, 58);
     private static readonly Color OpenDoor = new(222, 180, 104);
     private static readonly Color ShutDoor = new(66, 50, 42);
-    private static readonly Color BoxOffice = new(150, 44, 52);
     private static readonly Color HitPoints = new(132, 204, 110);
     private static readonly Color HitPointsLost = new(30, 22, 30);
     private static readonly Color Magician = new(250, 226, 120);
@@ -125,7 +123,7 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
 
     private readonly string _spritesFolder;
 
-    // By Figure and then by Facing.
+    // By Figure and then by Facing; a figure with one view has that one alone.
     private readonly Sheet[][] _sheets = new Sheet[4][];
 
     // The view's own time, in seconds: what a walk's frames are counted by.
@@ -189,10 +187,8 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
             [ReadSheet("magician-down.png", 3), ReadSheet("magician-up.png", 3), ReadSheet("magician-side.png", 3)];
         _sheets[(int)Figure.Critic] =
             [ReadSheet("critic-down.png", 3), ReadSheet("critic-up.png", 3), ReadSheet("critic-side.png", 3)];
-        Sheet stagehand = ReadSheet("stagehand-down.png", 3);
-        _sheets[(int)Figure.Stagehand] = [stagehand, stagehand, stagehand];
-        Sheet boxOffice = ReadSheet("box-office.png", 1, block: 6f);
-        _sheets[(int)Figure.BoxOffice] = [boxOffice, boxOffice, boxOffice];
+        _sheets[(int)Figure.Stagehand] = [ReadSheet("stagehand-down.png", 3)];
+        _sheets[(int)Figure.BoxOffice] = [ReadSheet("box-office.png", 1, block: 6f)];
 
         if (FontFiles.FirstOrDefault(File.Exists) is { } fontFile)
         {
@@ -620,7 +616,7 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
 
         var bar = new Vector2(Tuning.BoxOfficeSize, 0.4f);
         Vector2 barTopLeft = boxOfficeFeet
-            - new Vector2(bar.X / 2f, Tuning.BoxOfficeSize + CriticBodyHeight + CriticHeadSize + bar.Y);
+            - new Vector2(bar.X / 2f, Tuning.BoxOfficeSize + BoxOfficeBarLift + bar.Y);
         FillBar(barTopLeft, bar, _simulation.BoxOfficeHitPoints / Tuning.BoxOfficeHitPoints, HitPoints);
 
         // The magician has two small bars, told apart by place and by colour. Its hit points are under its feet, in
@@ -830,7 +826,7 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
     /// its own. A figure is a frame of a sprite sheet, drawn at a whole number of screen pixels to a sprite pixel
     /// and from a whole screen pixel, with a shadow on the floor under it while it stands.
     /// </summary>
-    /// <param name="pale">A stunned critic: it has gone pale all over (a tint).</param>
+    /// <param name="pale">A stunned critic: it has gone pale all over.</param>
     /// <param name="white">The flash of a figure that was hurt a moment ago, from 0 to 1: a white copy of the
     /// sprite drawn over it that thick, since a tint can only darken.</param>
     /// <param name="fallen">Lying flat where <paramref name="feet"/> is, and not standing on it.</param>
@@ -855,9 +851,11 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
         // Sideways when it goes more across than up or down. The side view faces right and is mirrored for left.
         bool sideways = MathF.Abs(toward.X) > MathF.Abs(toward.Y);
         Facing facing = sideways ? Facing.Side : toward.Y < 0f ? Facing.Up : Facing.Down;
-        Sheet sheet = _sheets[(int)figure][(int)(fallen ? Facing.Down : facing)];
+        Sheet[] views = _sheets[(int)figure];
+        Sheet sheet = views[fallen ? 0 : Math.Min((int)facing, views.Length - 1)];
+        bool mirrored = sideways && toward.X < 0f && !fallen && views.Length > 1;
         int frame = walking && !fallen && _simulation.Phase == Phase.Act
-            ? (int)(((_walkClock * WalkFramesPerSecond) + beat) % sheet.Frames)
+            ? (int)(((_walkClock * WalkFramesPerSecond) + beat) % (sheet.Columns * sheet.Columns))
             : 0;
         var source = new Rectangle(
             sheet.First.X + (frame % sheet.Columns * sheet.First.Width),
@@ -866,8 +864,9 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
             sheet.First.Height);
 
         // A sprite pixel is a whole number of screen pixels, the nearest to its measure that the window gives.
-        // ponytail: a figure is so up to a fifth smaller or larger than its units say, with the window's size. A
-        // stage drawn to a target of its own at the sprites' measure and scaled whole would end that.
+        // ponytail: a figure is so up to a third smaller or larger than its units say, with the window's size, and
+        // larger still in a window narrower than 1024. A stage drawn to a target of its own at the sprites' measure
+        // and scaled whole would end that.
         float pixel = MathF.Max(1f, MathF.Round(_scale / SpritePixelsPerUnit)) / _scale;
         float unit = pixel / sheet.Block;
         float width = source.Width * unit;
@@ -889,15 +888,19 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
                 fallen ? MathF.PI / 2f : 0f,
                 new Microsoft.Xna.Framework.Vector2(source.Width / 2f, fallen ? source.Height / 2f : source.Height),
                 unit,
-                sideways && toward.X < 0f && !fallen ? SpriteEffects.FlipHorizontally : SpriteEffects.None,
+                mirrored ? SpriteEffects.FlipHorizontally : SpriteEffects.None,
                 depth);
 
-        Copy(sheet.Image, (pale ? CriticStunnedBody : Color.White) * opacity, Depth(feet));
+        Copy(sheet.Image, Color.White * opacity, Depth(feet));
 
         // A sorted batch keeps no order between two textures at one depth: what is drawn over a figure stands a
-        // hair in front of it.
+        // hair in front of it. ponytail: a neighbour whose feet are within that hair below comes between a figure
+        // and its wash for a frame; a wash made in a shader would be the figure's own.
         float over = MathF.Min(1f, Depth(feet) + 0.0001f);
-        if (tint is { } wash)
+
+        // A tint can only darken a sprite, so an understudy's colour and a stunned critic's pallor are washed over
+        // it as the flash is.
+        if ((pale ? CriticStunnedBody : tint) is { } wash)
         {
             Copy(sheet.White, wash * (0.5f * opacity), over);
         }
@@ -943,7 +946,7 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
         Rectangle first = columns == 1
             ? new Rectangle(left, top, right - left + 1, bottom - top + 1)
             : new Rectangle(0, 0, image.Width / columns, image.Height / columns);
-        return new Sheet(image, white, first, columns, columns * columns, block);
+        return new Sheet(image, white, first, columns, block);
     }
 
     /// <summary>
@@ -996,7 +999,8 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
 
     /// <param name="First">The first frame; the others follow it across and then down.</param>
     /// <param name="Block">How many of the file's pixels are one sprite pixel.</param>
-    private sealed record Sheet(Texture2D Image, Texture2D White, Rectangle First, int Columns, int Frames, float Block);
+    /// <param name="Columns">How many frames a row has; there are as many rows.</param>
+    private sealed record Sheet(Texture2D Image, Texture2D White, Rectangle First, int Columns, float Block);
 
     /// <summary>What <see cref="DrawFigure"/> can draw.</summary>
     private enum Figure
