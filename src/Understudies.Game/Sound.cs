@@ -6,11 +6,11 @@ using Understudies.Core;
 namespace Understudies.Game;
 
 /// <summary>
-/// What a blow sounds like: six short sounds, each played when a tick reports what it is for, and all of them
-/// worked out in code when the game starts. There is no sound file. Like the juice it is the view's own state and
-/// decides no rule, so it may use what the rules may not (<see cref="Random"/>, a dictionary, trigonometry, a
-/// clock), and like the juice it is fed the simulation after every tick (<see cref="Feed"/>: a tick's events are
-/// gone on the next).
+/// What a blow sounds like, and a piece of applause picked up: seven short sounds, each played when a tick
+/// reports what it is for, and all of them worked out in code when the game starts. There is no sound file. Like
+/// the juice it is the view's own state and decides no rule, so it may use what the rules may not
+/// (<see cref="Random"/>, a dictionary, trigonometry, a clock), and like the juice it is fed the simulation after
+/// every tick (<see cref="Feed"/>: a tick's events are gone on the next).
 /// </summary>
 internal sealed class Sound
 {
@@ -22,7 +22,7 @@ internal sealed class Sound
 
     // How loud each sound is, from 0 to 1. What comes many times a second (a throw, a hit, a crowd's strikes) is
     // quiet, and what comes now and then (a kill, a Vanish) or is bad news (the magician is hurt) is not. A level
-    // is of a sound's loudest sample, which is the same in all six (Peak), so one level is not one loudness: a
+    // is of a sound's loudest sample, which is the same in all seven (Peak), so one level is not one loudness: a
     // buzz that holds is louder than a tap at the same level.
     private const float ThrowLevel = 0.15f;
     private const float HitLevel = 0.4f;
@@ -30,10 +30,11 @@ internal sealed class Sound
     private const float KillLevel = 0.9f;
     private const float VanishLevel = 0.7f;
     private const float HurtLevel = 0.25f;
+    private const float PickUpLevel = 0.5f;
 
     // A sound does not start again within this long of its own last start: a crowd strikes the box office many
     // times a second, and every blow of one tick would start at once.
-    // ponytail: one gap for all six, so a sound longer than the gap still lies on itself under a crowd, the buzz
+    // ponytail: one gap for all seven, so a sound longer than the gap still lies on itself under a crowd, the buzz
     // of a hurt magician four deep. A gap of its own for each sound, near its length, when that is too much.
     private const float RepeatGap = 0.05f;
 
@@ -114,6 +115,16 @@ internal sealed class Sound
     private const float HurtBelow = 2500f;
     private const float HurtFade = 0.08f;
 
+    // A piece of applause is picked up: a chime, short and bright, and the one good news among the seven. A tone
+    // at PickUpPitch that jumps to PickUpJump times as high when PickUpJumpAt of its time has gone by, with its
+    // octave PickUpOctave as loud over it, a third as loud after every PickUpDecay.
+    private const float PickUpTime = 0.14f;
+    private const float PickUpPitch = 1320f;
+    private const float PickUpJump = 1.5f;
+    private const float PickUpJumpAt = 0.35f;
+    private const float PickUpOctave = 0.3f;
+    private const float PickUpDecay = 0.05f;
+
     // No sound begins or ends with a jump, which would be heard as a click: each rises from nothing over Attack
     // and is brought down to nothing over Release. And each is made as loud as it can be told to play: its
     // loudest sample is Peak of all that 16 bits hold.
@@ -189,7 +200,7 @@ internal sealed class Sound
     }
 
     /// <summary>
-    /// The six sounds as they are played: the kind of event each is for, how loud it plays, and its samples, 16
+    /// The seven sounds as they are played: the kind of event each is for, how loud it plays, and its samples, 16
     /// bits each and one channel, <see cref="SampleRate"/> of them a second.
     /// </summary>
     private static (TickEventKind Kind, float Level, byte[] Samples)[] Synthesise() =>
@@ -200,6 +211,7 @@ internal sealed class Sound
         (TickEventKind.Vanish, VanishLevel, Vanish()),
         (TickEventKind.BoxOfficeStruck, StrikeLevel, Strike()),
         (TickEventKind.MagicianHurt, HurtLevel, Hurt()),
+        (TickEventKind.ApplausePickedUp, PickUpLevel, PickUp()),
     ];
 
     private static byte[] Throw()
@@ -280,6 +292,15 @@ internal sealed class Sound
         Func<float, float> below = LowPass(HurtBelow);
         return Render(HurtTime, t =>
             below(MathF.Sign(one(t)) + MathF.Sign(other(t))) * MathF.Min(1f, (HurtTime - t) / HurtFade));
+    }
+
+    private static byte[] PickUp()
+    {
+        static float Pitch(float t) => t < PickUpJumpAt * PickUpTime ? PickUpPitch : PickUpPitch * PickUpJump;
+
+        Func<float, float> tone = Sine(Pitch);
+        Func<float, float> octave = Sine(t => 2f * Pitch(t));
+        return Render(PickUpTime, t => (tone(t) + (PickUpOctave * octave(t))) * Decay(t, PickUpDecay));
     }
 
     /// <summary>

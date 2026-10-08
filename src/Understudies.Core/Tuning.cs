@@ -67,6 +67,17 @@ namespace Understudies.Core;
 /// Seconds from one blow of a critic to its next, whether a blow is a strike on the box office or a touch that hurts
 /// the magician.
 /// </param>
+/// <param name="ApplauseTime">
+/// Seconds a piece of applause lies on the floor before it is gone. It can be picked up from the tick after it
+/// is dropped, on one tick fewer than it is seen.
+/// </param>
+/// <param name="ApplausePickUpReach">
+/// The magician picks up a piece whose centre is no further from its own than its radius and this.
+/// </param>
+/// <param name="ApplauseFirstThreshold">
+/// The share of an act's enemies, from 0 to 1, that its applause has to reach for the first band.
+/// </param>
+/// <param name="ApplauseSecondThreshold">The same for the second band.</param>
 public sealed record Tuning(
     float ActLength,
     int ActsInPerformance,
@@ -99,7 +110,11 @@ public sealed record Tuning(
     float CriticTurnRadius,
     float CriticStrikeDamage,
     float CriticTouchDamage,
-    float CriticBlowCooldown)
+    float CriticBlowCooldown,
+    float ApplauseTime,
+    float ApplausePickUpReach,
+    float ApplauseFirstThreshold,
+    float ApplauseSecondThreshold)
 {
     // ponytail: the serializer reads the types by reflection; a trimmed or AOT build needs a source-generated context.
     private static readonly JsonSerializerOptions Options = new()

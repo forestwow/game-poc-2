@@ -32,6 +32,9 @@ internal sealed class Juice(Random random)
     private const int KillScraps = 12;
     private const int VanishScraps = 8;
 
+    // A piece of applause that is picked up puffs this many.
+    private const int PickUpScraps = 6;
+
     // A scrap starts at up to ScrapSpeed and at no less than ScrapSlowestShare of it, and loses speed at ScrapDrag
     // a second, so the fastest gets ScrapSpeed / ScrapDrag far. It is gone after ScrapTime, fading over the second
     // half of it. A burst starts ScrapLift above the floor, at a critic's chest.
@@ -139,6 +142,10 @@ internal sealed class Juice(Random random)
                     Burst(happened.Position, VanishScraps);
                     Burst(simulation.MagicianPosition, VanishScraps);
                     _hitStopLeft = VanishHitStop;
+                    break;
+
+                case TickEventKind.ApplausePickedUp:
+                    Burst(happened.Position, PickUpScraps);
                     break;
 
                 case TickEventKind.MagicianHurt:
