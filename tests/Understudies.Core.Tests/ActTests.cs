@@ -23,7 +23,8 @@ public class ActTests
     /// stage, to a box office it touches 17.5 units below the door: it strikes on the nineteenth tick and every half
     /// second after, one of the box office's thousand hit points a strike. The second critic is an hour away. The
     /// magician is far from all of it on <see cref="Mark"/>, throws at nobody, and no critic turns on it; a Vanish
-    /// takes it six units. The curtain has no length, which is no curtain: these tests count their ticks from the first
+    /// takes it six units.
+    /// The curtain has no length, which is no curtain: these tests count their ticks from the first
     /// tick of an act, and the curtain has tests of its own.
     /// </summary>
     private Tuning Scene { get; } = CommittedTuning.Parse() with

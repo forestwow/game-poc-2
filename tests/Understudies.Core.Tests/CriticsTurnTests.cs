@@ -21,7 +21,8 @@ public class CriticsTurnTests
     /// magician nearer than three units: this one does on the fifth tick, three units below the door, where the
     /// magician is one and a half to the side and two further down, two and a half away. Each of the two circles is
     /// half a unit, so they touch on the sixth tick. A touch takes two of the magician's ten hit points and a strike
-    /// one of the box office's hundred, and a critic deals a blow every half second. The curtain has no length, which is no curtain: these tests count their ticks from the first
+    /// one of the box office's hundred, and a critic deals a blow every half second.
+    /// The curtain has no length, which is no curtain: these tests count their ticks from the first
     /// tick of an act, and the curtain has tests of its own.
     /// </summary>
     private Tuning Scene { get; } = CommittedTuning.Parse() with

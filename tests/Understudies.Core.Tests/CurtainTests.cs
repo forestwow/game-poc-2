@@ -231,6 +231,68 @@ public class CurtainTests
     }
 
     [Test]
+    public void Step_AShowWithCurtainsAndOneWithout_AreOneShowAtEveryTickOfAnAct()
+    {
+        // One seed and one magician in two shows on the committed stage with acts of twenty seconds: one has the
+        // committed curtain before every act and the other none. The magician walks a square and vanishes every
+        // fifth second, so the second act's understudy has a route and Vanishes to play again, critics enter at
+        // a door as wide as the committed one (the generator places each), turn on the magician and are thrown
+        // at. A curtain's tick touches nothing an act runs on: no countdown, no number of the generator, no
+        // recording. So at the same tick of the same act the two shows are one state.
+        const int actTicks = 20 * Simulation.TicksPerSecond;
+        // The magician has hit points for all of it, so neither show closes.
+        Tuning tuning = CommittedTuning.Parse() with
+        {
+            ActLength = 20f,
+            CriticEntryInterval = 0.7f,
+            MagicianHitPoints = 1000f,
+        };
+        Assert.That(tuning.CurtainTime, Is.GreaterThan(0f));
+        var withCurtains = new Simulation(tuning, seed: 3);
+        var without = new Simulation(tuning with { CurtainTime = 0f }, seed: 3);
+
+        for (int act = 1; act <= 2; act++)
+        {
+            while (withCurtains.Phase == Phase.Curtain)
+            {
+                // What is asked for while the curtain is up is asked of nobody.
+                withCurtains.Step(new MagicianInput(new Vector2(1f, 1f), Vanish: true));
+            }
+
+            Assert.That(withCurtains.ComputeStateHash(), Is.EqualTo(without.ComputeStateHash()), $"act {act} begins");
+            for (int tick = 0; tick < actTicks; tick++)
+            {
+                Vector2 move = (tick / 45 % 4) switch
+                {
+                    0 => new Vector2(-1f, 0f),
+                    1 => new Vector2(0f, 1f),
+                    2 => new Vector2(1f, 0f),
+                    _ => new Vector2(0f, -1f),
+                };
+                var input = new MagicianInput(move, Vanish: tick % 300 == 150);
+                withCurtains.Step(input);
+                without.Step(input);
+
+                if (tick % 100 == 99)
+                {
+                    Assert.That(
+                        withCurtains.ComputeStateHash(),
+                        Is.EqualTo(without.ComputeStateHash()),
+                        $"act {act}, {tick + 1} ticks played");
+                }
+            }
+
+            withCurtains.GoOn();
+            without.GoOn();
+        }
+
+        // The shows were worth comparing: an understudy played its Vanishes again, and critics fell and struck.
+        Assert.That(without.Understudies, Has.Count.EqualTo(2));
+        Assert.That(without.Critics, Is.Not.Empty);
+        Assert.That(without.BoxOfficeHitPoints, Is.LessThan(tuning.BoxOfficeHitPoints));
+    }
+
+    [Test]
     public void ComputeStateHash_TwoCurtainsWithDifferentTimeLeft_AreTwoHashes()
     {
         // Both shows are in the curtain of their first act and nothing else has happened in either: one curtain
