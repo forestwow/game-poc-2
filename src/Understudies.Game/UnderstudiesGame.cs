@@ -1117,7 +1117,7 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
         // else's. How long they stay is read off the act's time left: it is no rule and no state.
         bool actHasJustBegun =
             _simulation.ActTicksLeft > (Tuning.ActLength - CaptionTimeInTheAct) * Simulation.TicksPerSecond;
-        if (_simulation is { Act: 2, Phase: Phase.Curtain or Phase.Act, Understudies: [{ IsOnStage: true } first, ..] }
+        if (_simulation is { Act: 2, Phase: Phase.Curtain or Phase.Act, Understudies: [{ IsOnStage: true }, ..] }
             && actHasJustBegun)
         {
             Write(
