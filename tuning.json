@@ -45,5 +45,9 @@
   "criticTurnRadius": 4,
   "criticStrikeDamage": 1,
   "criticTouchDamage": 1,
-  "criticBlowCooldown": 1
+  "criticBlowCooldown": 1,
+  "applauseTime": 4,
+  "applausePickUpReach": 0.4,
+  "applauseFirstThreshold": 0.15,
+  "applauseSecondThreshold": 0.35
 }

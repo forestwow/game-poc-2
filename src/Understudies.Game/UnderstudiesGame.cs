@@ -49,6 +49,21 @@ internal sealed class UnderstudiesGame : Microsoft.Xna.Framework.Game
     private const float RouteWidth = 0.12f;
     private const int RouteStride = 6;
 
+    // A piece of applause is a diamond that hovers at a critic's chest, where the scraps of its fall burst from,
+    // with a pale heart: this wide, and never fainter than ApplauseFaintest, so that a piece about to go is still
+    // seen to be there.
+    private const float ApplauseSize = 0.75f;
+    private const float ApplauseLift = 0.8f;
+    private const float ApplauseFaintest = 0.25f;
+
+    // The act's applause is a bar in the middle of the back wall, ApplauseBarGap above its foot. Its second notch
+    // is this far along it: the bar is full a little past the share that earns the most.
+    private static readonly Vector2 ApplauseBar = new(14f, 0.45f);
+    private const float ApplauseBarSecondNotchAt = 0.7f;
+    private const float ApplauseBarGap = 0.2f;
+    private const float ApplauseNotchWidth = 0.12f;
+    private const float ApplauseNotchPast = 0.18f;
+
     // ponytail: a system font, the first of these files that this machine has: one for macOS, one for Windows and
     // two for Linux. A font file is shipped with the game when a build leaves the owner's machine.
     private static readonly string[] FontFiles =
@@ -74,6 +89,10 @@ internal sealed class UnderstudiesGame : Microsoft.Xna.Framework.Game
     private static readonly Color ThrownCardFace = new(250, 246, 236);
     private static readonly Color ScrapOfPaper = new(244, 238, 222);
     private static readonly Color Words = new(236, 228, 210);
+
+    // Applause is the one thing on the stage in this colour: the pieces on the floor and the bar they fill.
+    private static readonly Color ApplauseGlow = new(255, 72, 196);
+    private static readonly Color ApplauseHeart = new(255, 226, 246);
 
     // An understudy's card is a card, a little duller than the magician's own.
     private static readonly Color UnderstudysCardFace = new(190, 184, 172);
@@ -455,6 +474,17 @@ internal sealed class UnderstudiesGame : Microsoft.Xna.Framework.Game
         // hit points are a bar above it, a critic's height above, clear of the heads of the critics who stand
         // behind the box.
         _spriteBatch.Begin(transformMatrix: worldToScreen);
+        foreach (Applause piece in _simulation.ApplauseOnTheFloor)
+        {
+            // Over every figure, so that a crowd does not hide what is there to be fetched, and the dimmer the
+            // less of its time it has left.
+            float left = Math.Clamp(piece.TicksLeft / (Tuning.ApplauseTime * Simulation.TicksPerSecond), 0f, 1f);
+            float seen = ApplauseFaintest + ((1f - ApplauseFaintest) * left);
+            Vector2 middle = piece.Position - new Vector2(0f, ApplauseLift);
+            FillTurned(middle, new Vector2(ApplauseSize), MathF.PI / 4f, ApplauseGlow * seen);
+            FillTurned(middle, new Vector2(ApplauseSize / 2.5f), MathF.PI / 4f, ApplauseHeart * seen);
+        }
+
         foreach (var scrap in _juice.Scraps)
         {
             FillTurned(scrap.Middle, Juice.ScrapSize, scrap.Turn, ScrapOfPaper * scrap.Opacity);
@@ -488,6 +518,22 @@ internal sealed class UnderstudiesGame : Microsoft.Xna.Framework.Game
                 smallBar,
                 1f - _simulation.VanishCooldownLeft,
                 VanishBar);
+        }
+
+        // The act's applause: its share of the act's critics so far, with a notch at each threshold. A share past
+        // a notch has earned what the notch stands for.
+        float fullBar = MathF.Max(0.01f, Tuning.ApplauseSecondThreshold / ApplauseBarSecondNotchAt);
+        var applauseTopLeft = new Vector2(
+            (Tuning.StageSize.X - ApplauseBar.X) / 2f,
+            MathF.Max(Tuning.StageFloorTop, WordsHeight + 0.4f + ApplauseBar.Y + (2f * ApplauseBarGap))
+                - ApplauseBarGap - ApplauseBar.Y);
+        FillBar(applauseTopLeft, ApplauseBar, _simulation.ActApplauseShare / fullBar, ApplauseGlow);
+        foreach (float threshold in new[] { Tuning.ApplauseFirstThreshold, Tuning.ApplauseSecondThreshold })
+        {
+            Fill(
+                applauseTopLeft + new Vector2((ApplauseBar.X * threshold / fullBar) - (ApplauseNotchWidth / 2f), -ApplauseNotchPast),
+                new Vector2(ApplauseNotchWidth, ApplauseBar.Y + (2f * ApplauseNotchPast)),
+                Words);
         }
 
         _spriteBatch.End();

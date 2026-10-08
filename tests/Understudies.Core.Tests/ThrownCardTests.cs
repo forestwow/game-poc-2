@@ -307,7 +307,12 @@ public class ThrownCardTests
         var simulation = Shows.WithOneCritic(Scene.WithCritic(critic => critic with { HitPoints = 1f }));
 
         Run(simulation, ticks: 8);
-        Assert.That(simulation.Events, Is.EqualTo(new[] { new TickEvent(TickEventKind.Kill, Door) }));
+        // And the applause the magician's own kill leaves, which has tests of its own.
+        Assert.That(simulation.Events, Is.EqualTo(new[]
+        {
+            new TickEvent(TickEventKind.Kill, Door),
+            new TickEvent(TickEventKind.ApplauseDropped, Door),
+        }));
 
         simulation.Step(default);
         Assert.That(simulation.Events, Is.Empty);
