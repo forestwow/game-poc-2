@@ -60,6 +60,7 @@ public class StateHashTests
         yield return Case("where the magician stands", 0, t => t with { MagicianMark = t.MagicianMark + Vector2.One });
         yield return Case("the box office's hit points", 0, t => t with { BoxOfficeHitPoints = t.BoxOfficeHitPoints + 1f });
         yield return Case("the magician's hit points", 0, t => t with { MagicianHitPoints = t.MagicianHitPoints + 1f });
+        yield return Case("the act's time left", 0, t => t with { ActLength = t.ActLength * 2f });
 
         // The first critic has entered.
         yield return Case("the time to the next critic", 1, t => t with { CriticEntryInterval = t.CriticEntryInterval * 2f });
@@ -120,6 +121,39 @@ public class StateHashTests
         var up = new MagicianInput(new Vector2(0f, -1f));
 
         Assert.That(Play(inTheCorner, seed: 7, up, ticks: 1), Is.Not.EqualTo(Play(inTheCorner, seed: 7, left, ticks: 1)));
+    }
+
+    [Test]
+    public void ComputeStateHash_TheSameMomentOfTwoActs_AreTwoHashes()
+    {
+        // Ten ticks have been played of both shows by a magician that stood on its mark. One show's acts are twenty
+        // ticks long; the other's are ten, and it has gone on to its second: each has ten ticks of an act left, and
+        // all the two differ in is which act that is.
+        var inTheFirstAct = new Simulation(Tuning with { ActLength = 20f / Simulation.TicksPerSecond }, seed: 7);
+        var inTheSecondAct = new Simulation(Tuning with { ActLength = 10f / Simulation.TicksPerSecond }, seed: 7);
+        for (int i = 0; i < 10; i++)
+        {
+            inTheFirstAct.Step(default);
+            inTheSecondAct.Step(default);
+        }
+
+        inTheSecondAct.GoOn();
+        Assert.That((inTheFirstAct.Act, inTheFirstAct.ActTicksLeft), Is.EqualTo((1, 10)));
+        Assert.That((inTheSecondAct.Act, inTheSecondAct.ActTicksLeft), Is.EqualTo((2, 10)));
+
+        Assert.That(inTheSecondAct.ComputeStateHash(), Is.Not.EqualTo(inTheFirstAct.ComputeStateHash()));
+    }
+
+    [Test]
+    public void ComputeStateHash_AnActThatIsOverAndAPerformanceThatIs_AreTwoHashes()
+    {
+        // The first act of both shows has just run out. It was the first of two acts of one performance and all
+        // there was of the other: one show can go on and the other cannot, which is all the two differ in.
+        Tuning tenTicks = Tuning with { ActLength = 10f / Simulation.TicksPerSecond };
+
+        Assert.That(
+            Play(tenTicks with { ActsInPerformance = 1 }, seed: 7, input: default, ticks: 10),
+            Is.Not.EqualTo(Play(tenTicks with { ActsInPerformance = 2 }, seed: 7, input: default, ticks: 10)));
     }
 
     private static TestCaseData Case(string what, int ticks, Func<Tuning, Tuning> change) =>
