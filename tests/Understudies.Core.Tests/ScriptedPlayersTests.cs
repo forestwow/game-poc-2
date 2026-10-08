@@ -30,8 +30,8 @@ public class ScriptedPlayersTests
 
         Assert.Multiple(() =>
         {
-            Assert.That(performance.Acts[2].StateHash, Is.EqualTo(18142735063768858210UL), "the end of act three");
-            Assert.That(performance.Acts[^1].StateHash, Is.EqualTo(7893684529718277452UL), "the end of the performance");
+            Assert.That(performance.Acts[2].StateHash, Is.EqualTo(18416097257097476696UL), "the end of act three");
+            Assert.That(performance.Acts[^1].StateHash, Is.EqualTo(5429885305550085217UL), "the end of the performance");
         });
     }
 
@@ -58,8 +58,8 @@ public class ScriptedPlayersTests
             Assert.That(vanishes, Is.GreaterThan(0), "Vanishes");
             Assert.That(blows, Is.GreaterThan(0), "blows on the box office");
             Assert.That(stunned, Is.GreaterThan(0), "stunned critics");
-            Assert.That(performance.Acts[2].StateHash, Is.EqualTo(2215326142459059304UL), "the end of act three");
-            Assert.That(performance.Acts[^1].StateHash, Is.EqualTo(10650504390807452429UL), "the end of the performance");
+            Assert.That(performance.Acts[2].StateHash, Is.EqualTo(8628429157010245494UL), "the end of act three");
+            Assert.That(performance.Acts[^1].StateHash, Is.EqualTo(12465959235886267719UL), "the end of the performance");
         });
     }
 
@@ -303,14 +303,9 @@ public class ScriptedPlayersTests
     [Test]
     public void TheGuard_OnTheCommittedTuning_TheOrbitLosesByActSixAndTheDoorsPlayerFinishesActTen()
     {
-        const int Seeds = 20;
         const int AtLeast = 16;
-        int orbits = ScriptedPlayers.OrbitRadii.Count;
-        var performances = new Performance[(orbits + 1) * Seeds];
-        Parallel.For(0, performances.Length, i => performances[i] = ScriptedPlayers.Play(
-            Tuning,
-            (ulong)(i % Seeds) + 1,
-            i / Seeds < orbits ? ScriptedPlayers.Orbit(ScriptedPlayers.OrbitRadii[i / Seeds]) : ScriptedPlayers.Doors));
+        Performance[] performances = PlayTheGuard(Tuning);
+        int orbits = GuardPlayers.Length - 1;
         Performance Of(int player, int seed) => performances[(player * Seeds) + seed - 1];
 
         Assert.Multiple(() =>
@@ -335,10 +330,8 @@ public class ScriptedPlayersTests
     public void PrintTheGuardsTable() => PrintTheTable(Tuning);
 
     /// <summary>
-    /// The same table on another budget and nothing else changed, for whoever tunes to the guard: the budget of
-    /// before plan T20, and the three that T19 looked at.
+    /// The same table on another budget and nothing else changed, for whoever tunes to the guard.
     /// </summary>
-    [TestCase(25, 8)]
     [TestCase(45, 40)]
     [TestCase(60, 60)]
     [TestCase(40, 80)]
@@ -346,21 +339,36 @@ public class ScriptedPlayersTests
     public void PrintTheTableOnAnotherBudget(int firstActBudget, int budgetGrowthPerAct) =>
         PrintTheTable(Tuning with { FirstActBudget = firstActBudget, BudgetGrowthPerAct = budgetGrowthPerAct });
 
-    private static void PrintTheTable(Tuning tuning)
+    /// <summary>The seeds the guard is read over: 1 to this.</summary>
+    private const int Seeds = 20;
+
+    /// <summary>Who plays the guard: the orbit on each of its circles, and the doors player last.</summary>
+    private static readonly (string Name, Func<Simulation, MagicianInput> Player)[] GuardPlayers =
+    [
+        .. ScriptedPlayers.OrbitRadii.Select(radius => ($"orbit {Number(radius)}", ScriptedPlayers.Orbit(radius))),
+        ("doors", ScriptedPlayers.Doors),
+    ];
+
+    /// <summary>
+    /// Every one of <see cref="GuardPlayers"/> over the seeds 1 to <see cref="Seeds"/>: a player's performances
+    /// side by side, a seed after a seed.
+    /// </summary>
+    private static Performance[] PlayTheGuard(Tuning tuning)
     {
-        const int Seeds = 20;
-        (string Name, Func<Simulation, MagicianInput> Player)[] players =
-        [
-            .. ScriptedPlayers.OrbitRadii.Select(radius => ($"orbit {Number(radius)}", ScriptedPlayers.Orbit(radius))),
-            ("doors", ScriptedPlayers.Doors),
-        ];
-        var performances = new Performance[players.Length * Seeds];
-        var clock = Stopwatch.StartNew();
+        var performances = new Performance[GuardPlayers.Length * Seeds];
 
         // A lost performance fills the stage and is slow; each is its own simulation, so they are played side
         // by side.
         Parallel.For(0, performances.Length, i =>
-            performances[i] = ScriptedPlayers.Play(tuning, (ulong)(i % Seeds) + 1, players[i / Seeds].Player));
+            performances[i] = ScriptedPlayers.Play(tuning, (ulong)(i % Seeds) + 1, GuardPlayers[i / Seeds].Player));
+        return performances;
+    }
+
+    private static void PrintTheTable(Tuning tuning)
+    {
+        (string Name, Func<Simulation, MagicianInput> Player)[] players = GuardPlayers;
+        var clock = Stopwatch.StartNew();
+        Performance[] performances = PlayTheGuard(tuning);
         clock.Stop();
         Performance Of(int player, int seed) => performances[(player * Seeds) + seed - 1];
 

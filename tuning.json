@@ -66,5 +66,5 @@
   "cardRange": 1.5,
   "cardVanishCooldown": 0.25,
   "cardChorusDamage": 0.5,
-  "cardChorusChance": 0
+  "cardChorusChance": 0.2
 }
