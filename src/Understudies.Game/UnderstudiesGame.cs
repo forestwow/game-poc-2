@@ -152,7 +152,7 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
     private const float ApplauseFaintest = 0.25f;
 
     // The game's words are in two faces, read from the repository's own files so that every machine shows the
-    // same (plan decision 30, T40): Pixelify Sans Bold for a card's name and nothing else since plan T48, and
+    // same (plan decision 30, T40): Pixelify Sans Bold for a card's name and, on the main menu, the title and the entries' names (plan T53), and
     // Atkinson Hyperlegible for a sentence, a label and every number that is read in a glance (the act, the clock, the
     // counts, what is held): at the sizes the game has, Pixelify's 5 is read as an S and its 2 as an 8. The files
     // are in the order of Face, under the fonts' folder; the game does not start without every one of them.
@@ -277,11 +277,18 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
     private readonly FontSystem[] _faces = new FontSystem[FaceFiles.Length];
 
     /// <summary>With a <paramref name="capturePath"/> the game does not play: it saves one frame there and exits.</summary>
+    /// <param name="captureTheMenu">The frame is the main menu's, and no tick is played for it.</param>
     /// <param name="spritesFolder">Where the figures' images are.</param>
     /// <param name="fontsFolder">Where the two faces' files are.</param>
     /// <param name="cardsFolder">Where the cards' pictures are.</param>
     public UnderstudiesGame(
-        Tuning tuning, string? capturePath, int captureTicks, string spritesFolder, string fontsFolder, string cardsFolder)
+        Tuning tuning,
+        string? capturePath,
+        int captureTicks,
+        bool captureTheMenu,
+        string spritesFolder,
+        string fontsFolder,
+        string cardsFolder)
     {
         _spritesFolder = spritesFolder;
         _fontsFolder = fontsFolder;
@@ -292,6 +299,12 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
         _sound = new Sound(silent: capturePath is not null);
         _capturePath = capturePath;
         _captureTicks = captureTicks;
+
+        // The game opens on its menu (plan T53). A capture is of a show from its first tick, unless it asks for
+        // the menu. The show made above stands behind the menu for its numbers and is never played: "Perform"
+        // makes another.
+        _onTheMenu = capturePath is null || captureTheMenu;
+        _guardLeft = MenuGuardTime;
         _ = new GraphicsDeviceManager(this)
         {
             PreferredBackBufferWidth = WindowWidth,
@@ -370,10 +383,6 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
         }
 
         KeyboardState keys = Keyboard.GetState();
-        if (keys.IsKeyDown(Keys.Escape))
-        {
-            Exit();
-        }
 
         // A key held down counts once.
         bool Pressed(Keys key) => keys.IsKeyDown(key) && !_keysBefore.IsKeyDown(key);
@@ -385,12 +394,6 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
             _simulation.Tuning = tuning;
         }
 
-        // R starts the show again, on the numbers of now.
-        if (Pressed(Keys.R))
-        {
-            StartAgain();
-        }
-
         // M mutes the sound, and M again brings it back.
         if (Pressed(Keys.M))
         {
@@ -400,10 +403,25 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
         GamePadState pad = GamePad.GetState(PlayerIndex.One);
         bool PadPressed(Buttons button) => pad.IsButtonDown(button) && _padBefore.IsButtonUp(button);
 
-        // A press does one thing, by the phase this frame began in: the Enter that takes a card finds the stage
-        // between two acts when it is done, and must not go on as well, and the Space that takes an encore's card
-        // finds the act going on, and must not be a Vanish as well.
-        if (IsOffered)
+        // A press does one thing, by the screen and the phase this frame began in: the Space that takes "Perform"
+        // finds a show when it is done, and must not be a Vanish as well; the Enter that takes a card finds the
+        // stage between two acts, and must not go on as well, and the Space that takes an encore's card finds the
+        // act going on, and must not be a Vanish either.
+        if (_onTheMenu)
+        {
+            ChooseOnTheMenu(keys, pad);
+        }
+        else if (Pressed(Keys.Escape))
+        {
+            // Esc is the way back to the menu, from an act as from a show that is over: the show is given up.
+            ShowTheMenu();
+        }
+        else if (Pressed(Keys.R))
+        {
+            // R starts the show again, on the numbers of now.
+            StartAgain();
+        }
+        else if (IsOffered)
         {
             ChooseInTheProgram(keys, pad);
         }
@@ -430,8 +448,9 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
 
         // The hit-stop: while the moment of a Vanish holds the world still, a frame's time is dropped. The clock
         // gets none of it and no tick is run, so the frame is drawn as the one before it was.
+        // Nothing is played under the menu: no tick, no juice, no sound of the stage.
         double frameSeconds = gameTime.ElapsedGameTime.TotalSeconds;
-        if (!_juice.Holds((float)frameSeconds))
+        if (!_onTheMenu && !_juice.Holds((float)frameSeconds))
         {
             // Between two acts the stage stands until the player goes on, and a performance that is over stands as
             // it ended until R: there Step changes nothing. In an encore and in the program it counts the offer's
@@ -458,8 +477,21 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
     protected override void Draw(GameTime gameTime)
     {
         // Only an act has a next tick to draw towards, and the curtain, whose rewind goes on between its ticks.
-        DrawStage(_simulation.Phase is Phase.Act or Phase.Curtain ? _clock.Alpha : 1f);
+        DrawTheFrame(_simulation.Phase is Phase.Act or Phase.Curtain ? _clock.Alpha : 1f);
         base.Draw(gameTime);
+    }
+
+    /// <summary>The frame of now: the menu, or the stage <paramref name="alpha"/> between its last two ticks.</summary>
+    private void DrawTheFrame(float alpha)
+    {
+        if (_onTheMenu)
+        {
+            DrawTheMenu();
+        }
+        else
+        {
+            DrawStage(alpha);
+        }
     }
 
     /// <summary>Goes on to the next act, where the simulation lets it: the last act's offer is the view's no more.</summary>
@@ -476,11 +508,12 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
 
     /// <summary>
     /// A new show, and nothing of the last one left in the view: no part of a tick owed, no Vanish asked for, the
-    /// magician facing the viewer, no card lit or shown. What is the player's and not the show's stays: the keys
-    /// that are down, and the sound's mute.
+    /// magician facing the viewer, no card lit or shown, and no menu. What is the player's and not the show's
+    /// stays: the keys that are down, and the sound's mute. The one way a show starts: the menu's "Perform" and R.
     /// </summary>
     private void StartAgain()
     {
+        _onTheMenu = false;
         _simulation = NewShow(Tuning);
         _juice = new Juice(Random.Shared);
         _clock = new SimulationClock();
@@ -589,7 +622,7 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
 
         using var frame = new RenderTarget2D(GraphicsDevice, WindowWidth, WindowHeight);
         GraphicsDevice.SetRenderTarget(frame);
-        DrawStage(alpha: 1f);
+        DrawTheFrame(alpha: 1f);
         GraphicsDevice.SetRenderTarget(null);
 
         using FileStream file = File.Create(path);
@@ -599,48 +632,14 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
     /// <param name="alpha">How far between the last two ticks to draw what moves: 1 is the last tick itself.</param>
     private void DrawStage(float alpha)
     {
-        // The stage keeps its shape: it is fitted to the window and the rest is left dark.
-        Viewport viewport = GraphicsDevice.Viewport;
-        float scale = MathF.Min(viewport.Width / Tuning.StageSize.X, viewport.Height / Tuning.StageSize.Y);
-        Vector2 corner = (new Vector2(viewport.Width, viewport.Height) - (Tuning.StageSize * scale)) / 2f;
-
         // A shake moves the whole picture, bars and all. The wall and the floor are laid as far past the stage's
         // edge as the stage is moved, so the strip of the window a shake uncovers is stage and not the surround.
-        // To a whole screen pixel: a part of one would change which of the set's uneven pixels are the wide ones,
-        // and a shaken set would shimmer.
-        corner += _juice.Shake * scale;
-        corner = new Vector2(MathF.Round(corner.X), MathF.Round(corner.Y));
+        FitTheStage(_juice.Shake);
         Vector2 past = Vector2.Abs(_juice.Shake);
-        _scale = scale;
-        _corner = corner;
-        Matrix worldToScreen = Matrix.CreateScale(scale, scale, 1f) * Matrix.CreateTranslation(corner.X, corner.Y, 0f);
-        _worldToScreen = worldToScreen;
+        Matrix worldToScreen = _worldToScreen;
 
         GraphicsDevice.Clear(Surround);
-
-        // The set: the back wall with its curtain hung to the floor's top, and the boards of the floor below it.
-        // The two pictures are laid side by side, so this batch lets a picture go round at its edges. Every batch
-        // that draws a sprite takes its pixels as they are: a sprite is never smoothed.
-        _spriteBatch.Begin(samplerState: SamplerState.PointWrap, transformMatrix: worldToScreen);
-        var across = new Vector2(Tuning.StageSize.X + (2f * past.X), 0f);
-        Fill(-past, across with { Y = Tuning.StageFloorTop + past.Y }, BackWall);
-        Lay(
-            _floor,
-            new Vector2(-past.X, Tuning.StageFloorTop),
-            across with { Y = Tuning.StageSize.Y - Tuning.StageFloorTop + past.Y },
-            MathF.Max(1f, MathF.Round((scale * FloorMeasure / SetPixelsPerUnit) - 0.01f)) / scale);
-        Fill(
-            new Vector2(-past.X, Tuning.StageFloorTop),
-            across with { Y = Tuning.StageSize.Y - Tuning.StageFloorTop + past.Y },
-            BoardsDim);
-        float curtainHeight = _curtain.First.Height / (_curtain.Block * SetPixelsPerUnit);
-        Lay(
-            _curtain,
-            new Vector2(-past.X, Tuning.StageFloorTop - curtainHeight),
-            across with { Y = curtainHeight },
-            1f / SetPixelsPerUnit);
-        Fill(new Vector2(-past.X, Tuning.StageFloorTop), across with { Y = GoldLine }, Magician);
-        _spriteBatch.End();
+        LayTheSet(past, Tuning.StageFloorTop, curtainMeasure: 1f, GoldLine);
 
         // What lies flat on the floor, and the doors, which are of the set and hide nobody: whoever stands at a
         // door is drawn over it.
@@ -940,6 +939,55 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
         DrawWords(alpha, besideTheBar: barTopLeft + new Vector2(bar.X + 0.3f, bar.Y / 2f));
     }
 
+    /// <summary>
+    /// Where the frame being drawn has the stage, moved by a <paramref name="shake"/>: the stage keeps its shape,
+    /// fitted to the window, and the rest is left dark.
+    /// </summary>
+    private void FitTheStage(Vector2 shake)
+    {
+        Viewport viewport = GraphicsDevice.Viewport;
+        float scale = MathF.Min(viewport.Width / Tuning.StageSize.X, viewport.Height / Tuning.StageSize.Y);
+        Vector2 corner = (new Vector2(viewport.Width, viewport.Height) - (Tuning.StageSize * scale)) / 2f;
+
+        // To a whole screen pixel: a part of one would change which of the set's uneven pixels are the wide ones,
+        // and a shaken set would shimmer.
+        corner += shake * scale;
+        _scale = scale;
+        _corner = new Vector2(MathF.Round(corner.X), MathF.Round(corner.Y));
+        _worldToScreen = Matrix.CreateScale(scale, scale, 1f) * Matrix.CreateTranslation(_corner.X, _corner.Y, 0f);
+    }
+
+    /// <summary>
+    /// The set, in a batch of its own: the back wall with its curtain hung to the floor's top, a gold line under
+    /// it, and the boards of the floor below, laid <paramref name="past"/> the stage's edges. The curtain is
+    /// <paramref name="curtainMeasure"/> times its size in an act: the menu's is taller.
+    /// </summary>
+    private void LayTheSet(Vector2 past, float floorTop, float curtainMeasure, float goldLine)
+    {
+        // The two pictures are laid side by side, so this batch lets a picture go round at its edges. Every batch
+        // that draws a sprite takes its pixels as they are: a sprite is never smoothed.
+        _spriteBatch.Begin(samplerState: SamplerState.PointWrap, transformMatrix: _worldToScreen);
+        var across = new Vector2(Tuning.StageSize.X + (2f * past.X), 0f);
+        Fill(-past, across with { Y = floorTop + past.Y }, BackWall);
+        Lay(
+            _floor,
+            new Vector2(-past.X, floorTop),
+            across with { Y = Tuning.StageSize.Y - floorTop + past.Y },
+            MathF.Max(1f, MathF.Round((_scale * FloorMeasure / SetPixelsPerUnit) - 0.01f)) / _scale);
+        Fill(
+            new Vector2(-past.X, floorTop),
+            across with { Y = Tuning.StageSize.Y - floorTop + past.Y },
+            BoardsDim);
+        float curtainHeight = curtainMeasure * _curtain.First.Height / (_curtain.Block * SetPixelsPerUnit);
+        Lay(
+            _curtain,
+            new Vector2(-past.X, floorTop - curtainHeight),
+            across with { Y = curtainHeight },
+            curtainMeasure / SetPixelsPerUnit);
+        Fill(new Vector2(-past.X, floorTop), across with { Y = goldLine }, Magician);
+        _spriteBatch.End();
+    }
+
     /// <summary>The colour of the act an understudy came from.</summary>
     private static Color TintOf(Understudy understudy) => TintOfAct(understudy.Act);
 
@@ -1187,7 +1235,8 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
     /// Words in screen pixels, in a <paramref name="face"/>: the line is centred on the height of
     /// <paramref name="at"/>, a point of the stage, with its left end there, its middle (<paramref name="anchor"/>
     /// 0.5) or its right end (1). Words on the stage carry the outline; words <paramref name="onPaper"/>, dark on
-    /// a light ground, have none. Words <paramref name="keptOnTheStage"/> are moved by as much as it takes to have
+    /// a light ground, have none; the menu's title has one of an <paramref name="outlineWidth"/> of its own, in
+    /// world units. Words <paramref name="keptOnTheStage"/> are moved by as much as it takes to have
     /// the whole line on the stage, and a label's letters are <paramref name="spacing"/> apart, in world units.
     /// Called between the Begin and the End of a batch with no transform.
     /// </summary>
@@ -1200,10 +1249,11 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
         Color color,
         bool onPaper = false,
         bool keptOnTheStage = false,
-        float spacing = 0f)
+        float spacing = 0f,
+        float outlineWidth = OutlineWidth)
     {
         SpriteFontBase font = Font(face, height);
-        int outline = onPaper ? 0 : Outline(font);
+        int outline = onPaper ? 0 : Outline(font, outlineWidth);
         float apart = MathF.Round(spacing * _scale);
         var size = new Vector2(font.MeasureString(text, characterSpacing: apart).X, font.LineHeight);
         Vector2 topLeft = _corner + (at * _scale) - new Vector2(size.X * anchor, size.Y / 2f);
@@ -1241,8 +1291,8 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
     /// How wide the outline of words on the stage is in that font, in screen pixels: small words have a thinner
     /// one, for the whole width shuts the eyes of letters under some eighteen pixels tall.
     /// </summary>
-    private int Outline(SpriteFontBase font) =>
-        Math.Max(1, (int)MathF.Round(MathF.Min(OutlineWidth * _scale, font.FontSize / SmallestOutlined)));
+    private int Outline(SpriteFontBase font, float width = OutlineWidth) =>
+        Math.Max(1, (int)MathF.Round(MathF.Min(width * _scale, font.FontSize / SmallestOutlined)));
 
     /// <summary>
     /// How wide <see cref="Write"/> draws <paramref name="text"/> in that face at that height, its letters
@@ -1262,7 +1312,7 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
     /// <summary>The faces of the game's words, in the order of <see cref="FaceFiles"/>.</summary>
     private enum Face
     {
-        /// <summary>Pixelify Sans Bold: a card's name.</summary>
+        /// <summary>Pixelify Sans Bold: a card's name, and the menu's title and entries.</summary>
         Heading,
 
         /// <summary>Atkinson Hyperlegible: a sentence, and a number that is read in a glance.</summary>
@@ -1299,6 +1349,8 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
     /// its frames.</param>
     /// <param name="beat">Which frame of the walk it is on when the clock is at nothing: two figures with
     /// different beats are out of step.</param>
+    /// <param name="measure">A measure of its own, in place of its family's: the menu's figures are larger than
+    /// the stage's.</param>
     private void DrawFigure(
         Figure figure,
         Vector2 feet,
@@ -1312,7 +1364,8 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
         float speed = WalkReferenceSpeed,
         int beat = 0,
         Color? cardboard = null,
-        float ahead = 0f)
+        float ahead = 0f,
+        float? measure = null)
     {
         // Sideways when it goes more across than up or down. The side view faces right and is mirrored for left.
         bool sideways = MathF.Abs(toward.X) > MathF.Abs(toward.Y);
@@ -1335,7 +1388,8 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
         // set's and, at a measure of 1, a figure's are one and a quarter screen pixels at 1280 wide (every
         // fourth is two), and whole at 1024 and its multiples. A set and figures drawn for 1280, or a stage drawn
         // to a target of its own and scaled whole, would end it.
-        float unit = (figure <= Figure.Rival ? FigurePixel : 1f / SetPixelsPerUnit) / sheet.Block;
+        float unit = (measure is { } own ? PixelAt(own) : figure <= Figure.Rival ? FigurePixel : 1f / SetPixelsPerUnit)
+            / sheet.Block;
         float width = source.Width * unit;
         var onAPixel = new Vector2(MathF.Round(feet.X * _scale), MathF.Round(feet.Y * _scale)) / _scale;
 
@@ -1416,14 +1470,14 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
     /// How long a walking figure's sprite pixel is in world units in the frame being drawn: the figures' measure,
     /// and a whole number of screen pixels where the measure asks for one to within <see cref="WholeWithin"/>.
     /// </summary>
-    private float FigurePixel
+    private float FigurePixel => PixelAt(FiguresMeasure);
+
+    /// <summary>A sprite pixel at a measure, as <see cref="FigurePixel"/> is at the figures'.</summary>
+    private float PixelAt(float measure)
     {
-        get
-        {
-            float asked = _scale * FiguresMeasure / SetPixelsPerUnit;
-            float whole = MathF.Max(1f, MathF.Round(asked));
-            return (MathF.Abs(asked - whole) <= WholeWithin ? whole : asked) / _scale;
-        }
+        float asked = _scale * measure / SetPixelsPerUnit;
+        float whole = MathF.Max(1f, MathF.Round(asked));
+        return (MathF.Abs(asked - whole) <= WholeWithin ? whole : asked) / _scale;
     }
 
     /// <summary>How tall the magician is drawn in the frame being drawn, in world units: what is over its head is over this.</summary>
