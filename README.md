@@ -59,4 +59,4 @@ Three scripted players measure whether hiding at the box office loses and going 
 
 For another budget, or any other variant of the tuning, there is `PrintTheVariants`, which plays the seeds 1 to 20 alone unless `UNDERSTUDIES_SEED_SETS` names other sets by their first seeds (`1,101`): numbers are searched on the first set only. `PrintTheCardOrders` plays the doors player and the kiter by four orders of taking cards.
 
-Two more of the ordinary tests pin the state hash of a scripted performance: the same seed and the same player must end in the same state on macOS ARM and on Linux x64. A change to `tuning.json`, to a rule or to a player changes those hashes, and the tests' numbers are pinned again.
+Two more of the ordinary tests pin the state hash of a scripted performance: the same seed and the same player must end in the same state on macOS ARM and on Linux x64, and CI runs on both. A change to `tuning.json`, to a rule or to a player changes those hashes, and the tests' numbers are pinned again.
