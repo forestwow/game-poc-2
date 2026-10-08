@@ -301,10 +301,10 @@ internal sealed partial class UnderstudiesGame
 
             // The count is a number read in a glance, and so in the sentences' face (plan T40).
             string name = Describe(card).Name;
-            bool limited = ofTheLimit && card != Card.ChorusDamage && Tuning.CardMaxCopies > 0;
-            string count = limited ? $"{Held(card)}/{Tuning.CardMaxCopies}" : $"×{Held(card)}";
+            bool limited = ofTheLimit && LimitOf(card) > 0;
+            string count = limited ? $"{Held(card)}/{LimitOf(card)}" : $"×{Held(card)}";
             Color paper = card == Card.ChorusDamage ? ChorusPaper
-                : limited && Held(card) >= Tuning.CardMaxCopies ? Magician
+                : limited && Held(card) >= LimitOf(card) ? Magician
                 : ThrownCardFace;
             float wide = (2f * ChipPad) + Wide(Face.Sentence, ChipWordsHeight, name) + ChipSpace + Wide(Face.Sentence, HudSmallHeight, count);
             if (rows.Count == 0 || RowWide(rows[^1]) + ChipsApart + wide > width)
@@ -340,7 +340,7 @@ internal sealed partial class UnderstudiesGame
                 float line = top + (ChipHeight / 2f);
                 Paper(new Vector2(left, top), new Vector2(chip.Width, ChipHeight), chip.Paper);
                 Write(Face.Sentence, ChipWordsHeight, chip.Name, new Vector2(left + ChipPad, line), 0f, OutlineInk, onPaper: true);
-                Write(Face.Sentence, HudSmallHeight, chip.Count, new Vector2(left + chip.Width - ChipPad, line), 1f, ChipCount, onPaper: true);
+                Write(Face.Sentence, HudSmallHeight, chip.Count, new Vector2(left + chip.Width - ChipPad, line), 1f, chip.Paper == Magician ? OutlineInk : ChipCount, onPaper: true);
                 left += chip.Width + ChipsApart;
             }
 
