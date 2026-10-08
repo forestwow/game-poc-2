@@ -211,7 +211,7 @@ public class ActTests
         // is in the air when the act ends. Ten ticks before twenty seconds are up, a Vanish that goes nowhere leaves
         // its cloud on the critics nearest the mark. One show's act ends there; the other's is twice as long.
         // No curtain: it would stand between the two acts of one show and not in the one act of the other. And
-        // no applause, whose pieces have no time: it would be cleared between the two acts, and pay for a card.
+        // no applause, whose pieces have no time: it would be cleared between the two acts, and pay for an encore.
         Tuning tuning = CommittedTuning.Parse() with
         {
             CurtainTime = 0f,
