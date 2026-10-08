@@ -875,6 +875,22 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
         DrawTheMagiciansBars(magicianFeet);
         DrawTheApplauseBar();
 
+        // A headliner (plan T46) is the one enemy whose hit points the player counts: a small bar under its
+        // feet, in its own red.
+        // ponytail: full is what one enters with in this act, so one left from the act before is never shown
+        // full. Keep what it entered with on the critic when that is seen.
+        var headlinerBar = new Vector2(1.6f, 0.25f) * FiguresMeasure;
+        foreach (Critic critic in _simulation.Critics.Where(critic => critic.Kind == 3))
+        {
+            // As everywhere a critic's kind is read: a tuning read again (F5) may have fewer kinds than the stage.
+            EnemyKind headliner = Tuning.EnemyKinds[Math.Min(critic.Kind, Tuning.EnemyKinds.Count - 1)];
+            FillBar(
+                Vector2.Lerp(critic.PreviousPosition, critic.Position, alpha) + new Vector2(-headlinerBar.X / 2f, 0.3f),
+                headlinerBar,
+                critic.HitPoints / (headliner.HitPoints + (headliner.HitPointsPerAct * (_simulation.Act - headliner.FromAct))),
+                HeadlinerWash);
+        }
+
         // The program's cards lie over everything but the words.
         if (ProgramIsShown)
         {

@@ -890,7 +890,9 @@ public sealed class Simulation(Tuning tuning, ulong seed, IReadOnlyList<IReadOnl
     /// </summary>
     private bool Hurt(Critic critic, float damage, ThrownCard card)
     {
-        critic.HitPoints -= damage;
+        // An understudy's card takes the kind's share of it (plan T46), from the tuning of now: a headliner
+        // hardly notices the cardboard, and is the magician's to fell.
+        critic.HitPoints -= card.ThrownByMagician ? damage : damage * KindOf(critic).UnderstudyDamageShare;
         bool fell = critic.HitPoints <= 0f;
         if (fell)
         {

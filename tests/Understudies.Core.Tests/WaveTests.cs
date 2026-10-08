@@ -116,10 +116,76 @@ public class WaveTests
                 }
                 else
                 {
-                    Assert.That(plan[act - 1].Select(entry => entry.Kind), Has.Some.EqualTo(kind), $"seed {seed}, act {act}");
+                    // A kind an act has a number of (plan T46: the headliner) is there that many times.
+                    int inAnAct = Tuning.EnemyKinds[kind].InAnAct;
+                    Assert.That(
+                        plan[act - 1].Count(entry => entry.Kind == kind),
+                        inAnAct > 0 ? Is.EqualTo(inAnAct) : Is.GreaterThan(0),
+                        $"seed {seed}, act {act}");
                 }
             }
         }
+    }
+
+    // Plan T46: a kind that an act has a number of, and does not draw for.
+    [Test]
+    public void Plan_AKindWithANumberForAnAct_HasThatManyInEveryActFromItsOwn_OneInEachStretchOfTheAct()
+    {
+        // Forty to spend and forty more an act, every enemy for 1, and nobody in a crowd: an act's entries are
+        // as many as its budget, four of them the few, and with four the act is four quarters.
+        Tuning tuning = Tuning with
+        {
+            FirstActBudget = 40,
+            BudgetGrowthPerAct = 40,
+            BudgetGrowthRise = 0,
+            WaveBurstShare = 0f,
+            EnemyKinds =
+            [
+                Tuning.Critic() with { Cost = 1, Weight = 1, FromAct = 1 },
+                Tuning.Critic() with { Name = "few", Cost = 1, Weight = 0, FromAct = 3, InAnAct = 4 },
+            ],
+        };
+        Tuning without = tuning with { EnemyKinds = [tuning.Critic()] };
+        int window = (int)((tuning.ActLength - tuning.ActQuietEnd) * Simulation.TicksPerSecond);
+        foreach (ulong seed in Seeds)
+        {
+            IReadOnlyList<IReadOnlyList<PlannedEntry>> plan = Waves.Plan(tuning, seed);
+            IReadOnlyList<IReadOnlyList<PlannedEntry>> planWithout = Waves.Plan(without, seed);
+            for (int act = 1; act <= plan.Count; act++)
+            {
+                if (act < 3)
+                {
+                    Assert.That(plan[act - 1], Is.EqualTo(planWithout[act - 1]), $"seed {seed}, act {act}");
+                    continue;
+                }
+
+                // The act pays for them: it has as many enemies as it would have without.
+                Assert.That(plan[act - 1], Has.Count.EqualTo(40 * act), $"seed {seed}, act {act}");
+                Assert.That(
+                    plan[act - 1].Where(entry => entry.Kind == 1).Select(entry => entry.Tick * 4 / window),
+                    Is.EqualTo(new[] { 0, 1, 2, 3 }),
+                    $"seed {seed}, act {act}: the quarter of the act each of the few enters in");
+            }
+        }
+    }
+
+    [Test]
+    public void Plan_AKindWithANumberForAnAct_HasNoMoreThanTheActCanPayFor()
+    {
+        Tuning tuning = Tuning with
+        {
+            FirstActBudget = 7,
+            EnemyKinds =
+            [
+                Tuning.Critic() with { Cost = 1, Weight = 1, FromAct = 1 },
+                Tuning.Critic() with { Name = "few", Cost = 3, Weight = 0, FromAct = 1, InAnAct = 4 },
+            ],
+        };
+
+        IReadOnlyList<PlannedEntry> first = Waves.Plan(tuning, seed: 1)[0];
+
+        Assert.That(first.Count(entry => entry.Kind == 1), Is.EqualTo(2));
+        Assert.That(first, Has.Count.EqualTo(3));
     }
 
     [Test]

@@ -34,6 +34,10 @@ namespace Understudies.Core.Tests;
 /// What the next encore cost then: with <paramref name="Unspent"/> no less than this, an encore was earned and
 /// none opened.
 /// </param>
+/// <param name="Headliners">The headliners (the fourth kind of enemy) that entered in the act.</param>
+/// <param name="HeadlinerKills">The headliners that fell in the act to a card the magician threw.</param>
+/// <param name="HeadlinerUnderstudyKills">Those that fell in it to an understudy's card.</param>
+/// <param name="HeadlinerTicksLived">The ticks of play from entering to falling, of all that fell in the act.</param>
 internal readonly record struct ActRecord(
     int Entries,
     int Applause,
@@ -54,7 +58,11 @@ internal readonly record struct ActRecord(
     int UnderstudyKills,
     int ShortOffers,
     int Unspent,
-    int NextCost);
+    int NextCost,
+    int Headliners,
+    int HeadlinerKills,
+    int HeadlinerUnderstudyKills,
+    int HeadlinerTicksLived);
 
 /// <summary>A scripted performance played to its end: the ovation or the close.</summary>
 /// <param name="Ended"><see cref="Phase.Ovation"/> or <see cref="Phase.Closed"/>.</param>
@@ -408,6 +416,10 @@ internal static class ScriptedPlayers
         // The tick of play each enemy entered on, by its id, which counts them as they enter; and how many of the
         // magician's own kills fell within three, five and eight seconds of entering, and at all.
         var entered = new List<int>();
+
+        // Which of them are headliners, the fourth kind (plan T46): who fells those, and how long they stand.
+        var headliner = new List<bool>();
+        int[] headliners = new int[4];
         int ticksPlayed = 0;
         int[] kills = new int[4];
         int understudyKills = 0;
@@ -424,11 +436,19 @@ internal static class ScriptedPlayers
                 if (critic.Id >= entered.Count)
                 {
                     entered.Add(ticksPlayed);
+                    headliner.Add(critic.Kind == 3);
+                    headliners[0] += critic.Kind == 3 ? 1 : 0;
                 }
             }
 
             foreach (TickEvent happened in simulation.Events)
             {
+                if (happened.Kind == TickEventKind.Kill && headliner[happened.CriticId])
+                {
+                    headliners[happened.Thrower == TickEvent.TheMagician ? 1 : 2]++;
+                    headliners[3] += ticksPlayed - entered[happened.CriticId];
+                }
+
                 if (happened.Kind == TickEventKind.Throw && happened.Thrower == TickEvent.TheMagician)
                 {
                     mostCardsAThrow = Math.Max(mostCardsAThrow, ++thrown);
@@ -506,7 +526,11 @@ internal static class ScriptedPlayers
                 understudyKills,
                 shortOffers,
                 unspent,
-                nextCost));
+                nextCost,
+                headliners[0],
+                headliners[1],
+                headliners[2],
+                headliners[3]));
             if (simulation.Phase != Phase.BetweenActs)
             {
                 return new Performance(simulation.Phase, acts, encores);
@@ -517,6 +541,7 @@ internal static class ScriptedPlayers
             inReach.Clear();
             dropped = fellInReach = walkedTo = mostCritics = understudyKills = mostCardsAThrow = shortOffers = 0;
             kills = new int[4];
+            headliners = new int[4];
         }
     }
 

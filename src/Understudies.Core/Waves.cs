@@ -63,7 +63,8 @@ public static class Waves
 
     /// <summary>
     /// What an act buys, in the order it buys it: a weighted draw among the kinds it may have and can still afford,
-    /// until it can afford none.
+    /// until it can afford none, with those it has a number of (<see cref="EnemyKind.InAnAct"/>) spread among
+    /// them.
     /// </summary>
     private static List<int> Buy(Rng rng, Tuning tuning, int act)
     {
@@ -72,6 +73,19 @@ public static class Waves
         int left = tuning.FirstActBudget
             + ((act - 1) * tuning.BudgetGrowthPerAct)
             + (tuning.BudgetGrowthRise * (act - 1) * (act - 2) / 2);
+
+        // What an act has a number of (plan T46) it pays for first, as many as it can, and draws nothing for.
+        var few = new List<int>();
+        for (int kind = 0; kind < tuning.EnemyKinds.Count; kind++)
+        {
+            EnemyKind its = tuning.EnemyKinds[kind];
+            for (int n = 0; n < its.InAnAct && its.FromAct <= act && its.Cost <= left; n++)
+            {
+                few.Add(kind);
+                left -= its.Cost;
+            }
+        }
+
         var bought = new List<int>();
         while (true)
         {
@@ -80,6 +94,17 @@ public static class Waves
             int total = tuning.EnemyKinds.Where(Affordable).Sum(kind => kind.Weight);
             if (total == 0)
             {
+                // The few stand in the order of buying each in a stretch of its own, the last first so that no
+                // place moves: an act with four has one somewhere in each quarter. An act that has none draws
+                // nothing here, so a kind's number changes no act before the kind's own.
+                // ponytail: two kinds with a number are laid as one list, a kind after a kind, so each has its
+                // own part of the act. Deal them round when there are two.
+                int drawn = bought.Count;
+                for (int n = few.Count - 1; n >= 0; n--)
+                {
+                    bought.Insert((int)((n + rng.NextFloat()) * drawn / few.Count), few[n]);
+                }
+
                 return bought;
             }
 

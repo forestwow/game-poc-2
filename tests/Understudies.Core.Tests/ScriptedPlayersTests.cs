@@ -37,7 +37,7 @@ public class ScriptedPlayersTests
             // An act that stood for an encore is in what is pinned.
             Assert.That(performance.Acts.Sum(act => act.Encores), Is.GreaterThan(0), "encores");
             Assert.That(performance.Acts[2].StateHash, Is.EqualTo(162178741610036784UL), "the end of act three");
-            Assert.That(performance.Acts[^1].StateHash, Is.EqualTo(4023339526767687653UL), "the end of the performance");
+            Assert.That(performance.Acts[^1].StateHash, Is.EqualTo(4282083162319239188UL), "the end of the performance");
         });
     }
 
@@ -70,7 +70,7 @@ public class ScriptedPlayersTests
             Assert.That(stunned, Is.GreaterThan(0), "stunned critics");
             Assert.That(performance.Acts.Sum(act => act.Encores), Is.GreaterThan(0), "encores");
             Assert.That(performance.Acts[2].StateHash, Is.EqualTo(14979360235718945559UL), "the end of act three");
-            Assert.That(performance.Acts[^1].StateHash, Is.EqualTo(6100973595553144623UL), "the end of the performance");
+            Assert.That(performance.Acts[^1].StateHash, Is.EqualTo(5419211264143406984UL), "the end of the performance");
         });
     }
 
@@ -439,11 +439,13 @@ public class ScriptedPlayersTests
     /// guard's own floor of 16 finished lets four collapse, which is 320: a tuning between "fine" and "the
     /// guard's floor" is caught here. Since plan T41 it is 370, and no seed collapses: the headliner of acts
     /// eight to ten takes some thirty off every performance (284 at the worst), so the floor is twenty away and
-    /// is now what a late threat is tuned against: plan T41 says what a stronger one would ask of it. The
+    /// is now what a late threat is tuned against: plan T41 says what a stronger one would ask of it. Since
+    /// plan T46 it is 363 (286 at the worst): the sixteen headliners of each of acts eight to ten take 4, 10
+    /// and 18, and the floor is thirteen away. The
     /// second is the card order, which must not be a hidden hinge (T29's first numbers held by the committed
     /// order alone and lost act seven on every seed by any other): taking the longer arm first, the doors
-    /// player still finishes act ten on at least 16 of 20. It finishes 20 (19 on the seeds 101 to 120, 20 on
-    /// 301 to 320), with 256 of the box office: a break here is a finding about a card or a player, not a
+    /// player still finishes act ten on at least 16 of 20. It finishes 20 (20 on the seeds 101 to 120 and on
+    /// 401 to 420), with 348 of the box office: a break here is a finding about a card or a player, not a
     /// floor to lower unread.
     /// </summary>
     [Test]
@@ -472,8 +474,11 @@ public class ScriptedPlayersTests
     /// when the headliner comes; the doors player has 35.2 encores against 17.8 and 370 of the box office
     /// against 55 on the first set, 34.5 against 20.2 and 370 against 82 on the second. The encores are the
     /// thin one now (34.5 where 30.3 are asked). With the limit on copies and no headliner the comparison failed:
-    /// 395 against 349. Whether the kiter has to lose outright is the owner's question, open in the plan:
-    /// nothing here says it loses, though on the committed numbers it now does on most seeds.
+    /// 395 against 349. Since plan T46 (sixteen headliners an act, which the magician fells) the kiter finishes
+    /// every seed of both sets again: 35.1 encores against 18.5 and 363 of the box office against 286 on the
+    /// first, 34.9 against 18.8 and 361 against 306 on the second, where the box office is now the thin one
+    /// (55 more where 50 are asked). Whether the kiter has to lose outright is the owner's question, open in
+    /// the plan: nothing here says it loses, and by the committed card order it does not.
     /// </summary>
     [TestCase(1)]
     [TestCase(101)]
@@ -730,6 +735,10 @@ public class ScriptedPlayersTests
                 cards => cards.OneMoreCard, cards => cards.Pierce, cards => cards.Ricochet, cards => cards.Burst,
             }.Select(kind => Number(acts.Average(act => kind(act.Cards)), "0.#")))));
         table.WriteLine($"         kills, its own/understudies' {ByAct(acts => $"{Number(acts.Average(act => act.Kills), "0")}/{Number(acts.Average(act => act.UnderstudyKills), "0")}")}");
+        table.WriteLine(
+            "         headliners entered/felled by the magician/by an understudy, and seconds one that fell stood "
+            + ByAct(acts => $"{Number(acts.Average(act => act.Headliners))}/{Number(acts.Average(act => act.HeadlinerKills))}/{Number(acts.Average(act => act.HeadlinerUnderstudyKills))}"
+                + $" {Number(acts.Sum(act => act.HeadlinerTicksLived) / (double)Simulation.TicksPerSecond / Math.Max(1, acts.Sum(act => act.HeadlinerKills + act.HeadlinerUnderstudyKills)))}s"));
         table.WriteLine(
             $"         encores that offered fewer than three {ByAct(acts => Number(acts.Average(act => act.ShortOffers)))}; "
             + $"acts that ended with an encore earned and not opened {ByAct(acts => acts.Count(act => act.NextCost > 0 && act.Unspent >= act.NextCost).ToString(CultureInfo.InvariantCulture))}; "
