@@ -71,18 +71,22 @@ public class WaveTests
     }
 
     [Test]
-    public void Plan_TheCommittedKinds_NoStagehandInActOne_AndFromActTwoAMixWithCriticsTheLargerPart()
+    public void Plan_TheCommittedKinds_NoStagehandBeforeItsAct_AndFromItAMixWithCriticsTheLargerPart()
     {
+        int from = Tuning.Stagehand().FromAct;
+        Assert.That(from, Is.GreaterThan(1), "the first act has no stagehand");
         foreach (ulong seed in Seeds)
         {
             IReadOnlyList<IReadOnlyList<PlannedEntry>> plan = Waves.Plan(Tuning, seed);
 
-            Assert.That(plan[0].Select(entry => entry.Kind), Has.All.EqualTo(0), $"seed {seed}");
-            for (int act = 2; act <= plan.Count; act++)
+            for (int act = 1; act <= plan.Count; act++)
             {
                 int stagehands = plan[act - 1].Count(entry => entry.Kind == 1);
 
-                Assert.That(stagehands, Is.InRange(1, (plan[act - 1].Count - 1) / 2), $"seed {seed}, act {act}");
+                Assert.That(
+                    stagehands,
+                    act < from ? Is.Zero : Is.InRange(1, (plan[act - 1].Count - 1) / 2),
+                    $"seed {seed}, act {act}");
             }
         }
     }
@@ -252,13 +256,16 @@ public class WaveTests
     public void GoOn_TheCriticsLeftFromAnAct_AreJoinedByTheNextActs()
     {
         var simulation = new Simulation(ShortActs, seed: 1);
+        // Every committed kind costs 1, so an act lets in as many as its budget; nobody throws in these acts.
+        int first = ShortActs.FirstActBudget;
+        int second = first + ShortActs.BudgetGrowthPerAct;
         Play(simulation);
-        Assert.That(simulation.Critics, Has.Count.EqualTo(25));
+        Assert.That(simulation.Critics, Has.Count.EqualTo(first));
         simulation.GoOn();
 
         Play(simulation);
 
-        Assert.That(simulation.Critics, Has.Count.EqualTo(25 + 33));
+        Assert.That(simulation.Critics, Has.Count.EqualTo(first + second));
     }
 
     [Test]
@@ -335,6 +342,9 @@ public class WaveTests
     [Test]
     public void Tuning_NewNumbersInAPerformanceUnderWay_DoNotPlanItAgain()
     {
+        // Every committed kind costs 1, so an act lets in as many as its budget.
+        int first = ShortActs.FirstActBudget;
+        int second = first + ShortActs.BudgetGrowthPerAct;
         var simulation = new Simulation(ShortActs, seed: 1);
         simulation.Step(default);
 
@@ -342,9 +352,9 @@ public class WaveTests
         Play(simulation);
         simulation.GoOn();
 
-        Assert.That(simulation.Plan.Select(act => act.Count).Take(2), Is.EqualTo(new[] { 25, 33 }));
-        Assert.That(simulation.Critics, Has.Count.EqualTo(25));
-        Assert.That(simulation.ActEntries, Has.Count.EqualTo(33));
+        Assert.That(simulation.Plan.Select(act => act.Count).Take(2), Is.EqualTo(new[] { first, second }));
+        Assert.That(simulation.Critics, Has.Count.EqualTo(first));
+        Assert.That(simulation.ActEntries, Has.Count.EqualTo(second));
     }
 
     /// <summary>Where each critic of the first act stood on the tick it entered, in the order they entered.</summary>
