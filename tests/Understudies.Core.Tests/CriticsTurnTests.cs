@@ -28,6 +28,7 @@ public class CriticsTurnTests
     private Tuning Scene { get; } = CommittedTuning.Parse().WithCritic(critic => critic with { Speed = 60f, Radius = 0.5f, StrikeDamage = 1f }) with
     {
         CurtainTime = 0f,
+        StageFloorTop = 0f,
         StageDoors = [new StageDoor(Door, 1)],
         StageDoorWidth = 0f,
         BoxOfficePosition = Door + new Vector2(0f, 20f),

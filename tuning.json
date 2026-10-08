@@ -5,8 +5,8 @@
   "stageSize": { "x": 48, "y": 27 },
   "stageFloorTop": 3,
   "stageDoors": [
-    { "position": { "x": 0, "y": 15 }, "opensInAct": 1 },
-    { "position": { "x": 48, "y": 9 }, "opensInAct": 3 },
+    { "position": { "x": 1.5, "y": 15 }, "opensInAct": 1 },
+    { "position": { "x": 46.5, "y": 9 }, "opensInAct": 3 },
     { "position": { "x": 17, "y": 3 }, "opensInAct": 6 }
   ],
   "stageDoorWidth": 3,

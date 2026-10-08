@@ -88,6 +88,22 @@ public class TuningTests
             Throws.TypeOf<JsonException>().With.Message.Contains("'stageDoors'"));
     }
 
+    [TestCase(1.4f)]
+    [TestCase(46.6f)]
+    public void Parse_ADoorThatReachesPastTheStagesSide_IsRefusedWithTheKeysName(float x)
+    {
+        // A door is three units wide and runs along the stage's width (plan T49): its middle is at least half of
+        // that in from either side, or somebody would come in outside the stage.
+        JsonNode file = JsonNode.Parse(CommittedTuning.Json)!;
+        file["stageDoorWidth"] = 3;
+        file["stageDoors"] = JsonNode.Parse(
+            $$"""[{ "position": { "x": {{x.ToString(System.Globalization.CultureInfo.InvariantCulture)}}, "y": 15 }, "opensInAct": 1 }]""");
+
+        Assert.That(
+            () => Tuning.Parse(file.ToJsonString()),
+            Throws.TypeOf<JsonException>().With.Message.Contains("'stageDoors'"));
+    }
+
     [Test]
     public void Parse_ADoorWithNoActToOpenIn_IsRefusedWithTheKeysName()
     {

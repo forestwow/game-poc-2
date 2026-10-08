@@ -209,7 +209,7 @@ public class ActTests
             CurtainTime = 0f,
             ApplauseTime = 0f,
             CriticTurnRadius = 0f,
-            ThrownCardSpeed = 0.3f,
+            ThrownCardSpeed = 0.1f,
             VanishDistance = 0f,
         };
         const int twentySeconds = 20 * Simulation.TicksPerSecond;
