@@ -164,6 +164,12 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
         Path.Combine("atkinson-hyperlegible", "AtkinsonHyperlegible-Regular.ttf"),
     ];
 
+    // A card's picture (plan T47) is the file named by the lower case of the card's name in the Card enum, under
+    // the cards' folder: a card added to the enum is asked for its picture by that name, and the game does not
+    // start without it.
+    internal static readonly string[] CardFiles =
+        [.. Enum.GetValues<Card>().Select(card => card.ToString().ToLowerInvariant() + ".png")];
+
     // Words on the stage carry an outline in ink, this wide in world units: two screen pixels in the window of
     // 1280 the game opens in, and two as well in one 1024 wide, where 1.6 is rounded; never less than one, and
     // never more than one part in SmallestOutlined of the words' height.
@@ -227,6 +233,7 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
 
     private readonly string _spritesFolder;
     private readonly string _fontsFolder;
+    private readonly string _cardsFolder;
 
     // By Figure and then by Facing; a figure with one view has that one alone.
     private readonly Sheet[][] _sheets = new Sheet[Enum.GetValues<Figure>().Length][];
@@ -258,16 +265,22 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
     private float _scale;
     private Vector2 _corner;
 
+    // A card's picture (plan T47), by the card's number: read unsmoothed, a file pixel to a sprite pixel.
+    private readonly Texture2D[] _cardPictures = new Texture2D[CardFiles.Length];
+
     // One for each Face, in its order.
     private readonly FontSystem[] _faces = new FontSystem[FaceFiles.Length];
 
     /// <summary>With a <paramref name="capturePath"/> the game does not play: it saves one frame there and exits.</summary>
     /// <param name="spritesFolder">Where the figures' images are.</param>
     /// <param name="fontsFolder">Where the two faces' files are.</param>
-    public UnderstudiesGame(Tuning tuning, string? capturePath, int captureTicks, string spritesFolder, string fontsFolder)
+    /// <param name="cardsFolder">Where the cards' pictures are.</param>
+    public UnderstudiesGame(
+        Tuning tuning, string? capturePath, int captureTicks, string spritesFolder, string fontsFolder, string cardsFolder)
     {
         _spritesFolder = spritesFolder;
         _fontsFolder = fontsFolder;
+        _cardsFolder = cardsFolder;
         _simulation = capturePath is null ? NewShow(tuning) : new Simulation(tuning, CaptureSeed);
         _juice = new Juice(capturePath is null ? Random.Shared : new Random((int)CaptureSeed));
         _sound = new Sound(silent: capturePath is not null);
@@ -320,6 +333,13 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
         _curtain = ReadSheet("curtain.png", 1, block: 4f);
         _hitBurst = ReadSheet("hit-burst.png", 3);
         _killBurst = ReadSheet("kill-burst.png", 3);
+
+        // The batch blends colours that are already multiplied by their alpha.
+        for (int card = 0; card < CardFiles.Length; card++)
+        {
+            _cardPictures[card] = Texture2D.FromFile(
+                GraphicsDevice, Path.Combine(_cardsFolder, CardFiles[card]), DefaultColorProcessors.PremultiplyAlpha);
+        }
 
         for (int face = 0; face < FaceFiles.Length; face++)
         {
@@ -1054,7 +1074,9 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
             _ => null,
         };
 
-        _spriteBatch.Begin();
+        // Unsmoothed, for a card's picture: the words and the paper are drawn a pixel to a pixel and are the same
+        // either way.
+        _spriteBatch.Begin(samplerState: SamplerState.PointClamp);
         if (_simulation.Phase is Phase.Encore or Phase.Program or Phase.BetweenActs)
         {
             DrawTheOffer();
