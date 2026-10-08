@@ -76,7 +76,7 @@
       "created_at": "2026-10-08T09:00:45.857Z"
     },
     {
-      "file": "collage-magician.png",
+      "file": "failed/collage-magician.png",
       "command": "ludo image create",
       "settings": {
         "image_type": "sprite",
@@ -90,7 +90,7 @@
       "created_at": "2026-10-08T09:01:00.085Z"
     },
     {
-      "file": "collage-critic.png",
+      "file": "failed/collage-critic.png",
       "command": "ludo image create",
       "settings": {
         "image_type": "sprite",
