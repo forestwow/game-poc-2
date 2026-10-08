@@ -18,7 +18,7 @@ internal sealed partial class UnderstudiesGame
     // ink border with a hard shadow: a head strip in the colour of whose it is, its name, its flavour, what it
     // does, and at its foot how many of it are held. Three are a row with room at the sides, and one is as tall
     // as the floor leaves between the held row and the countdown.
-    private static readonly Vector2 CardSize = new(12.6f, 13.5f);
+    private static readonly Vector2 CardSize = new(12.6f, 13.9f);
     private const float CardGap = 1.2f;
     private const float CardsTop = 8.6f;
     private const float CardBorder = 0.15f;
@@ -41,15 +41,16 @@ internal sealed partial class UnderstudiesGame
     // Where the lines of a card are, from its top. The flavour is the smaller face, under the name; what the card
     // does is the larger, under that, and starts at one height on every card: under two lines of flavour. A line
     // of either is no wider than the card less CardMargin at each side. The foot's line is the flavour's size.
-    // The picture's place (plan S5a, T47): a square of 96 screen pixels (3.6 units) between the head strip and
-    // the name, in the middle. Nothing is drawn for it today, and the words stand in the middle of the card's
-    // body, with as much room over the name as under three lines of what the card does. With the picture NameLine
-    // is 6.55, and every line under it moves with it: three lines of what the card does then end just over the
-    // foot's line.
+    // The picture's place (plan S5a, T47): a square of 124 screen pixels (4.65 units: a picture of 62 sprite
+    // pixels at two screen pixels each) under the head strip, in the middle of the card's width, its top 1.95
+    // from the card's, with the name, the flavour and what the card does under it. Nothing is drawn for it today,
+    // and the words stand in the middle of the card's body, with as much room over the name as under three lines
+    // of what the card does. With the picture NameLine is 7.45, and every line under it moves with it: three
+    // lines of what the card does then end just over the foot's line.
     private const float NameLine = 5f;
-    private const float FlavourDrop = 1.15f;
-    private const float SentenceDrop = 3.15f;
-    private const float FootLift = 0.7f;
+    private const float FlavourDrop = 1f;
+    private const float SentenceDrop = 2.7f;
+    private const float FootLift = 0.6f;
     private const float FlavourHeight = 0.6f;
     private const float FlavourPitch = 0.7f;
     private const float SentencePitch = 0.9f;
@@ -57,10 +58,10 @@ internal sealed partial class UnderstudiesGame
 
     // Under the cards: the countdown's line, its bar in an ink rim, and the keys, each key a cap: its name in a
     // thin cream border.
-    private const float CountdownLine = 23.1f;
-    private const float CountdownBarTop = 23.8f;
+    private const float CountdownLine = 23.3f;
+    private const float CountdownBarTop = 23.95f;
     private static readonly Vector2 CountdownBar = new(18f, 0.375f);
-    private const float KeysLine = 24.85f;
+    private const float KeysLine = 24.95f;
     private const float KeyHeight = 0.825f;
     private const float KeyPad = 0.225f;
     private const float KeyWordsHeight = 0.6f;
