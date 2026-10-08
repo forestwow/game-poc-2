@@ -1058,8 +1058,14 @@ public sealed class Simulation(Tuning tuning, ulong seed, IReadOnlyList<IReadOnl
             // the magician out of it too.
             // A kind that eats applause (plan T57) goes for the nearest piece on the floor while there is one, and
             // to the box office when there is none: asked anew on every tick, as the turn is. It walks until the
-            // piece's middle is on its own circle, and is not put back out from a piece it stands over.
-            Applause? piece = kind.EatsApplause ? NearestApplause(critic.Position) : null;
+            // piece's middle is on its own circle, and is not put back out from a piece it stands over. One that
+            // has turned on the magician (no committed kind both turns and eats; a reload can make one) hunts the
+            // magician and eats nothing.
+            // ponytail: it walks straight at the piece, through the box office when that is between the two, and
+            // is not put back out of it while a piece lies, so one that stands inside when the floor is empty is
+            // put out in a single tick, as a critic that turns back is (above). It ends with the box office a wall
+            // to every critic.
+            Applause? piece = kind.EatsApplause && !turned ? NearestApplause(critic.Position) : null;
             bool stops = turned || piece is not null;
             Vector2 toTarget = Direction(
                 (turned ? MagicianPosition : piece?.Position ?? Tuning.BoxOfficePosition) - critic.Position,

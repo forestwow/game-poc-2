@@ -151,7 +151,7 @@ public class ScalperTests
         // The piece at B is dropped first, and the scalper enters as far from it as from the one at A.
         Simulation simulation = Show(Scene, (0, DoorB, Still), (30, DoorA, Still), (120, DoorBetween, Scalper));
 
-        StepUntil(simulation, TickEventKind.ApplauseEaten);
+        TicksUntil(simulation, TickEventKind.ApplauseEaten);
 
         Assert.That(simulation.Events.Single(happened => happened.Kind == TickEventKind.ApplauseEaten).Position, Is.EqualTo(B));
     }
@@ -173,13 +173,7 @@ public class ScalperTests
     [Test]
     public void Step_TheMagicianAndAScalperReachAPieceOnOneTick_TheMagicianPicksItUp()
     {
-        (int Tick, int Door, int Kind)[] plan = [(0, DoorA, Still), (60, DoorFar, Scalper)];
-        int eatenOn = TicksUntilEaten(Show(Scene, plan));
-        Simulation simulation = Show(Scene, plan);
-        for (int tick = 1; tick < eatenOn; tick++)
-        {
-            simulation.Step(default);
-        }
+        Simulation simulation = OnTheTickBefore(TickEventKind.ApplauseEaten, Scene, (0, DoorA, Still), (60, DoorFar, Scalper));
 
         // On the tick the scalper would eat it, the piece is in the magician's reach too: the magician picks up
         // right after it moves, before the critics walk.
@@ -197,16 +191,16 @@ public class ScalperTests
     [Test]
     public void Step_AStunnedScalper_EatsNothing()
     {
-        (int Tick, int Door, int Kind)[] plan = [(0, DoorA, Still), (60, DoorFar, Scalper)];
-        int eatenOn = TicksUntilEaten(Show(Scene, plan));
-        Simulation simulation = Show(Scene, plan);
-        for (int tick = 1; tick < eatenOn; tick++)
+        // A scalper that stands still enters exactly where a piece lies, and would eat it on its first tick: on
+        // that tick a cloud covers the whole stage. The piece is inside its circle, and it eats nothing.
+        Simulation simulation = Show(StandingStill, (0, DoorA, Still), (60, DoorA, Scalper));
+        for (int tick = 0; tick <= 60; tick++)
         {
             simulation.Step(default);
         }
 
-        // A cloud over the whole stage on the tick the scalper would eat the piece.
-        simulation.Tuning = Scene with { VanishCloudRadius = 100f };
+        Assert.That(simulation.Critics.Single().Position, Is.EqualTo(simulation.ApplauseOnTheFloor.Single().Position));
+        simulation.Tuning = StandingStill with { VanishCloudRadius = 100f };
         simulation.Step(new MagicianInput(Vector2.Zero, Vanish: true));
 
         Assert.Multiple(() =>
@@ -218,13 +212,79 @@ public class ScalperTests
     }
 
     [Test]
+    public void Step_APieceDroppedWithinAScalpersStep_IsEatenOnTheTickItIsDropped()
+    {
+        // The scalper stands still at the far door until the tick the critic at A falls, and on that tick it is
+        // quick enough to be there in one step: the cards fly before the critics walk, so the piece is on the
+        // floor for its walk, and the magician, which picks up from the next tick, never has it.
+        (int Tick, int Door, int Kind)[] plan = [(0, DoorFar, Scalper), (60, DoorA, Still)];
+        Simulation simulation = OnTheTickBefore(TickEventKind.Kill, StandingStill, plan);
+
+        simulation.Tuning = InOneStep;
+        simulation.Step(default);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(
+                simulation.Events.Select(happened => happened.Kind).Where(kind => kind != TickEventKind.Throw),
+                Is.EqualTo(new[] { TickEventKind.Kill, TickEventKind.ApplauseDropped, TickEventKind.ApplauseEaten }));
+            Assert.That(simulation.ApplauseOnTheFloor, Is.Empty);
+            Assert.That(simulation.ActApplause, Is.Zero);
+        });
+    }
+
+    [Test]
+    public void Step_TwoScalpersReachOnePieceOnOneTick_TheOneThatEnteredFirstEatsIt()
+    {
+        (int Tick, int Door, int Kind)[] plan = [(0, DoorFar, Scalper), (1, DoorFar, Scalper), (60, DoorA, Still)];
+        Simulation simulation = OnTheTickBefore(TickEventKind.Kill, StandingStill, plan);
+
+        simulation.Tuning = InOneStep;
+        simulation.Step(default);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(
+                simulation.Events.Where(happened => happened.Kind == TickEventKind.ApplauseEaten).Select(happened => happened.CriticId),
+                Is.EqualTo(new[] { 0 }));
+            Assert.That(simulation.ApplauseOnTheFloor, Is.Empty);
+        });
+    }
+
+    [Test]
+    public void Step_AKindThatEatsAndHasTurnedOnTheMagician_HuntsTheMagicianAndEatsNothing()
+    {
+        // No committed kind does both; a reload can make one. The piece lies at A, and the scalper enters between
+        // A and the magician with the whole stage inside the turn radius.
+        Tuning both = Scene with
+        {
+            CriticTurnRadius = 100f,
+            EnemyKinds = [Scene.Critic(), Scene.EnemyKinds[Scalper] with { TurnsOnTheMagician = true }],
+        };
+        Simulation simulation = Show(both, (0, DoorA, Still), (60, DoorBetween, Scalper));
+        bool hurt = false;
+        for (int tick = 0; tick < 5 * Simulation.TicksPerSecond; tick++)
+        {
+            simulation.Step(default);
+            hurt |= Happened(simulation, TickEventKind.MagicianHurt);
+            Assert.That(Happened(simulation, TickEventKind.ApplauseEaten), Is.False, $"tick {tick}");
+        }
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(hurt, "it reached the magician");
+            Assert.That(simulation.ApplauseOnTheFloor.Select(piece => piece.Position), Is.EqualTo(new[] { A }));
+        });
+    }
+
+    [Test]
     public void Step_AScalperFallsToTheMagiciansOwnCard_OnePieceIsLeftWhereItFell()
     {
         // The scalper as the committed file has it, in range from the moment it enters.
         Tuning tuning = Scene with { EnemyKinds = [Scene.Critic(), CommittedTuning.Parse().Scalper()] };
         Simulation simulation = Show(tuning, (0, DoorBetween, Scalper));
 
-        StepUntil(simulation, TickEventKind.Kill);
+        TicksUntil(simulation, TickEventKind.Kill);
 
         Vector2 fell = simulation.Events.Single(happened => happened.Kind == TickEventKind.Kill).Position;
         Assert.That(simulation.Events.Where(happened => happened.Kind != TickEventKind.Throw), Is.EqualTo(new[]
@@ -240,7 +300,7 @@ public class ScalperTests
     {
         // A scalper that stands still enters exactly where a piece lies, and eats it on its first tick; one
         // that does not eat stands on it. Nothing else is apart: an eaten piece is no state but the piece gone.
-        Tuning eater = Scene with { EnemyKinds = [Scene.Critic(), Scene.EnemyKinds[Scalper] with { Speed = 0f }] };
+        Tuning eater = StandingStill;
         Tuning plain = eater with { EnemyKinds = [eater.Critic(), eater.EnemyKinds[Scalper] with { EatsApplause = false }] };
         Simulation one = Show(eater, (0, DoorA, Still), (60, DoorA, Scalper));
         Simulation other = Show(plain, (0, DoorA, Still), (60, DoorA, Scalper));
@@ -260,6 +320,25 @@ public class ScalperTests
         });
     }
 
+    /// <summary><see cref="Scene"/> with a scalper that stands where it entered.</summary>
+    private Tuning StandingStill => Scene with { EnemyKinds = [Scene.Critic(), Scene.EnemyKinds[Scalper] with { Speed = 0f }] };
+
+    /// <summary><see cref="Scene"/> with a scalper that crosses the stage in one tick.</summary>
+    private Tuning InOneStep => Scene with { EnemyKinds = [Scene.Critic(), Scene.EnemyKinds[Scalper] with { Speed = 1200f }] };
+
+    /// <summary>A show played up to the tick before the one on which <paramref name="kind"/> first happens in it.</summary>
+    private static Simulation OnTheTickBefore(TickEventKind kind, Tuning tuning, params (int Tick, int Door, int Kind)[] plan)
+    {
+        int on = TicksUntil(Show(tuning, plan), kind);
+        Simulation simulation = Show(tuning, plan);
+        for (int tick = 1; tick < on; tick++)
+        {
+            simulation.Step(default);
+        }
+
+        return simulation;
+    }
+
     private Tuning WithAScalperThat(bool eats) =>
         Scene with { EnemyKinds = [Scene.Critic(), Scene.EnemyKinds[Scalper] with { EatsApplause = eats }] };
 
@@ -269,11 +348,7 @@ public class ScalperTests
     private static bool Happened(Simulation simulation, TickEventKind kind) =>
         simulation.Events.Any(happened => happened.Kind == kind);
 
-    private static void StepUntil(Simulation simulation, TickEventKind kind) => TicksUntil(simulation, kind);
-
-    /// <summary>How many ticks a show is played until a piece is eaten: the last of them is the tick that eats it.</summary>
-    private static int TicksUntilEaten(Simulation simulation) => TicksUntil(simulation, TickEventKind.ApplauseEaten);
-
+    /// <summary>Plays a show until something of a kind happens, and says how many ticks that was: the last is its tick.</summary>
     private static int TicksUntil(Simulation simulation, TickEventKind kind)
     {
         for (int ticks = 1; ticks <= 20 * Simulation.TicksPerSecond; ticks++)

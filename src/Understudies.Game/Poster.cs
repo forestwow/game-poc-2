@@ -45,7 +45,9 @@ internal sealed partial class UnderstudiesGame
     private const float PosterNewApart = 0.6f;
     private const float PosterFigureDrop = 0.25f;
 
-    // Three new kinds on one page (plan T57): smaller figures, the names at the smaller height and nearer.
+    // Three new kinds on one page (plan T57): smaller figures, the names at the smaller height and nearer. Only
+    // night 10 has three, and only until night 3 takes the scalper: that night's ticket deletes these three and
+    // the branch that reads them.
     private const float PosterSmallMeasure = 1f;
     private const float PosterSmallName = 1.1f;
     private const float PosterSmallApart = 0.35f;
