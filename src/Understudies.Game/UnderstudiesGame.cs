@@ -65,11 +65,11 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
     private const float RouteWidth = 0.12f;
     private const int RouteStride = 6;
 
-    // A piece of applause is a diamond that hovers at a critic's chest, where the scraps of its fall burst from,
-    // with a pale heart: this wide, and never fainter than ApplauseFaintest, so that a piece about to go is still
-    // seen to be there.
+    // A piece of applause is a diamond with a pale heart: this wide, and never fainter than ApplauseFaintest, so
+    // that a piece about to go is still seen to be there. Its lower tip is on the place it lies, which is the
+    // place the magician's feet must come near.
     private const float ApplauseSize = 0.75f;
-    private const float ApplauseLift = 0.8f;
+    private const float ApplauseLift = ApplauseSize * 0.7f;
     private const float ApplauseFaintest = 0.25f;
 
     // The act's applause is a bar in the middle of the back wall, ApplauseBarGap above its foot. Its second notch
