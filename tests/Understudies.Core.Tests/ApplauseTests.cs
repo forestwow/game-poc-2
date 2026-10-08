@@ -86,6 +86,26 @@ public class ApplauseTests
     }
 
     [Test]
+    public void Step_AStagehandFallsToTheMagiciansOwnCard_OnePieceIsLeftWhereItFell()
+    {
+        // The stagehand as the committed file has it, running from the door to the committed box office: the
+        // magician's card meets it on its way.
+        Tuning tuning = Scene with { EnemyKinds = [Scene.Critic(), CommittedTuning.Parse().Stagehand()] };
+        Simulation simulation = Shows.WithOneOfKind(tuning, kind: 1);
+
+        StepUntil(simulation, TickEventKind.Kill);
+
+        Vector2 fell = simulation.Events[0].Position;
+        Assert.That(fell, Is.Not.EqualTo(Door));
+        Assert.That(simulation.Events, Is.EqualTo(new[]
+        {
+            new TickEvent(TickEventKind.Kill, fell),
+            new TickEvent(TickEventKind.ApplauseDropped, fell),
+        }));
+        Assert.That(simulation.ApplauseOnTheFloor.Select(piece => piece.Position), Is.EqualTo(new[] { fell }));
+    }
+
+    [Test]
     public void Step_ACriticFallsToAnUnderstudysCard_NothingIsDropped()
     {
         // The first act is stood through on the mark, with nobody on the stage. In the second the magician walks

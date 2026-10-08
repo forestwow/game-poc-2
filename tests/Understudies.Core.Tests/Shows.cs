@@ -2,7 +2,7 @@ namespace Understudies.Core.Tests;
 
 /// <summary>
 /// Shows for the tests of the other rules, which say exactly who enters when and draw no plan: every critic is of
-/// the first kind and enters by the first door.
+/// the first kind, unless a show says another, and enters by the first door.
 /// </summary>
 internal static class Shows
 {
@@ -12,6 +12,13 @@ internal static class Shows
 
     /// <summary>A show with one critic, which enters on the first tick.</summary>
     public static Simulation WithOneCritic(Tuning tuning) => WithCriticsOnTicks(tuning, 0);
+
+    /// <summary>
+    /// A show with one enemy of a kind, by the kind's place in <see cref="Tuning.EnemyKinds"/>, which enters on the
+    /// first tick.
+    /// </summary>
+    public static Simulation WithOneOfKind(Tuning tuning, int kind) =>
+        new(tuning, seed: 1, [[new PlannedEntry(Tick: 0, Door: 0, kind)]]);
 
     /// <summary>
     /// A show with a steady stream: a critic enters on the first tick of the performance and on every
@@ -37,6 +44,9 @@ internal static class Shows
 
     /// <summary>The first kind of enemy, which is the critic.</summary>
     public static EnemyKind Critic(this Tuning tuning) => tuning.EnemyKinds[0];
+
+    /// <summary>The second kind of enemy, which is the stagehand.</summary>
+    public static EnemyKind Stagehand(this Tuning tuning) => tuning.EnemyKinds[1];
 
     /// <summary>The tuning with its first kind of enemy changed, and that kind alone on its list.</summary>
     public static Tuning WithCritic(this Tuning tuning, Func<EnemyKind, EnemyKind> change) =>

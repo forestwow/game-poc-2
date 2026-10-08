@@ -784,27 +784,46 @@ public sealed class Simulation(Tuning tuning, ulong seed, IReadOnlyList<IReadOnl
         }
 
         // At the nearest critic whose centre is in range; of two as near, at the one that entered first.
-        // ponytail: the card flies at where its target stands now, so it only hits what cannot leave that spot in
-        // time: thrownCardSpeed must stay at or above a kind's speed x throwRange / its radius (72 with the
-        // committed numbers, which is exactly where it is). A faster enemy or a longer range breaks that and
-        // cards start to miss across the line of fire; the throw then has to aim ahead of its target.
-        Vector2? aim = null;
+        Critic? target = null;
         float nearest = float.PositiveInfinity;
         foreach (Critic critic in _critics)
         {
-            Vector2 toCritic = Direction(critic.Position - from, out float distance);
+            Direction(critic.Position - from, out float distance);
             if (distance <= Tuning.ThrowRange && distance < nearest)
             {
-                aim = toCritic;
+                target = critic;
                 nearest = distance;
             }
         }
 
-        if (aim is not { } direction)
+        if (target is null)
         {
             return 0;
         }
 
+        // The card is thrown ahead of its target, at where the two meet if the target goes on as in its last step:
+        // `to` away now and `step` further every tick, it is met after t ticks by a card that flies `speed` a tick
+        // when |to + step x t| = speed x t. A target that stands has no step and is aimed at where it stands. The
+        // step is this tick's own, made before anybody throws: nothing of an earlier tick is read here.
+        // ponytail: the lead is of the first order, and the card flies straight. A target that stops, turns or is
+        // pushed while the card is in the air (a stagehand that reaches the box office, a critic that turns on the
+        // magician, a cloud) has left the meeting place by as much as it strays in that time, and is missed when
+        // that is more than its radius: at most its speed x throwRange / thrownCardSpeed, 2 units for the
+        // committed stagehand. A target near the end of the range that walks away is met past the range, where the
+        // card has fallen. And a card first flies on the tick after its throw, so its target is up to one of its
+        // own steps behind the aim: 0.13 of a unit for the committed stagehand, whose radius is 0.4. A slower card or a longer range makes both worse; a card that turns in the air is what
+        // mends them.
+        Vector2 to = target.Position - from;
+        Vector2 step = target.Position - target.PreviousPosition;
+        float speed = Tuning.ThrownCardSpeed / TicksPerSecond;
+        float closing = (to.X * step.X) + (to.Y * step.Y);
+        float faster = (speed * speed) - ((step.X * step.X) + (step.Y * step.Y));
+
+        // A card no faster than its target need never meet it: that one too is aimed at where it stands.
+        float ticks = faster > 0f
+            ? (closing + MathF.Sqrt((closing * closing) + (faster * nearest * nearest))) / faster
+            : 0f;
+        Vector2 direction = Direction(to + (step * ticks), out _);
         _thrownCards.Add(new ThrownCard(from, direction, Tuning.ThrowRange, byTheMagician));
         _events.Add(new TickEvent(TickEventKind.Throw, from));
         return Ticks(Tuning.ThrowCooldown);

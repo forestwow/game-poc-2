@@ -25,7 +25,7 @@
   "vanishStunTime": 1.5,
   "throwRange": 9,
   "throwCooldown": 0.5,
-  "thrownCardSpeed": 72,
+  "thrownCardSpeed": 36,
   "thrownCardDamage": 1,
   "enemyKinds": [
     {
@@ -34,9 +34,19 @@
       "radius": 0.5,
       "hitPoints": 3,
       "cost": 1,
-      "weight": 1,
+      "weight": 3,
       "fromAct": 1,
       "turnsOnTheMagician": true
+    },
+    {
+      "name": "stagehand",
+      "speed": 8,
+      "radius": 0.4,
+      "hitPoints": 1,
+      "cost": 1,
+      "weight": 1,
+      "fromAct": 2,
+      "turnsOnTheMagician": false
     }
   ],
   "firstActBudget": 25,

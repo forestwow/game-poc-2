@@ -208,7 +208,7 @@ public class ActTests
         {
             CurtainTime = 0f,
             CriticTurnRadius = 0f,
-            ThrownCardSpeed = 1.2f,
+            ThrownCardSpeed = 0.3f,
             VanishDistance = 0f,
         };
         const int twentySeconds = 20 * Simulation.TicksPerSecond;

@@ -17,6 +17,8 @@ internal sealed class UnderstudiesGame : Microsoft.Xna.Framework.Game
     private const float MagicianHeight = 3f;
     private const float CriticBodyHeight = 1.4f;
     private const float CriticHeadSize = 0.6f;
+    private const float StagehandBodyHeight = 0.9f;
+    private const float StagehandHeadSize = 0.5f;
     private const float ThrownCardWidth = 0.5f;
     private const float ThrownCardHeight = 0.35f;
 
@@ -86,6 +88,10 @@ internal sealed class UnderstudiesGame : Microsoft.Xna.Framework.Game
     private static readonly Color CriticBody = new(62, 88, 156);
     private static readonly Color CriticStunnedBody = new(168, 180, 212);
     private static readonly Color CriticHead = new(226, 216, 200);
+
+    // A stagehand is told from a critic at a glance: shorter and narrower, and rust where a critic is blue.
+    private static readonly Color StagehandBody = new(226, 112, 52);
+    private static readonly Color StagehandStunnedBody = new(240, 200, 176);
     private static readonly Color ThrownCardFace = new(250, 246, 236);
     private static readonly Color ScrapOfPaper = new(244, 238, 222);
     private static readonly Color Words = new(236, 228, 210);
@@ -401,6 +407,8 @@ internal sealed class UnderstudiesGame : Microsoft.Xna.Framework.Game
         foreach (var body in _juice.Bodies)
         {
             // A critic that fell lies where it fell and fades away, under the feet of whoever stands there.
+            // ponytail: a fallen stagehand lies there as a critic. A kill says where and not whose: when it says
+            // the kind too, the body is drawn as that kind.
             DrawFigure(Figure.Critic, body.Position, white: body.White, fallen: true, opacity: body.Opacity);
         }
 
@@ -438,7 +446,10 @@ internal sealed class UnderstudiesGame : Microsoft.Xna.Framework.Game
         foreach (Critic critic in _simulation.Critics)
         {
             Vector2 feet = Vector2.Lerp(critic.PreviousPosition, critic.Position, alpha);
-            DrawFigure(Figure.Critic, feet, pale: critic.IsStunned, white: _juice.CriticWhite(critic.Id));
+            // ponytail: the view knows the kinds by their places in enemyKinds, the critic first and the stagehand
+            // second. A third kind is drawn as a stagehand until it has a figure of its own.
+            Figure figure = critic.Kind == 0 ? Figure.Critic : Figure.Stagehand;
+            DrawFigure(figure, feet, pale: critic.IsStunned, white: _juice.CriticWhite(critic.Id));
         }
 
         foreach (ThrownCard card in _simulation.ThrownCards)
@@ -712,6 +723,7 @@ internal sealed class UnderstudiesGame : Microsoft.Xna.Framework.Game
         {
             Figure.Magician => MagicianHeight,
             Figure.Critic => CriticBodyHeight + CriticHeadSize,
+            Figure.Stagehand => StagehandBodyHeight + StagehandHeadSize,
             _ => Tuning.BoxOfficeSize,
         };
 
@@ -741,10 +753,17 @@ internal sealed class UnderstudiesGame : Microsoft.Xna.Framework.Game
 
             // A body with a paler head on it, so that the critics of a crowd can be told apart.
             case Figure.Critic:
-                // ponytail: every critic is drawn as wide as the first kind. With a second kind (T15) the figure
-                // is given its critic's own.
+                // As wide as its kind's circle.
                 Part(Tuning.EnemyKinds[0].Radius * 2f, CriticBodyHeight, pale ? CriticStunnedBody : CriticBody);
                 Part(CriticHeadSize, CriticHeadSize, CriticHead, lift: CriticBodyHeight);
+                break;
+
+            // The same two parts, smaller and in its own colour, and as wide as its own kind's circle. After a
+            // reload that leaves one kind in the file a stagehand is of that kind, as the simulation has it.
+            case Figure.Stagehand:
+                float radius = Tuning.EnemyKinds[Math.Min(1, Tuning.EnemyKinds.Count - 1)].Radius;
+                Part(radius * 2f, StagehandBodyHeight, pale ? StagehandStunnedBody : StagehandBody);
+                Part(StagehandHeadSize, StagehandHeadSize, CriticHead, lift: StagehandBodyHeight);
                 break;
 
             case Figure.BoxOffice:
@@ -794,6 +813,7 @@ internal sealed class UnderstudiesGame : Microsoft.Xna.Framework.Game
     {
         Magician,
         Critic,
+        Stagehand,
         BoxOffice,
     }
 }
