@@ -39,7 +39,7 @@ To look at a frame without playing, the game can walk a fixed script for a numbe
 
 A capture is silent: it makes no sound and opens no audio device.
 
-The script never closes the show and never lets the magician fall. To see either, run the capture from a directory whose `tuning.json` is a changed copy. With 60 `boxOfficeHitPoints` the box office has fallen by tick 1560. With 20 `magicianHitPoints` and 100000 `boxOfficeHitPoints` (a crowd that nobody thins would close the show) the magician falls in the first act on tick 1891 and in the third on tick 9508, and stands through the second and the fourth: 9600 is in the third act with the magician down and the two understudies playing on, and 14140 in the fourth, where the third act's understudy has left the stage at the end of its short route and the two older ones still play.
+The script never closes the show and never lets the magician fall. To see either, run the capture from a directory whose `tuning.json` is a changed copy. With 60 `boxOfficeHitPoints` the box office has fallen by tick 1560. With 20 `magicianHitPoints` and 100000 `boxOfficeHitPoints` (a crowd that nobody thins would close the show) the magician falls in the first act on tick 1939, stands through the second, and falls in the third on tick 9503 and in every act after it: 9600 is in the third act with the magician down and the two understudies playing on, and 14140 in the fourth, with the magician down again, where the third act's understudy has left the stage at the end of its short route and the two older ones still play.
 
 ## Tests
 

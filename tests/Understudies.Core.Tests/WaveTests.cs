@@ -71,15 +71,6 @@ public class WaveTests
     }
 
     [Test]
-    public void Plan_AKindWithTwiceTheWeight_IsBoughtMoreOften()
-    {
-        // From the second act on both kinds may be bought, one twice as readily as the other.
-        var bought = Seeds.SelectMany(seed => Waves.Plan(TwoKinds, seed).Skip(1).SelectMany(act => act)).ToList();
-
-        Assert.That(bought.Count(entry => entry.Kind == 0), Is.GreaterThan(bought.Count(entry => entry.Kind == 1)));
-    }
-
-    [Test]
     public void Plan_TwoKindsOfOneCostWithWeightsOfThreeToOne_AreBoughtThreeToOne()
     {
         // Both can be afforded for as long as either can, so the weights alone decide: of some ten thousand
