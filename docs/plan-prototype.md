@@ -35,7 +35,7 @@ The proof of concept ends at stop 3 (§6). The package for five outside testers 
 | 6 | What an understudy replays | **positions per tick and the ticks of its Vanish**, not inputs. Nothing slows or pushes an understudy: it is on its rail. Settles vision §6 against the "list of commands" of vision §11. Since decision 26 also the ticks of its act's encores and the cards taken (T24) |
 | 7 | Journal | none |
 | 8 | Repository | `main` is the default branch; CI runs `dotnet test` |
-| 9 | Numbers and target | `float` in Core, `net10.0` everywhere, nullable reference types on, warnings are errors. Two rules keep a seed repeatable: Core, and the scripted players that drive it, use only + − × ÷ and the square root (no trigonometry), and one test pins the state hash of a scripted performance, run on macOS ARM locally and on Linux x64 in CI |
+| 9 | Numbers and target | `float` in Core, `net10.0` everywhere, nullable reference types on, warnings are errors. Two rules keep a seed repeatable: Core, and the scripted players that drive it, use only + − × ÷ and the square root (no trigonometry), and one test pins the state hash of a scripted performance, run on macOS ARM and on Linux x64, both in CI (T38) |
 | 10 | Tests | first, for every Core rule; none for the view; the bot guard is an ordinary CI test |
 | 11 | Tuning | one `tuning.json`, read with `System.Text.Json`, unknown and missing keys are errors, reloaded with a key while the game runs. The fingerprints of vision §11 wait until after G1 |
 | 12 | Libraries | MonoGame DesktopGL 3.8.5.1 and `FontStashSharp.MonoGame` for text. No framework (MonoGame.Extended, Nez, Myra) and no content pipeline in the prototype |
@@ -369,7 +369,7 @@ What the documents could not know, since they were written on `main` before T23:
 
 Taken between those, when they are next in the way:
 
-- **R6, the small bugs**, and **R7, macOS in CI**: a small pull request each.
+- **R6, the small bugs**: a small pull request. **R7, macOS in CI**, is built as T38 (#38): the job runs on `ubuntu-latest` and `macos-latest`.
 - **R5's other half and R8** (a card described by Core, kinds by name, a sprite atlas, a hash that does not walk every route): when a ticket is slowed by the lack of them.
 - **R9** (the package and three friends now) is against what the owner said on the same day (§6: a good deal is to be added before anything is given out). It stays the owner's to call.
 
