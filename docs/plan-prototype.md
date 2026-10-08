@@ -634,7 +634,7 @@ Decision 30; the screens in words are in `docs/design/2026-10-08-screens/README.
 - *The mark's face* (T43): the act's number over the head is in Atkinson Hyperlegible, with the other numbers; the design has no mark on the figure (its cast's squares are the HUD's, S3).
 - *The bar's numbers* (the HUD): the design's "23 / 30" is the act's applause over a cost the rule does not have; the game shows the pieces toward the next encore over its cost. Is the act's whole applause wanted on the screen as well?
 
-**The one order, with the road above:** T25, then S1, S2, S4, S3, the limit on copies (T41, taken beside the screens since it touches no view), S5a (the cards' pictures), S5, T30 (the notices), S6, T31 (stop 2 asked), then the chorus kinds and the rest of the road, with S7 where it is next free of them. S4 is the other half of R3 that the road's row 6 gave to T30: it is taken here instead. 
+**The one order, with the road above:** T25, then S1, S2, S4, S3, the limit on copies (T41, taken beside the screens), S5a (the cards' pictures), S5, T30 (the notices), S6, T31 (stop 2 asked), then the chorus kinds and the rest of the road, with S7 where it is next free of them. S4 is the other half of R3 that the road's row 6 gave to T30: it is taken here instead. 
 
 ## 6. Stops
 
