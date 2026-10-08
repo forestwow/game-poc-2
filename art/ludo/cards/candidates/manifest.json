@@ -1,6 +1,6 @@
 {
   "tool": "ludo.ai, through its CLI (ludo 0.1.6)",
-  "ticket": "T47, the cards' pictures (the plan's row S5a): candidates, none in the game yet",
+  "ticket": "T47, the cards' pictures (the plan's row S5a): the candidates; the nine taken are in art/ludo/cards with a manifest of their own",
   "credits": 18,
   "note": "Candidates for the owner to pick from; sheet.png shows them all, and sheet-picks.png the pick and the runner-up of each card, cut to what is drawn. Each is 768 pixels with twelve to a sprite pixel and a transparent background. A name with -b or -c is a second or third try of that card with a changed prompt; pierce (no letter) was the first picture made and its card stops short of the critics. A job that returned two pictures is listed twice with the credits of the whole job.",
   "generations_made": [
