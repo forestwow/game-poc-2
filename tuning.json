@@ -57,7 +57,7 @@
   "criticTouchDamage": 1,
   "criticBlowCooldown": 1,
   "applauseTime": 4,
-  "applausePickUpReach": 1.4,
+  "applausePickUpReach": 0.8,
   "applauseFirstThreshold": 0.15,
   "applauseSecondThreshold": 0.35,
   "programTime": 12,

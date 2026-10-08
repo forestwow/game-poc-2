@@ -204,8 +204,9 @@ The radius and the reach are constants of the players. A test run by name (`[Exp
 What the owner asked for after stop 3 (§6), a ticket each as it is named.
 
 **T21 Applause within reach.**
-The owner's report from play: a piece is picked up only by walking onto it exactly, with the feet. Two causes: the reach was 0.4 past the magician's circle, and the piece was drawn 0.8 above the place it lies, so the eye aimed the body at a place the feet had to find. `applausePickUpReach` goes to 1.4 (two units from the middle of the magician's circle) and the diamond is drawn with its tip on its place.
-- The guard still holds on the new number, and the two pinned hashes are pinned again.
+The owner's report from play: a piece is picked up only by walking onto it exactly, with the feet. Two causes: the reach was 0.4 past the magician's circle, and the piece was drawn 0.8 above the place it lies, so the eye aimed the body at a place the feet had to find. `applausePickUpReach` goes to 0.8 (1.4 from the middle of the magician's circle) and the diamond is drawn with its tip on its place.
+- The guard still holds on the new number (orbit 19 of 20, doors 17 of 20), and the two pinned hashes are pinned again.
+- **What it costs, for the owner to weigh.** A critic that touches the magician stands 1.1 from its middle: the old reach of 1.0 left its piece on the floor, and any reach that answers the report takes it without a step. Standing on the box office still earns nothing, but a player that circles near it earns more than before. The review measured 1.4 first (reach 2.0): the orbit on its outer circle went from 0.6 to 1.5 cards a performance and one seed of the middle circle ended in the ovation, so the smaller number was taken. The guard is jumpy here: a reach of 1.0 past the circle gives the orbit 16 of 20, the floor itself.
 
 ## 6. Stops
 

@@ -62,7 +62,7 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
     // that a piece about to go is still seen to be there. Its lower tip is on the place it lies, which is the
     // place the magician's feet must come near.
     private const float ApplauseSize = 0.75f;
-    private const float ApplauseLift = 0.5f;
+    private const float ApplauseLift = ApplauseSize * 0.7f;
     private const float ApplauseFaintest = 0.25f;
 
     // The act's applause is a bar in the middle of the back wall, ApplauseBarGap above its foot. Its second notch
