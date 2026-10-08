@@ -215,6 +215,7 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
         {
             _simulation = NewShow(Tuning);
             _juice = new Juice(Random.Shared);
+            _offered = [];
             _takenLeft = 0f;
         }
 
@@ -247,7 +248,7 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
             // moment after its time ran out must not begin the next act.
             if ((Pressed(Keys.Enter) || PadPressed(Buttons.Start)) && _takenLeft <= 0f)
             {
-                _simulation.GoOn();
+                GoOn();
             }
         }
 
@@ -283,6 +284,16 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
         // Only an act has a next tick to draw towards, and the curtain, whose rewind goes on between its ticks.
         DrawStage(_simulation.Phase is Phase.Act or Phase.Curtain ? _clock.Alpha : 1f);
         base.Draw(gameTime);
+    }
+
+    /// <summary>Goes on to the next act, where the simulation lets it: the last act's offer is the view's no more.</summary>
+    private void GoOn()
+    {
+        if (_simulation.Phase == Phase.BetweenActs)
+        {
+            _offered = [];
+            _simulation.GoOn();
+        }
     }
 
     /// <summary>A show nobody has seen: its seed is the time, which Core never reads.</summary>
@@ -349,7 +360,7 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
             // when the act earned none: that is how a capture shows the program's screen. The pick is the
             // simulation's own and not the view's, so no capture shows a card just taken.
             _simulation.Pick(0);
-            _simulation.GoOn();
+            GoOn();
             int length = (int)MathF.Round(Tuning.ActLength * second);
             Tick((_simulation.Act, length - _simulation.ActTicksLeft) switch
             {
