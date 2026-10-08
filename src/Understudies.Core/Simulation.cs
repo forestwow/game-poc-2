@@ -43,6 +43,8 @@ public sealed class Simulation(Tuning tuning, ulong seed)
     /// run out is over, and after the last act of the performance comes the ovation. Only in an act does
     /// <see cref="Step"/> change anything.
     /// </summary>
+    // ponytail: the phase is read off the other state and not kept, so a reload of the tuning with another number of
+    // acts can move it without a tick (an ovation back to between two acts). Keep it as state if that ever matters.
     public Phase Phase =>
         ShowClosed ? Phase.Closed
         : ActTicksLeft > 0 ? Phase.Act
@@ -568,6 +570,7 @@ public sealed class Simulation(Tuning tuning, ulong seed)
             else
             {
                 BoxOfficeHitPoints = MathF.Max(0f, BoxOfficeHitPoints - Tuning.CriticStrikeDamage);
+                _events.Add(new TickEvent(TickEventKind.BoxOfficeStruck, critic.Position));
             }
 
             critic.TicksToNextBlow = Ticks(Tuning.CriticBlowCooldown);
