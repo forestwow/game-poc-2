@@ -75,6 +75,15 @@ internal sealed partial class UnderstudiesGame
     private static readonly Color ChorusPaper = new(216, 240, 230);
     private static readonly Color ChipCount = new(160, 54, 95);
 
+    // While cards are shown the chips are a row over them, in the middle, the row's bottom this far down the
+    // stage, and each says how many of its card are held of how many may be (plan T41): a card that is full, which
+    // no encore offers again, has its chip in the magician's gold. With nothing held the row's place says so.
+    private const float HeldFootInAnOffer = 7.5f;
+    private const string NothingHeld = "YOU HOLD NO CARD YET";
+
+    // While an encore is read the act's clock stands, and is greyed.
+    private static readonly Color ClockStands = new(140, 130, 144);
+
     // The cast is a row of squares at the right, one for every understudy in its act's tint and one for the act
     // that is being recorded, dark with a broken border. An understudy that is off the stage (its act's magician
     // fell, and its route has run out) has its square this much nearer the dark one, with its number in its tint.
@@ -86,7 +95,7 @@ internal sealed partial class UnderstudiesGame
     private static readonly Color CastRecording = new(58, 46, 62);
 
     /// <summary>A chip of what is held, as wide as its words make it.</summary>
-    private readonly record struct Chip(string Name, string Count, bool Chorus, float Width);
+    private readonly record struct Chip(string Name, string Count, Color Paper, float Width);
 
     /// <summary>How tall a footlight is drawn, in world units: the HUD's foot stands on the row of them.</summary>
     private float FootlightTall
@@ -200,11 +209,17 @@ internal sealed partial class UnderstudiesGame
 
         // A second that has begun still shows: the time reads 0:00 only when the act is over.
         int seconds = (_simulation.ActTicksLeft + Simulation.TicksPerSecond - 1) / Simulation.TicksPerSecond;
-        Write(Face.Sentence, ClockHeight, $"{seconds / 60}:{seconds % 60:00}", new Vector2(right, HudFirstLine), 1f, Words);
+        bool encore = _simulation.Phase == Phase.Encore;
+        Write(Face.Sentence, ClockHeight, $"{seconds / 60}:{seconds % 60:00}", new Vector2(right, HudFirstLine), 1f, encore ? ClockStands : Words);
 
         // Under the clock, the encores of the whole performance. While the stage stands for an offer or between
-        // two acts the encores' line under the curtain says it, with what the next costs.
-        if (_simulation.Phase is not (Phase.Encore or Phase.Program or Phase.BetweenActs))
+        // two acts the encores' line under the curtain says it, with what the next costs, and in an encore the
+        // line under the clock says why the clock is grey.
+        if (encore)
+        {
+            Write(Face.Sentence, HudSmallHeight, "the clock stands", new Vector2(right, HudSecondLine), 1f, Words);
+        }
+        else if (_simulation.Phase is not (Phase.Program or Phase.BetweenActs))
         {
             int encores = _simulation.EncoresTaken;
             Write(
@@ -239,34 +254,42 @@ internal sealed partial class UnderstudiesGame
                 Magician);
         }
 
-        // Along the front of the floor, above the footlights: what is held at the left, and the cast at the right,
-        // which the chips keep clear of however many acts it comes to have. While cards are shown the floor's
-        // front is the countdown's and the keys': the chips are in the footlights' row, where the line of what is
-        // held was, and the cast is not drawn.
-        // ponytail: in the lamps' row the chips have the lamps under them out, and their label stands close
-        // under the keys' line. All nine kinds of card are one row there; a second row, which a longer name
-        // would make, would stand in the keys' line. The row has a place above the offer when the encore's
-        // screen is laid out again (plan S5).
+        // While cards are shown, what is held is a row over them (plan T48), and the cast is not drawn: the
+        // floor's front is the countdown's and the keys'.
+        // ponytail: one row, which all nine kinds of card are at 1280 wide. A second row, which a longer name or a
+        // tenth card would make, goes up into the encores' line: the cards move down by a row when that is seen.
         if (ProgramIsShown)
         {
-            DrawTheHeld(new Vector2(middle, Tuning.StageSize.Y - 0.2f), 0.5f, HeldWidthInAnOffer);
+            if (!DrawTheHeld(new Vector2(middle, HeldFootInAnOffer), 0.5f, Tuning.StageSize.X - 2f, ofTheLimit: true))
+            {
+                Write(
+                    Face.Sentence,
+                    LabelHeight,
+                    NothingHeld,
+                    new Vector2(middle, HeldFootInAnOffer - (ChipHeight / 2f)),
+                    0.5f,
+                    Words,
+                    spacing: LabelSpacing);
+            }
+
             return;
         }
 
+        // Along the front of the floor, above the footlights: what is held at the left, and the cast at the right,
+        // which the chips keep clear of however many acts it comes to have.
         float foot = Tuning.StageSize.Y - FootlightTall - HudFoot;
         float castWidest = (Tuning.ActsInPerformance * (CastSquare + CastApart)) - CastApart;
         DrawTheHeld(new Vector2(HudFootSide, foot), 0f, Tuning.StageSize.X - (2f * HudFootSide) - castWidest - 1f);
         DrawTheCast(new Vector2(Tuning.StageSize.X - HudFootSide, foot));
     }
 
-    /// <summary>How wide a row of chips may be while cards are shown.</summary>
-    private float HeldWidthInAnOffer => Tuning.StageSize.X - 2f;
-
     /// <summary>
     /// What is held, as rows of chips no wider than <paramref name="width"/>, in the order of the cards: a card
-    /// that is not held has no chip, and a row has as many chips as fit.
+    /// that is not held has no chip, and a row has as many chips as fit. A chip says how many of its card are
+    /// held, and <paramref name="ofTheLimit"/> of how many a magician may hold, where the card has a limit: the
+    /// chorus card has none.
     /// </summary>
-    private List<List<Chip>> HeldRows(float width)
+    private List<List<Chip>> HeldRows(float width, bool ofTheLimit)
     {
         List<List<Chip>> rows = [];
         foreach (Card card in Enum.GetValues<Card>())
@@ -278,14 +301,18 @@ internal sealed partial class UnderstudiesGame
 
             // The count is a number read in a glance, and so in the sentences' face (plan T40).
             string name = Describe(card).Name;
-            string count = $"×{Held(card)}";
+            bool limited = ofTheLimit && card != Card.ChorusDamage && Tuning.CardMaxCopies > 0;
+            string count = limited ? $"{Held(card)}/{Tuning.CardMaxCopies}" : $"×{Held(card)}";
+            Color paper = card == Card.ChorusDamage ? ChorusPaper
+                : limited && Held(card) >= Tuning.CardMaxCopies ? Magician
+                : ThrownCardFace;
             float wide = (2f * ChipPad) + Wide(Face.Sentence, ChipWordsHeight, name) + ChipSpace + Wide(Face.Sentence, HudSmallHeight, count);
             if (rows.Count == 0 || RowWide(rows[^1]) + ChipsApart + wide > width)
             {
                 rows.Add([]);
             }
 
-            rows[^1].Add(new Chip(name, count, card == Card.ChorusDamage, wide));
+            rows[^1].Add(new Chip(name, count, paper, wide));
         }
 
         return rows;
@@ -297,11 +324,12 @@ internal sealed partial class UnderstudiesGame
     /// What is held, as chips under their label, in the batch of the words: the lowest row's bottom edge is at
     /// <paramref name="foot"/> and the rows go up from there, each with its left end there, its middle
     /// (<paramref name="anchor"/> 0.5) or its right end (1), and none wider than <paramref name="width"/>. With
-    /// nothing held nothing is drawn. The one routine that draws what is held, wherever a screen wants it.
+    /// nothing held nothing is drawn, and the answer is no. The one routine that draws what is held, wherever a
+    /// screen wants it; <paramref name="ofTheLimit"/> is the offer's screen's, where the limit is what is chosen by.
     /// </summary>
-    private void DrawTheHeld(Vector2 foot, float anchor, float width)
+    private bool DrawTheHeld(Vector2 foot, float anchor, float width, bool ofTheLimit = false)
     {
-        List<List<Chip>> rows = HeldRows(width);
+        List<List<Chip>> rows = HeldRows(width, ofTheLimit);
         float top = foot.Y;
         for (int row = rows.Count - 1; row >= 0; row--)
         {
@@ -310,7 +338,7 @@ internal sealed partial class UnderstudiesGame
             foreach (Chip chip in rows[row])
             {
                 float line = top + (ChipHeight / 2f);
-                Paper(new Vector2(left, top), new Vector2(chip.Width, ChipHeight), chip.Chorus ? ChorusPaper : ThrownCardFace);
+                Paper(new Vector2(left, top), new Vector2(chip.Width, ChipHeight), chip.Paper);
                 Write(Face.Sentence, ChipWordsHeight, chip.Name, new Vector2(left + ChipPad, line), 0f, OutlineInk, onPaper: true);
                 Write(Face.Sentence, HudSmallHeight, chip.Count, new Vector2(left + chip.Width - ChipPad, line), 1f, ChipCount, onPaper: true);
                 left += chip.Width + ChipsApart;
@@ -323,6 +351,8 @@ internal sealed partial class UnderstudiesGame
         {
             Write(Face.Sentence, LabelHeight, HeldLabel, new Vector2(foot.X, top + ChipsApart - LabelLift), anchor, Words, spacing: LabelSpacing);
         }
+
+        return rows.Count > 0;
     }
 
     /// <summary>
@@ -366,15 +396,16 @@ internal sealed partial class UnderstudiesGame
     /// A piece of paper in the batch of the words, on whole screen pixels: its <paramref name="fill"/> in an ink
     /// border, with a hard ink shadow down and to the right (<see cref="Fill"/> is in screen pixels in this
     /// batch, which has no transform). A <paramref name="broken"/> border is in stretches,
-    /// each two borders long and as far apart.
+    /// each two borders long and as far apart. A card's <paramref name="border"/> and <paramref name="shadow"/>
+    /// are wider than a chip's, in world units.
     /// </summary>
-    private void Paper(Vector2 topLeft, Vector2 size, Color fill, bool broken = false)
+    private void Paper(Vector2 topLeft, Vector2 size, Color fill, bool broken = false, float border = PaperBorder, float shadow = PaperBorder)
     {
         Vector2 at = _corner + (topLeft * _scale);
         at = new Vector2(MathF.Round(at.X), MathF.Round(at.Y));
         var whole = new Vector2(MathF.Round(size.X * _scale), MathF.Round(size.Y * _scale));
-        float border = MathF.Max(1f, MathF.Round(PaperBorder * _scale));
-        Fill(at + new Vector2(border), whole, OutlineInk);
+        border = MathF.Max(1f, MathF.Round(border * _scale));
+        Fill(at + new Vector2(MathF.Max(1f, MathF.Round(shadow * _scale))), whole, OutlineInk);
         Fill(at, whole, OutlineInk);
         Fill(at + new Vector2(border), whole - new Vector2(2f * border), fill);
         if (!broken)
