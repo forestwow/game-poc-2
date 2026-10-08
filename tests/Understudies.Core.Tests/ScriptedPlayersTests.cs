@@ -508,7 +508,12 @@ public class ScriptedPlayersTests
     /// starts with # is none. Without the variable it is the committed tuning alone. Beside the guard's players it
     /// plays the doors player with no applause in the first act, the roamer, and the orbit on two circles wider
     /// than the guard's: none of the four counts for the guard. For every player but the orbit it prints by act
-    /// what share of the magician's own kills fell within three, five and eight seconds of entering.
+    /// what share of the magician's own kills fell within three, five and eight seconds of entering. Then the doors
+    /// player and the kiter by five other orders of taking cards ("range first", "one more card last", and each of
+    /// plan T25's three cards first), with the spread over the six; and for the doors player by every order what
+    /// plan T41 weighs a limit on copies by: by act the encores, the most cards of one throw, the cards held of
+    /// each kind, its own kills and its understudies', and the encores that had fewer than three cards to offer
+    /// or were earned and did not open.
     /// </summary>
     [Test]
     [Explicit("Prints the guard in short for every variant of the tuning in the file UNDERSTUDIES_VARIANTS names, on the seeds 1 to 20 and on the sets UNDERSTUDIES_SEED_SETS names (a few seconds a variant and set)")]
@@ -656,23 +661,73 @@ public class ScriptedPlayersTests
                 table.WriteLine($"       most critics by act {ByAct(acts => acts.Max(act => act.MostCritics).ToString(CultureInfo.InvariantCulture))}");
             }
 
-            // The doors player and the kiter by two other orders of taking cards (plan T29): a tuning that holds
-            // by the committed order alone measures the order and not the route.
+            // The doors player and the kiter by other orders of taking cards (plan T29, and plan T41 for the three
+            // new cards first): a tuning that holds by the committed order alone measures the order and not the
+            // route. The doors player's cards are printed by act under every order, the committed one first.
             (string Name, Func<Simulation, MagicianInput> Player)[] two = [GuardPlayers[Doors], GuardPlayers[Kiter]];
-            foreach ((string order, IReadOnlyList<Card> cards) in new[] { ("range first", RangeFirst), ("one more card last", OneMoreCardLast) })
+            var doorsByOrder = new List<List<Performance>> { Of(Doors) };
+            var kiterByOrder = new List<List<Performance>> { Of(Kiter) };
+            PrintTheCards(table, "the committed order", Of(Doors));
+            foreach ((string order, IReadOnlyList<Card> cards) in new[]
+            {
+                ("range first", RangeFirst), ("one more card last", OneMoreCardLast),
+                ("pierce first", First(Card.Pierce)), ("ricochet first", First(Card.Ricochet)), ("burst first", First(Card.Burst)),
+            })
             {
                 Performance[] byOrder = PlayTheGuard(tuning, firstSeed, two, cards);
                 for (int player = 0; player < two.Length; player++)
                 {
                     List<Performance> mine = [.. byOrder.Skip(player * Seeds).Take(Seeds)];
+                    (player == 0 ? doorsByOrder : kiterByOrder).Add(mine);
                     string boxOffice = string.Join(" ", Enumerable.Range(0, mine.Max(played => played.Act))
                         .Select(act => Number(mine.Where(played => played.Act > act).Average(played => played.Acts[act].BoxOffice), "0")));
                     table.WriteLine(
                         $"     by {order}, {two[player].Name}: finished {mine.Count(Finished)}, lost {HowLost(mine)}; encores {Number(mine.Average(Encores))}; "
                         + $"box office at the end {Number(mine.Average(played => played.BoxOffice), "0")}, the worst {Number(mine.Min(played => played.BoxOffice), "0")}; by act {boxOffice}");
                 }
+
+                PrintTheCards(table, order, doorsByOrder[^1]);
             }
+
+            // How far the order moves a player (plan T41): the fewest and the most over the six orders.
+            foreach ((string who, List<List<Performance>> orders) in new[] { ("doors", doorsByOrder), ("kiter", kiterByOrder) })
+            {
+                table.WriteLine(
+                    $"     the spread over the six orders, {who}: finished {orders.Min(mine => mine.Count(Finished))} to {orders.Max(mine => mine.Count(Finished))}; "
+                    + $"box office at the end {Number(orders.Min(mine => mine.Average(played => played.BoxOffice)), "0")} to {Number(orders.Max(mine => mine.Average(played => played.BoxOffice)), "0")}; "
+                    + $"encores {Number(orders.Min(mine => mine.Average(Encores)))} to {Number(orders.Max(mine => mine.Average(Encores)))}");
+            }
+
+            table.WriteLine(
+                $"     orders by which the kiter ends ahead of the doors player (finished, or the box office): "
+                + $"{Enumerable.Range(0, doorsByOrder.Count).Count(order => kiterByOrder[order].Count(Finished) > doorsByOrder[order].Count(Finished) || kiterByOrder[order].Average(played => played.BoxOffice) > doorsByOrder[order].Average(played => played.BoxOffice))} of {doorsByOrder.Count}");
         }
+    }
+
+    /// <summary>
+    /// What a player had and did with it, by act (plan T41): the encores it took, the cards it threw at once at the
+    /// most, the self cards it held of each kind when the act was over, who made the kills, and whether an encore
+    /// had fewer than three cards to offer or was earned and did not open. Averages over the performances that
+    /// played the act.
+    /// </summary>
+    private static void PrintTheCards(TextWriter table, string order, List<Performance> mine)
+    {
+        string ByAct(Func<List<ActRecord>, string> of) => string.Join(" ", Enumerable.Range(0, mine.Max(played => played.Act))
+            .Select(act => of([.. mine.Where(played => played.Act > act).Select(played => played.Acts[act])])));
+        table.WriteLine($"       doors by {order}: encores by act {ByAct(acts => Number(acts.Average(act => act.Encores)))}");
+        table.WriteLine($"         most cards a throw  {ByAct(acts => Number(acts.Average(act => act.MostCardsAThrow)))}");
+        table.WriteLine(
+            "         cards held (damage/attack speed/range/vanish/one more/pierce/ricochet/burst) "
+            + ByAct(acts => string.Join("/", new Func<SelfCards, int>[]
+            {
+                cards => cards.Damage, cards => cards.AttackSpeed, cards => cards.Range, cards => cards.VanishCooldown,
+                cards => cards.OneMoreCard, cards => cards.Pierce, cards => cards.Ricochet, cards => cards.Burst,
+            }.Select(kind => Number(acts.Average(act => kind(act.Cards)), "0.#")))));
+        table.WriteLine($"         kills, its own/understudies' {ByAct(acts => $"{Number(acts.Average(act => act.Kills), "0")}/{Number(acts.Average(act => act.UnderstudyKills), "0")}")}");
+        table.WriteLine(
+            $"         encores that offered fewer than three {ByAct(acts => Number(acts.Average(act => act.ShortOffers)))}; "
+            + $"acts that ended with an encore earned and not opened {ByAct(acts => acts.Count(act => act.NextCost > 0 && act.Unspent >= act.NextCost).ToString(CultureInfo.InvariantCulture))}; "
+            + $"applause unspent {ByAct(acts => Number(acts.Average(act => act.Unspent)))}");
     }
 
     /// <summary>
