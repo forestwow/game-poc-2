@@ -40,9 +40,6 @@ internal sealed partial class UnderstudiesGame
     private const float SentencePitch = 0.9f;
     private const float PanelMargin = 0.5f;
 
-    // What is held is one line at the stage's bottom edge, or two, this far apart: the second stands clear of
-    // the line of keys under the countdown.
-    private const float HoldsPitch = 0.85f;
     private const float CountdownHeight = 1f;
     private static readonly Vector2 CountdownBar = new(20f, 0.4f);
 
@@ -190,8 +187,8 @@ internal sealed partial class UnderstudiesGame
 
     /// <summary>
     /// The words of an encore, of the program and of the stage between two acts: how many encores were taken, under
-    /// the applause's bar, and what the magician holds, at the stage's bottom edge; and while the cards are shown
-    /// the words on them, with the countdown and the keys under them while they are offered.
+    /// the line that announces; and while the cards are shown the words on them, with the countdown and the keys
+    /// under them while they are offered. What the magician holds is the HUD's (<see cref="DrawTheHeld"/>).
     /// </summary>
     private void DrawProgramWords()
     {
@@ -206,16 +203,9 @@ internal sealed partial class UnderstudiesGame
             _simulation.Phase == Phase.Encore
                 ? $"{soFar} This one was earned with {_simulation.EncoreCost} pieces of applause."
                 : $"{soFar} The next costs {_simulation.EncoreCost} pieces of applause in one act.",
-            new Vector2(middle, Tuning.StageFloorTop + 0.9f),
+            new Vector2(middle, Tuning.StageFloorTop + EncoresLineDrop),
             0.5f,
             ApplauseHeart);
-
-        List<string> holds = HeldLines();
-        for (int line = 0; line < holds.Count; line++)
-        {
-            float up = (holds.Count - 1 - line) * HoldsPitch;
-            Write(Face.Sentence, SmallWordsHeight, holds[line], new Vector2(middle, Tuning.StageSize.Y - 0.5f - up), 0.5f, Words);
-        }
 
         if (!ProgramIsShown)
         {
@@ -317,16 +307,6 @@ internal sealed partial class UnderstudiesGame
             new Vector2(middle, PanelsBottom + 2.8f),
             0.5f,
             Words);
-    }
-
-    /// <summary>What the magician holds, as the lines written at the stage's bottom edge.</summary>
-    private List<string> HeldLines()
-    {
-        // Nine kinds of card do not go in one line: as many lines as it takes, the last where the one line was.
-        string[] held = [.. Enum.GetValues<Card>().Where(card => Held(card) > 0).Select(card => $"{Describe(card).Name} x{Held(card)}")];
-        return held.Length == 0
-            ? ["You hold no card yet."]
-            : Wrapped(Face.Sentence, SmallWordsHeight, ["You hold:", .. held[..^1].Select(card => $"{card},"), held[^1]], Tuning.StageSize.X - 2f);
     }
 
     /// <summary>
