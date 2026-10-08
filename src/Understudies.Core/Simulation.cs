@@ -28,9 +28,11 @@ public sealed class Simulation(Tuning tuning, ulong seed, IReadOnlyList<IReadOnl
     private List<Vector2> _route = [];
     private List<(int Tick, Vector2 Place)> _vanishes = [];
 
-    // The self cards the act that is played began with: its recording's, and its understudy's. A card taken in an
-    // encore of the act is the magician's at once and the next act's recording's.
+    // The self cards the act that is played began with: its recording's, and what its understudy begins every
+    // later act with. A card taken in an encore of the act is the magician's at once, and is recorded with the
+    // tick of the act it was taken on: the number of the first tick the magician played with it.
     private SelfCards _recordingCards;
+    private List<(int Tick, Card Card)> _encores = [];
 
     // Whom one throw is at, the nearest first. It is read within the throw that fills it: what it holds after
     // that is nobody's, and the next throw empties it before it looks for its own.
@@ -215,6 +217,10 @@ public sealed class Simulation(Tuning tuning, ulong seed, IReadOnlyList<IReadOnl
             EncoreApplause = Math.Max(0, EncoreApplause - EncoreCost);
             EncoresTaken++;
             ActEncores++;
+
+            // An encore stands the act, so the act's count is still that of its next tick: the first the magician
+            // plays with the card, and the tick on which its understudy gains it (plan T24).
+            _encores.Add((_actTicksPlayed, _offer[place]));
         }
 
         if (_offer[place] == Card.ChorusDamage)
@@ -383,11 +389,13 @@ public sealed class Simulation(Tuning tuning, ulong seed, IReadOnlyList<IReadOnl
         // The act just over is an understudy from now on, and the next act's recording starts empty. Every
         // understudy stands at the start of its route, with its throw ready: for the view there is nothing between
         // that place and where the last act left it.
-        // It keeps the cards its act began with (plan decision 20), and not those of the act's encores.
-        _understudies.Add(new Understudy(Act, _route, _vanishes, _recordingCards));
+        // It begins every act with the cards its own began with (plan decision 20), and gains those of its act's
+        // encores on their ticks (plan T24): placed on the first tick, it has only the first.
+        _understudies.Add(new Understudy(Act, _route, _vanishes, _recordingCards, _encores));
         _recordingCards = MagicianCards;
         _route = [];
         _vanishes = [];
+        _encores = [];
         _actTicksPlayed = 0;
         foreach (Understudy understudy in _understudies)
         {
@@ -444,7 +452,11 @@ public sealed class Simulation(Tuning tuning, ulong seed, IReadOnlyList<IReadOnl
             hasher.AddFloat(point.Y);
         }
 
-        void AddRecording(IReadOnlyList<Vector2> route, IReadOnlyList<(int Tick, Vector2 Place)> vanishes)
+        void AddRecording(
+            IReadOnlyList<Vector2> route,
+            IReadOnlyList<(int Tick, Vector2 Place)> vanishes,
+            SelfCards cards,
+            IReadOnlyList<(int Tick, Card Card)> encores)
         {
             hasher.AddInt(route.Count);
             foreach (Vector2 place in route)
@@ -457,6 +469,14 @@ public sealed class Simulation(Tuning tuning, ulong seed, IReadOnlyList<IReadOnl
             {
                 hasher.AddInt(tick);
                 AddPoint(place);
+            }
+
+            AddCards(cards);
+            hasher.AddInt(encores.Count);
+            foreach ((int tick, Card card) in encores)
+            {
+                hasher.AddInt(tick);
+                hasher.AddInt((int)card);
             }
         }
 
@@ -522,8 +542,11 @@ public sealed class Simulation(Tuning tuning, ulong seed, IReadOnlyList<IReadOnl
 
         // No test tells EncoresTaken, ActEncores, the encore stream's state or the offer's cards apart from the rest
         // of the hash: as the rule stands EncoresTaken is the number of the magician's self cards, the stream and
-        // the offer follow from the seed and that number, and ActEncores differs only where the recording's cards
-        // do. Whatever breaks one of those (plan T24 breaks the first) adds the test that isolates it.
+        // the offer follow from the seed and that number, and ActEncores is the number of the recording's encores.
+        // Plan T24 broke none of those. Of what it added, the tick of a recorded encore has its test, in the
+        // recording and in an understudy; the card of one has none, since two shows that took two cards on one
+        // tick have two magicians; nor have the cards an understudy has now, which follow from those it begins
+        // with, its encores and the tick of the act. Whatever breaks one of those adds the test that isolates it.
         hasher.AddInt(ActApplause);
         hasher.AddInt(EncoreApplause);
         hasher.AddInt(EncoresTaken);
@@ -542,11 +565,10 @@ public sealed class Simulation(Tuning tuning, ulong seed, IReadOnlyList<IReadOnl
             AddPoint(understudy.Position);
             hasher.AddInt(understudy.TicksToNextThrow);
             hasher.AddInt(understudy.IsOnStage ? 1 : 0);
-            AddRecording(understudy.Route, understudy.Vanishes);
+            AddRecording(understudy.Route, understudy.Vanishes, understudy.FirstCards, understudy.Encores);
         }
 
-        AddRecording(_route, _vanishes);
-        AddCards(_recordingCards);
+        AddRecording(_route, _vanishes, _recordingCards, _encores);
         hasher.AddInt(_ticksToNextThrow);
 
         // The cards taken, and an offer that is up: what it has and how long it still waits.
@@ -697,11 +719,24 @@ public sealed class Simulation(Tuning tuning, ulong seed, IReadOnlyList<IReadOnl
     }
 
     /// <summary>
-    /// Puts an understudy where its route says for a tick of the act, the first being 0. A route with no place for
-    /// that tick leaves it where it is, and off the stage.
+    /// Puts an understudy where its route says for a tick of the act, the first being 0, with the cards the
+    /// magician played that tick with: those its act began with and those of the encores taken by then. A route
+    /// with no place for that tick leaves it where it is, and off the stage.
     /// </summary>
     private static void Place(Understudy understudy, int tick)
     {
+        // Worked out afresh from the recording on every tick, a handful of encores at most: nothing to set back
+        // when an act begins.
+        SelfCards cards = understudy.FirstCards;
+        foreach ((int taken, Card card) in understudy.Encores)
+        {
+            if (taken <= tick)
+            {
+                cards = cards.With(card);
+            }
+        }
+
+        understudy.Cards = cards;
         understudy.IsOnStage = tick < understudy.Route.Count;
         if (understudy.IsOnStage)
         {

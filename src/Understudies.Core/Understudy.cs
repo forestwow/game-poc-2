@@ -9,22 +9,40 @@ namespace Understudies.Core;
 public sealed class Understudy
 {
     internal Understudy(
-        int act, IReadOnlyList<Vector2> route, IReadOnlyList<(int Tick, Vector2 Place)> vanishes, SelfCards cards)
+        int act,
+        IReadOnlyList<Vector2> route,
+        IReadOnlyList<(int Tick, Vector2 Place)> vanishes,
+        SelfCards cards,
+        IReadOnlyList<(int Tick, Card Card)> encores)
     {
         Act = act;
+        FirstCards = cards;
         Cards = cards;
         Route = route;
         Vanishes = vanishes;
+        Encores = encores;
     }
 
     /// <summary>The number of the act it came from: the first is 1.</summary>
     public int Act { get; }
 
     /// <summary>
-    /// The self cards the magician had in that act: the understudy throws by them for ever, whatever the magician
-    /// takes later.
+    /// The self cards it throws by now: those the magician had on this tick of that act, whatever the magician
+    /// has taken since. It begins every act with those its own act began with, and gains each card of that
+    /// act's encores on the tick the magician first played with it (plan T24). The Vanish cooldown card is among
+    /// them and changes nothing for it: its Vanishes are recorded ticks.
     /// </summary>
-    public SelfCards Cards { get; }
+    public SelfCards Cards { get; internal set; }
+
+    /// <summary>The self cards that act began with.</summary>
+    internal SelfCards FirstCards { get; }
+
+    /// <summary>
+    /// Every encore taken in that act, in the order they were taken: the tick of the act the magician first
+    /// played with the card, the first being 0, and the card. None is after the magician's fall: a fallen
+    /// magician takes no encore.
+    /// </summary>
+    internal IReadOnlyList<(int Tick, Card Card)> Encores { get; }
 
     /// <summary>
     /// Where the magician stood after each tick of that act, from its first: as many places as the act was played

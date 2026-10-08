@@ -664,51 +664,98 @@ public class CardTests
         Assert.That(simulation.Critics, Is.Empty);
     }
 
+    // An understudy takes its act's encores (plan T24).
+
     [Test]
-    public void Pick_ASelfCardInAnEncore_IsTheMagiciansAndEveryLaterActs_AndNotThatActsUnderstudys()
+    public void Pick_ASelfCardInAnEncore_ItsActsUnderstudyGainsItOnTheTickItWasTaken_InEveryLaterAct()
     {
-        // The first act: the piece, its encore's range card, then down to ten units below the door, out of a
-        // throw's nine and within the ten and a half of a throw with one range card. The second, which began
-        // with that card: two units to the right and as far down, which is as far from the door within a third
-        // of a unit. In the third the magician walks away to the right, and when a critic that outlasts the act
-        // enters, a second and two thirds into it, both understudies have long stood where their acts ended and
-        // the magician is 25 units off.
+        // The first act's encore opens when the tick of the piece is over, and its range card is the magician's
+        // from the next tick of the act on. The later acts have a curtain of six ticks.
         ulong seed = SeedWhoseEncores([Card.Range]);
-        var simulation = new Simulation(Scene, seed, [[AtOnce], [], [new PlannedEntry(100, Door: 0, Kind: 0)]]);
+        var simulation = new Simulation(Scene, seed, [[AtOnce]]);
         PlayTheAct(simulation);
         Take(simulation, Card.Range);
+        simulation.Tuning = NoEncore with { CurtainTime = 0.1f };
+        PlayTheAct(simulation);
+        simulation.Pick(0);
+
+        for (int act = 2; act <= 3; act++)
+        {
+            // What the act began with, under the curtain and up to the tick of the encore.
+            simulation.GoOn();
+            Assert.That(simulation.Understudies[0].Cards, Is.EqualTo(default(SelfCards)), $"act {act}, as it begins");
+            while (simulation.Phase == Phase.Curtain)
+            {
+                simulation.Step(default);
+            }
+
+            Assert.That(simulation.Understudies[0].Cards, Is.EqualTo(default(SelfCards)), $"act {act}, the curtain");
+            Run(simulation, PieceTick + 1);
+            Assert.That(simulation.Understudies[0].Cards, Is.EqualTo(default(SelfCards)), $"act {act}, the piece's tick");
+
+            // And the card from the tick after it, to the end of the act.
+            simulation.Step(default);
+            Assert.That(simulation.Understudies[0].Cards, Is.EqualTo(new SelfCards(Range: 1)), $"act {act}, the next tick");
+            PlayTheAct(simulation);
+            Assert.That(simulation.Understudies[0].Cards, Is.EqualTo(new SelfCards(Range: 1)), $"act {act}, over");
+        }
+
+        // The second act began with the card: its understudy has it from the first.
+        Assert.That(simulation.Understudies[1].Cards, Is.EqualTo(new SelfCards(Range: 1)));
         Assert.That(simulation.MagicianCards, Is.EqualTo(new SelfCards(Range: 1)));
-        PlayTheAct(simulation, tick => tick < 42 ? Down : default);
+    }
+
+    [Test]
+    public void Pick_OneMoreCardInAnEncore_ItsActsUnderstudyThrowsOnThatTickAsTheMagicianDid()
+    {
+        // A throw every three ticks: on the second tick of the act, at the critic that entered on the first, and
+        // on the fifth, which is the first tick after the encore, at the two that entered on the third, one by
+        // each door. The second act has two critics from its first tick as well, and its magician walks away
+        // from its first tick: a card thrown from the door is the understudy's.
+        Tuning quick = Scene with { ThrowCooldown = 0.05f };
+        PlannedEntry byTheOther = new(Tick: 0, Door: 1, Kind: 0);
+        PlannedEntry[] onTheThird = [AtOnce with { Tick = 2 }, byTheOther with { Tick = 2 }];
+        ulong seed = SeedWhoseEncores([Card.OneMoreCard]);
+        var simulation = new Simulation(quick, seed, [[AtOnce, .. onTheThird], [AtOnce, byTheOther, .. onTheThird]]);
+
+        List<(int Tick, TickEvent Event)> first = PlayTheAct(simulation);
+        Take(simulation, Card.OneMoreCard);
+        simulation.Tuning = quick with { EncoreFirstCost = 1000 };
+        first.AddRange(PlayTheAct(simulation));
         simulation.Pick(0);
         simulation.GoOn();
+        List<(int Tick, TickEvent Event)> second = PlayTheAct(simulation, _ => Right);
 
-        // The act the card was taken in began without it, and its understudy has what the act began with.
-        Assert.That(simulation.Understudies[0].Cards, Is.EqualTo(default(SelfCards)));
-        Assert.That(simulation.MagicianCards, Is.EqualTo(new SelfCards(Range: 1)));
-        PlayTheAct(simulation, tick => tick switch
-        {
-            < 4 => default,
-            < 12 => Right,
-            < 50 => Down,
-            _ => default,
-        });
-        simulation.Tuning = NoEncore.WithCritic(critic => critic with { HitPoints = 1000f });
+        int Thrown(List<(int Tick, TickEvent Event)> events, int tick) =>
+            Of(events, TickEventKind.Throw).Count(thrown => thrown.Tick == tick && thrown.Event.Position == AtTheDoor);
+
+        Assert.That(simulation.Understudies[0].Position, Is.EqualTo(AtTheDoor));
+        Assert.That((Thrown(first, 1), Thrown(first, PieceTick + 1)), Is.EqualTo((1, 2)), "the magician");
+        Assert.That((Thrown(second, 1), Thrown(second, PieceTick + 1)), Is.EqualTo((1, 2)), "its understudy");
+    }
+
+    [Test]
+    public void Step_TheMagicianFellAfterAnEncore_ItsUnderstudyHasThatEncore_AndLeavesTheStageAsBefore()
+    {
+        // The range card on the tick after the piece's. Then the critic that enters on the eleventh tick turns
+        // on the magician, which stands in its reach, and fells it with one touch on the twelfth.
+        ulong seed = SeedWhoseEncores([Card.Range]);
+        var simulation = new Simulation(Scene, seed, [[AtOnce, AtOnce with { Tick = 10 }]]);
+        PlayTheAct(simulation);
+        Take(simulation, Card.Range);
+        simulation.Tuning = NoEncore with { CriticTurnRadius = 2f, CriticTouchDamage = 1000f };
+        PlayTheAct(simulation);
+        Assert.That(simulation.MagicianHasFallen, Is.True);
+        simulation.Pick(0);
+        simulation.Tuning = NoEncore;
         simulation.GoOn();
-        Assert.That(simulation.Understudies.Select(understudy => understudy.Cards), Is.EqualTo(new[]
-        {
-            default(SelfCards),
-            new SelfCards(Range: 1),
-        }));
 
-        List<(int Tick, TickEvent Event)> events = PlayTheAct(simulation, _ => Right);
-
-        // Only the second act's understudy reaches the critic, and its cards fly that far.
-        Vector2 second = simulation.Understudies[1].Position;
-        Assert.That(simulation.Understudies[0].Position, Is.EqualTo(new Vector2(20f, 10.1f)).Using<Vector2>(Near));
-        Assert.That(second, Is.EqualTo(new Vector2(22f, 10.1f)).Using<Vector2>(Near));
-        Assert.That(Of(events, TickEventKind.Throw), Is.Not.Empty);
-        Assert.That(Of(events, TickEventKind.Throw).Select(thrown => thrown.Event.Position), Is.All.EqualTo(second));
-        Assert.That(Of(events, TickEventKind.Hit), Is.Not.Empty);
+        Run(simulation, PieceTick + 2);
+        Understudy understudy = simulation.Understudies[0];
+        Assert.That((understudy.IsOnStage, understudy.Cards), Is.EqualTo((true, new SelfCards(Range: 1))));
+        Assert.That(understudy.Route, Has.Count.EqualTo(12));
+        PlayTheAct(simulation);
+        Assert.That((understudy.IsOnStage, understudy.Cards), Is.EqualTo((false, new SelfCards(Range: 1))));
     }
 
     // A critic of three hit points and a card that takes one: three cards fell it, and two when a damage card
@@ -1037,6 +1084,44 @@ public class CardTests
         one.GoOn();
         other.GoOn();
         Assert.That(other.Understudies[1].Cards, Is.Not.EqualTo(one.Understudies[1].Cards));
+        Assert.That(other.ComputeStateHash(), Is.Not.EqualTo(one.ComputeStateHash()));
+    }
+
+    [Test]
+    public void ComputeStateHash_TheSameEncoreOnTwoTicks_AreTwoHashes_InTheRecordingAndInItsUnderstudy()
+    {
+        // The one critic of the act enters on its first tick in one show and on its eleventh in the other: both
+        // magicians stand at the door, pick its piece up and take the leftmost card of the same encore, ten
+        // ticks apart. When the act is over nothing is left of it on the stage, and the two shows differ only in
+        // the tick of the encore that the act's recording keeps.
+        Simulation Show(int entersOn)
+        {
+            var simulation = new Simulation(Scene, seed: 1, [[AtOnce with { Tick = entersOn }]]);
+            PlayTheAct(simulation);
+            simulation.Pick(0);
+            PlayTheAct(simulation);
+            Assert.That((simulation.Phase, simulation.Critics, simulation.ThrownCards, simulation.ApplauseOnTheFloor),
+                Is.EqualTo((Phase.Program, Array.Empty<Critic>(), Array.Empty<ThrownCard>(), Array.Empty<Applause>())));
+            return simulation;
+        }
+
+        Simulation one = Show(entersOn: 0);
+        Simulation other = Show(entersOn: 10);
+
+        Assert.That(other.MagicianCards, Is.EqualTo(one.MagicianCards));
+        Assert.That(other.ComputeStateHash(), Is.Not.EqualTo(one.ComputeStateHash()));
+
+        // In the second act, past both ticks, the two understudies have the same cards, and each gains its own
+        // on another tick of every act to come.
+        foreach (Simulation simulation in new[] { one, other })
+        {
+            simulation.Pick(0);
+            simulation.GoOn();
+            Run(simulation, ticks: 20);
+        }
+
+        Assert.That(one.Understudies[0].Cards, Is.Not.EqualTo(default(SelfCards)));
+        Assert.That(other.Understudies[0].Cards, Is.EqualTo(one.Understudies[0].Cards));
         Assert.That(other.ComputeStateHash(), Is.Not.EqualTo(one.ComputeStateHash()));
     }
 
