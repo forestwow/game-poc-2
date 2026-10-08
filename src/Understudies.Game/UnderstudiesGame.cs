@@ -78,14 +78,21 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
     private const float ApplauseBarGap = 0.2f;
     private const float ApplauseCountHeight = 0.7f;
 
-    // ponytail: a system font, the first of these files that this machine has: one for macOS, one for Windows and
-    // two for Linux. A font file is shipped with the game when a build leaves the owner's machine.
+    // ponytail: a system font, the first of these files that this machine has: Arial for macOS and for Windows,
+    // and for Linux DejaVu Sans and then Liberation Sans, each where Debian, Fedora and Arch keep it. A Linux that
+    // keeps neither there has no text. A font file is shipped with the game when a build leaves the owner's
+    // machine: which font is the owner's choice.
     private static readonly string[] FontFiles =
     [
         "/System/Library/Fonts/Supplemental/Arial.ttf",
         Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Fonts), "arial.ttf"),
+        "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+        "/usr/share/fonts/dejavu-sans-fonts/DejaVuSans.ttf",
+        "/usr/share/fonts/TTF/DejaVuSans.ttf",
+        "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",
+        "/usr/share/fonts/liberation-sans/LiberationSans-Regular.ttf",
+        "/usr/share/fonts/liberation/LiberationSans-Regular.ttf",
     ];
-
 
     // The floor about the box office where a fall earns no applause: a shade over the boards and a broken line,
     // both quiet. The rows are an eighth of a unit tall, and the line is cut into this many stretches, every
