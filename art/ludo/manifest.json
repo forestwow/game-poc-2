@@ -3,7 +3,7 @@
   "ticket": "T07b, the art spike",
   "generations": 11,
   "credits": 14.0,
-  "note": "Every file a generation names is what the tool returned (the PNG; the WebP twin of each was not kept). The three the game reads are the picked ones scaled down with `sips -Z <longest side>` and nothing else: the game trims the empty margin itself. The eleventh generation is a walk cycle made from the picked magician, to see whether the tool turns a still into a sprite: the game does not read it (plan T07b has no animation).",
+  "note": "Every file a generation names is what the tool returned (the PNG; the WebP twin of each was not kept). The three the game reads are the picked ones scaled down with `sips -Z <longest side>` and nothing else: the game trims the empty margin itself. A generation here is one returned result (six jobs made the eleven). The eleventh generation is a walk cycle made from the picked magician, to see whether the tool turns a still into a sprite: the game does not read it (plan T07b asks for no animation: it is beyond the ticket, made when the owner asked whether these were only still pictures).",
   "game_files": [
     {
       "file": "magician.png",
@@ -34,7 +34,8 @@
         "n": 2
       },
       "job_id": "856813b9-de1f-444b-a97e-f1b12c9e71d6",
-      "created_at": "2026-10-08T08:49:14.298Z"
+      "created_at": "2026-10-08T08:49:14.298Z",
+      "credits": 0.5
     },
     {
       "file": "magician-papercraft-v2.png",
@@ -49,7 +50,8 @@
       },
       "job_id": "856813b9-de1f-444b-a97e-f1b12c9e71d6",
       "created_at": "2026-10-08T08:49:14.298Z",
-      "picked_as": "magician.png"
+      "picked_as": "magician.png",
+      "credits": 0.5
     },
     {
       "file": "magician-flat-v1.png",
@@ -63,7 +65,8 @@
         "n": 2
       },
       "job_id": "8e6fc5a6-5b22-4c48-9fe6-11229dc43961",
-      "created_at": "2026-10-08T08:49:40.061Z"
+      "created_at": "2026-10-08T08:49:40.061Z",
+      "credits": 0.5
     },
     {
       "file": "magician-flat-v2.png",
@@ -77,7 +80,8 @@
         "n": 2
       },
       "job_id": "8e6fc5a6-5b22-4c48-9fe6-11229dc43961",
-      "created_at": "2026-10-08T08:49:40.061Z"
+      "created_at": "2026-10-08T08:49:40.061Z",
+      "credits": 0.5
     },
     {
       "file": "critic-v1.png",
@@ -90,7 +94,8 @@
       },
       "job_id": "bba6ea47-223a-444c-a363-02558b1b89da",
       "created_at": "2026-10-08T08:50:25.384Z",
-      "picked_as": "critic.png"
+      "picked_as": "critic.png",
+      "credits": 0.5
     },
     {
       "file": "critic-v2.png",
@@ -102,7 +107,8 @@
         "n": 2
       },
       "job_id": "bba6ea47-223a-444c-a363-02558b1b89da",
-      "created_at": "2026-10-08T08:50:25.384Z"
+      "created_at": "2026-10-08T08:50:25.384Z",
+      "credits": 0.5
     },
     {
       "file": "box-office-v1.png",
@@ -114,7 +120,8 @@
         "n": 2
       },
       "job_id": "dfe94d12-6877-43ab-92f4-0c69ff58fc13",
-      "created_at": "2026-10-08T08:50:53.692Z"
+      "created_at": "2026-10-08T08:50:53.692Z",
+      "credits": 0.5
     },
     {
       "file": "box-office-v2.png",
@@ -126,7 +133,8 @@
         "n": 2
       },
       "job_id": "dfe94d12-6877-43ab-92f4-0c69ff58fc13",
-      "created_at": "2026-10-08T08:50:53.692Z"
+      "created_at": "2026-10-08T08:50:53.692Z",
+      "credits": 0.5
     },
     {
       "file": "box-office-create-v1.png",
@@ -141,7 +149,8 @@
       },
       "job_id": "38c197ad-d255-4de1-928b-041cf1f25460",
       "created_at": "2026-10-08T08:51:39.103Z",
-      "picked_as": "box-office.png"
+      "picked_as": "box-office.png",
+      "credits": 0.5
     },
     {
       "file": "box-office-create-v2.png",
@@ -155,7 +164,8 @@
         "n": 2
       },
       "job_id": "38c197ad-d255-4de1-928b-041cf1f25460",
-      "created_at": "2026-10-08T08:51:39.103Z"
+      "created_at": "2026-10-08T08:51:39.103Z",
+      "credits": 0.5
     },
     {
       "file": "magician-walk.png",
@@ -173,10 +183,12 @@
         "num_frames": 16,
         "num_cols": 4,
         "num_rows": 4,
-        "duration": 2.5
+        "duration": 2.5,
+        "frame": "146 x 277 pixels, the sheet 584 x 1108"
       },
       "credits": 9,
-      "job_id": "1ceef5bd-7c9c-4ad4-9c28-819ffcd6be23"
+      "job_id": "1ceef5bd-7c9c-4ad4-9c28-819ffcd6be23",
+      "created_at": "2026-10-08T08:55:00Z (to the minute)"
     }
   ]
 }

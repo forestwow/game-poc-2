@@ -146,7 +146,7 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
 
     /// <summary>With a <paramref name="capturePath"/> the game does not play: it saves one frame there and exits.</summary>
     /// <param name="artFolder">Where the figures' images are; null draws them as shapes.</param>
-    public UnderstudiesGame(Tuning tuning, string? capturePath, int captureTicks, string? artFolder = null)
+    public UnderstudiesGame(Tuning tuning, string? capturePath, int captureTicks, string? artFolder)
     {
         _artFolder = artFolder;
         _simulation = capturePath is null ? NewShow(tuning) : new Simulation(tuning, CaptureSeed);
@@ -899,6 +899,11 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
                 (int x, int y) = (i % image.Width, i / image.Width);
                 (left, top, right, bottom) = (Math.Min(left, x), Math.Min(top, y), Math.Max(right, x), Math.Max(bottom, y));
             }
+        }
+
+        if (right < 0)
+        {
+            throw new InvalidDataException($"{name} is empty");
         }
 
         return (image, new Rectangle(left, top, right - left + 1, bottom - top + 1));

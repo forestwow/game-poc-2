@@ -12,7 +12,7 @@ if (args is ["--capture", var path, "--ticks", var ticks, .. var rest]
         // Found as tuning.json is: the repository's own when the game is run from its root, or else beside the
         // executable. ponytail: nothing copies art/ there yet; the build does when a build leaves the repository.
         artFolder = Path.Combine(Directory.Exists("art") ? "art" : Path.Combine(AppContext.BaseDirectory, "art"), tool);
-        if (!Directory.Exists(artFolder))
+        if (!new[] { "magician.png", "critic.png", "box-office.png" }.All(name => File.Exists(Path.Combine(artFolder, name))))
         {
             Console.Error.WriteLine($"No art in {Path.GetFullPath(artFolder)}");
             return 2;
