@@ -689,7 +689,7 @@ public sealed class Simulation(Tuning tuning, ulong seed, IReadOnlyList<IReadOnl
 
         // At the nearest critic whose centre is in range; of two as near, at the one that entered first.
         // ponytail: the card flies at where its target stands now, so it only hits what cannot leave that spot in
-        // time: thrownCardSpeed must stay at or above criticSpeed x throwRange / criticRadius (72 with the
+        // time: thrownCardSpeed must stay at or above a kind's speed x throwRange / its radius (72 with the
         // committed numbers, which is exactly where it is). A faster enemy or a longer range breaks that and
         // cards start to miss across the line of fire; the throw then has to aim ahead of its target.
         Vector2? aim = null;
