@@ -183,6 +183,11 @@ public class ProgressTests
     [TestCase("""{ "version": 1, "nights": [ { "night": 1, "bestAct": 5, "wo""", TestName = "Load_ADamagedFile_IsNoProgressAndIsKeptAside")]
     [TestCase("""{ "version": 0, "nights": [], "stars": 4 }""", TestName = "Load_AFileOfAnOlderVersion_IsNoProgressAndIsKeptAside")]
     [TestCase("""{ "version": 1, "nights": [ { "night": 1, "bestAct": 0, "won": false } ] }""", TestName = "Load_AFileWithANumberOutOfRange_IsNoProgressAndIsKeptAside")]
+    [TestCase("""{ "version": "2" }""", TestName = "Load_AVersionThatIsAText_IsNoProgressAndIsKeptAside")]
+    [TestCase("""{ "version": null, "nights": [] }""", TestName = "Load_AVersionThatIsNull_IsNoProgressAndIsKeptAside")]
+    [TestCase("""{ "version": true }""", TestName = "Load_AVersionThatIsTrue_IsNoProgressAndIsKeptAside")]
+    [TestCase("""{ "version": [2] }""", TestName = "Load_AVersionThatIsAList_IsNoProgressAndIsKeptAside")]
+    [TestCase("""{ "version": 2.5, "nights": [] }""", TestName = "Load_AVersionThatIsNotWhole_IsNoProgressAndIsKeptAside")]
     public void Load_WhatIsNotTheProgress(string text)
     {
         File.WriteAllText(ThePath, text);

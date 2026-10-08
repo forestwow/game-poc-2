@@ -189,7 +189,8 @@ internal sealed partial class UnderstudiesGame
     /// </summary>
     private void GiveUp()
     {
-        if (_simulation.Act > 1 || _simulation.Phase is Phase.Program or Phase.BetweenActs)
+        if (_simulation.Phase is not (Phase.Ovation or Phase.Closed)
+            && (_simulation.Act > 1 || _simulation.Phase is Phase.Program or Phase.BetweenActs))
         {
             Remember();
         }

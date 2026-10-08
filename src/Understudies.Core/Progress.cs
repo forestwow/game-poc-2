@@ -155,7 +155,7 @@ public sealed record Progress(IReadOnlyList<NightPlayed> Nights)
         {
             return None;
         }
-        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        catch (Exception exception)
         {
             notKept = $"it could not be read ({exception.Message})";
             return None;
@@ -173,12 +173,19 @@ public sealed record Progress(IReadOnlyList<NightPlayed> Nights)
                 return None;
             }
         }
+        catch (Exception exception)
+        {
+            // Nothing is known to come here. This stands between a file on the player's disk and the game
+            // starting, so whatever a file's content throws is a file that was not read: left as it is.
+            notKept = $"it could not be read ({exception.Message})";
+            return None;
+        }
 
         try
         {
             File.Move(path, path + DamagedSuffix, overwrite: true);
         }
-        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        catch (Exception exception)
         {
             notKept = $"it is not the progress and could not be put aside ({exception.Message})";
         }
@@ -194,10 +201,11 @@ public sealed record Progress(IReadOnlyList<NightPlayed> Nights)
             using JsonDocument text = JsonDocument.Parse(json);
             return text.RootElement.ValueKind == JsonValueKind.Object
                 && text.RootElement.TryGetProperty("version", out JsonElement version)
+                && version.ValueKind == JsonValueKind.Number
                 && version.TryGetInt32(out int number)
                 && number > Version;
         }
-        catch (JsonException)
+        catch (Exception)
         {
             return false;
         }
