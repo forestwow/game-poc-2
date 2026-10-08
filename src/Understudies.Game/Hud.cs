@@ -22,8 +22,9 @@ internal sealed partial class UnderstudiesGame
     private const float ClockHeight = 1.5f;
     private const float HudSmallHeight = 0.65f;
 
-    // A label is Pixelify Sans in capitals, 14 screen pixels at 1280 (the smallest at which the face's squares
-    // come near whole pixels), its letters this far apart. A label has no number in it.
+    // A label is in capitals, 14 screen pixels at 1280, its letters this far apart. In Atkinson Hyperlegible
+    // and not in the design's Pixelify Sans, whose capital C is read as an O at every size tried ("ENOORE",
+    // "OAST"): the design's face waits for the owner (plan T45).
     private const float LabelHeight = 0.525f;
     private const float LabelSpacing = 0.075f;
 
@@ -60,8 +61,8 @@ internal sealed partial class UnderstudiesGame
     // right: two screen pixels at 1280.
     private const float PaperBorder = 0.075f;
 
-    // What is held is a row of chips, a card's name in the labels' face and how many of it in the small face,
-    // each, with its label over it; a row that is too wide goes on in another above it. The bottom of the lowest row is HudFoot above the footlights.
+    // What is held is a row of chips, a card's name and, a little larger, how many of it, each in Atkinson
+    // Hyperlegible (a name in Pixelify Sans at this size has the labels' trouble: "Oard Sharp"), with its label over it; a row that is too wide goes on in another above it. The bottom of the lowest row is HudFoot above the footlights.
     private const string HeldLabel = "YOU HOLD";
     private const float ChipHeight = 0.975f;
     private const float ChipPad = 0.375f;
@@ -119,7 +120,10 @@ internal sealed partial class UnderstudiesGame
         float between = Whole(VanishBarGap);
         float bar = Whole(VanishBarHeight);
 
-        float left = MathF.Round((feet.X * _scale) - (wide / 2f));
+        // Kept on the stage sideways as well, the Vanish's bar with the row: a pixel of ink is left at each side.
+        float left = MathF.Max(
+            1f,
+            MathF.Min(MathF.Round((feet.X * _scale) - (wide / 2f)), MathF.Round(Tuning.StageSize.X * _scale) - wide - 1f));
         float top = MathF.Min(
             MathF.Round((feet.Y + PipsDrop) * _scale),
             MathF.Floor(Tuning.StageSize.Y * _scale) - tall - between - bar - 1f);
@@ -212,7 +216,7 @@ internal sealed partial class UnderstudiesGame
                 Words);
         }
 
-        Write(Face.Label, LabelHeight, ApplauseLabel, new Vector2(middle, ApplauseLabelLine), 0.5f, ApplauseHeart, spacing: LabelSpacing);
+        Write(Face.Sentence, LabelHeight, ApplauseLabel, new Vector2(middle, ApplauseLabelLine), 0.5f, ApplauseHeart, spacing: LabelSpacing);
         Write(
             Face.Sentence,
             ApplauseCountHeight,
@@ -275,7 +279,7 @@ internal sealed partial class UnderstudiesGame
             // The count is a number read in a glance, and so in the sentences' face (plan T40).
             string name = Describe(card).Name;
             string count = $"×{Held(card)}";
-            float wide = (2f * ChipPad) + Wide(Face.Label, ChipWordsHeight, name) + ChipSpace + Wide(Face.Sentence, HudSmallHeight, count);
+            float wide = (2f * ChipPad) + Wide(Face.Sentence, ChipWordsHeight, name) + ChipSpace + Wide(Face.Sentence, HudSmallHeight, count);
             if (rows.Count == 0 || RowWide(rows[^1]) + ChipsApart + wide > width)
             {
                 rows.Add([]);
@@ -307,7 +311,7 @@ internal sealed partial class UnderstudiesGame
             {
                 float line = top + (ChipHeight / 2f);
                 Paper(new Vector2(left, top), new Vector2(chip.Width, ChipHeight), chip.Chorus ? ChorusPaper : ThrownCardFace);
-                Write(Face.Label, ChipWordsHeight, chip.Name, new Vector2(left + ChipPad, line), 0f, OutlineInk, onPaper: true);
+                Write(Face.Sentence, ChipWordsHeight, chip.Name, new Vector2(left + ChipPad, line), 0f, OutlineInk, onPaper: true);
                 Write(Face.Sentence, HudSmallHeight, chip.Count, new Vector2(left + chip.Width - ChipPad, line), 1f, ChipCount, onPaper: true);
                 left += chip.Width + ChipsApart;
             }
@@ -317,7 +321,7 @@ internal sealed partial class UnderstudiesGame
 
         if (rows.Count > 0)
         {
-            Write(Face.Label, LabelHeight, HeldLabel, new Vector2(foot.X, top + ChipsApart - LabelLift), anchor, Words, spacing: LabelSpacing);
+            Write(Face.Sentence, LabelHeight, HeldLabel, new Vector2(foot.X, top + ChipsApart - LabelLift), anchor, Words, spacing: LabelSpacing);
         }
     }
 
@@ -355,12 +359,13 @@ internal sealed partial class UnderstudiesGame
                 onPaper: true);
         }
 
-        Write(Face.Label, LabelHeight, CastLabel, new Vector2(foot.X, top - LabelLift), 1f, Words, spacing: LabelSpacing);
+        Write(Face.Sentence, LabelHeight, CastLabel, new Vector2(foot.X, top - LabelLift), 1f, Words, spacing: LabelSpacing);
     }
 
     /// <summary>
     /// A piece of paper in the batch of the words, on whole screen pixels: its <paramref name="fill"/> in an ink
-    /// border, with a hard ink shadow down and to the right. A <paramref name="broken"/> border is in stretches,
+    /// border, with a hard ink shadow down and to the right (<see cref="Fill"/> is in screen pixels in this
+    /// batch, which has no transform). A <paramref name="broken"/> border is in stretches,
     /// each two borders long and as far apart.
     /// </summary>
     private void Paper(Vector2 topLeft, Vector2 size, Color fill, bool broken = false)

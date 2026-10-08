@@ -85,8 +85,8 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
 
     // The one caption of a performance, over the head of the first understudy and going where it goes: through
     // the curtain of the second act and for the first seconds of that act, long enough to be read. Where the
-    // understudy stands beside the magician the words are clear of the bar over the magician's head: their
-    // middle is CaptionLift above the head.
+    // understudy stands beside the magician the words are clear of the magician's head: their middle is
+    // CaptionLift above the head.
     private const string Caption = "Your understudy. It repeats your act one, every act.";
     private const float CaptionHeight = 1f;
     private const float CaptionLift = 1.4f;
@@ -856,7 +856,7 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
         List<List<Chip>> inTheRow = ProgramIsShown ? HeldRows(HeldWidthInAnOffer) : [];
         float chipsHalf = inTheRow.Count == 0
             ? 0f
-            : MathF.Max(inTheRow.Max(RowWide), Wide(Face.Label, LabelHeight, HeldLabel) + (HeldLabel.Length * LabelSpacing)) / 2f;
+            : MathF.Max(inTheRow.Max(RowWide), Wide(Face.Sentence, LabelHeight, HeldLabel, LabelSpacing)) / 2f;
         for (float x = FootlightGap / 2f; x < Tuning.StageSize.X; x += FootlightGap)
         {
             if (inTheRow.Count == 0 || MathF.Abs(x - (Tuning.StageSize.X / 2f)) > chipsHalf + (FootlightGap / 4f))
@@ -1182,8 +1182,12 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
     private int Outline(SpriteFontBase font) =>
         Math.Max(1, (int)MathF.Round(MathF.Min(OutlineWidth * _scale, font.FontSize / SmallestOutlined)));
 
-    /// <summary>How wide <see cref="Write"/> draws <paramref name="text"/> in that face at that height, in world units.</summary>
-    private float Wide(Face face, float height, string text) => Font(face, height).MeasureString(text).X / _scale;
+    /// <summary>
+    /// How wide <see cref="Write"/> draws <paramref name="text"/> in that face at that height, its letters
+    /// <paramref name="spacing"/> apart, in world units.
+    /// </summary>
+    private float Wide(Face face, float height, string text, float spacing = 0f) =>
+        Font(face, height).MeasureString(text, characterSpacing: MathF.Round(spacing * _scale)).X / _scale;
 
     /// <summary>
     /// A face at the size the window makes of a height in world units. A whole number of pixels tall, and drawn
@@ -1199,7 +1203,7 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
         /// <summary>Pixelify Sans Bold: a card's name.</summary>
         Heading,
 
-        /// <summary>Pixelify Sans SemiBold: a card's head strip.</summary>
+        /// <summary>Pixelify Sans SemiBold: a card's head strip, and nothing else (the HUD's labels are sentences' face).</summary>
         Label,
 
         /// <summary>Atkinson Hyperlegible: a sentence, and a number that is read in a glance.</summary>
