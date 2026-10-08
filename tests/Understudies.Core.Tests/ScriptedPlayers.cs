@@ -11,8 +11,9 @@ namespace Understudies.Core.Tests;
 /// <param name="BoxOffice">What the box office had left.</param>
 /// <param name="Dropped">The pieces of applause dropped in the act, picked up or not.</param>
 /// <param name="FellInReach">
-/// Of the pieces picked up, those dropped inside the magician's pick-up reach of where it stood on that tick:
-/// applause that fell on a magician that did not move for it.
+/// Of the pieces picked up, those dropped inside the magician's pick-up reach of where it stood on that tick. A
+/// critic that touches the magician stands further off than that reach on the committed numbers, so this counts
+/// only what a squeezed crowd drops: it is no measure of how safe a player stood.
 /// </param>
 /// <param name="WalkedTo">Of the pieces picked up, the others: those the magician had to go to.</param>
 /// <param name="StateHash">The simulation's state hash at that moment.</param>
@@ -32,7 +33,9 @@ internal readonly record struct ActRecord(
 /// <summary>A scripted performance played to its end: the ovation or the close.</summary>
 /// <param name="Ended"><see cref="Phase.Ovation"/> or <see cref="Phase.Closed"/>.</param>
 /// <param name="Acts">Every act that was played, the one the show closed in too.</param>
-internal sealed record Performance(Phase Ended, IReadOnlyList<ActRecord> Acts)
+/// <param name="Offers">What each of those acts' programs offered, from the leftmost: nothing for an act with no program.</param>
+internal sealed record Performance(
+    Phase Ended, IReadOnlyList<ActRecord> Acts, IReadOnlyList<IReadOnlyList<Card>> Offers)
 {
     /// <summary>The number of the act the performance ended in.</summary>
     public int Act => Acts.Count;
@@ -49,18 +52,31 @@ internal sealed record Performance(Phase Ended, IReadOnlyList<ActRecord> Acts)
 internal static class ScriptedPlayers
 {
     /// <summary>
-    /// The circle the orbit player walks round the box office and never leaves, by its radius: the throw reaches
-    /// across the box office from anywhere on it.
+    /// The circles the orbit player is played on, by their radii: standing on the box office, close round it, and
+    /// out where the throw still reaches across it. The guard is read against all of them (see
+    /// <see cref="Orbit"/>): a tuning that only beats one way of hiding has not beaten hiding.
     /// </summary>
-    public const float OrbitRadius = 5f;
+    public static readonly IReadOnlyList<float> OrbitRadii = [0.5f, 3f, 5f];
 
     /// <summary>
-    /// How far from its post the doors player goes for a piece of applause: a second's walk, and as far as the
-    /// committed throw reaches, so that what it fells from its post it fetches. With 6 it left most of its own
-    /// applause lying, where its cards and its understudies' fell critics at the far end of the throw. From
-    /// further than this, where only a Vanish takes it, it walks back before anything else.
+    /// How far from where it stands the doors player goes for a piece of applause: a second's walk, and as far
+    /// as the committed throw reaches, so that what it fells from its post it fetches. With 6 it left most of its
+    /// own applause lying, where its cards and its understudies' fell critics at the far end of the throw. From
+    /// further than this it walks back before anything else.
     /// </summary>
     public const float DoorsReach = 9f;
+
+    /// <summary>
+    /// The doors player steps back from a critic that has turned on it and is this near to its centre: a touch
+    /// is at 1.1 on the committed numbers.
+    /// </summary>
+    public const float DoorsStepBackReach = 2.5f;
+
+    /// <summary>
+    /// While a critic is at the box office the doors player stands this far from the box office's centre, on the
+    /// side of its door: the throw reaches across the box office from there.
+    /// </summary>
+    public const float DoorsDefenceDistance = 6f;
 
     /// <summary>
     /// A player is crowded, and vanishes if it can, when this many critics that turn on it are within
@@ -109,11 +125,14 @@ internal static class ScriptedPlayers
     }
 
     /// <summary>
-    /// The degenerate strategy the design has to beat (vision 4): it walks round the box office on a circle of
-    /// <see cref="OrbitRadius"/> and never leaves the circle. It steps to a piece of applause only when the piece
-    /// lies inside the circle, and when it is crowded it vanishes across the circle, to a place on it.
+    /// The degenerate strategy the design has to beat (vision 4), on a circle of <paramref name="radius"/>: it
+    /// walks round the box office on the circle and never leaves it. It steps to a piece of applause only when
+    /// the piece lies inside the circle, and when it is crowded it vanishes across the circle, to a place on it:
+    /// on a circle less than a Vanish across it does not vanish. Hiding is whichever of
+    /// <see cref="OrbitRadii"/> does best, so the design has beaten it on a seed only when every one of them
+    /// has lost.
     /// </summary>
-    public static MagicianInput Orbit(Simulation simulation)
+    public static Func<Simulation, MagicianInput> Orbit(float radius) => simulation =>
     {
         Vector2 position = simulation.MagicianPosition;
         Vector2 centre = simulation.Tuning.BoxOfficePosition;
@@ -121,17 +140,19 @@ internal static class ScriptedPlayers
         var onward = new Vector2(-outward.Y, outward.X);
 
         // The Vanish goes its whole distance the way the magician faces: the place on the circle that far from
-        // here is `inward` along the line to the centre and `aside` along the circle's tangent. Nearer the
-        // centre than the Vanish is long less the radius there is no such place, and it does not vanish.
+        // here is `inward` along the line to the centre and `aside` along the circle's tangent. Where there is
+        // no such place (too near the centre, or the circle too small) it does not vanish.
         float blink = simulation.Tuning.VanishDistance;
-        float inward = ((fromCentre * fromCentre) + (blink * blink) - (OrbitRadius * OrbitRadius)) / (2f * fromCentre);
-        if (inward <= blink && IsCrowded(simulation, out _) && simulation.VanishCooldownLeft == 0f)
+        float inward = ((fromCentre * fromCentre) + (blink * blink) - (radius * radius)) / (2f * fromCentre);
+        if (inward <= blink
+            && IsCrowded(simulation, CrowdSize, CrowdReach, out _)
+            && simulation.VanishCooldownLeft == 0f)
         {
             float aside = MathF.Sqrt((blink * blink) - (inward * inward));
             return new MagicianInput((onward * aside) - (outward * inward), Vanish: true);
         }
 
-        if (NearestApplause(simulation, centre, OrbitRadius) is Vector2 piece)
+        if (NearestApplause(simulation, centre, radius) is Vector2 piece)
         {
             return Walk(simulation, piece);
         }
@@ -139,31 +160,41 @@ internal static class ScriptedPlayers
         // Round the circle: at the place on it one step on, or, from inside it, straight out to it. The straight
         // line to a place on the circle is inside the circle.
         float step = simulation.Tuning.MagicianSpeed / Simulation.TicksPerSecond;
-        return Walk(simulation, centre + (Direction((position - centre) + (onward * step), out _) * OrbitRadius));
-    }
+        return Walk(simulation, centre + (Direction((position - centre) + (onward * step), out _) * radius));
+    };
 
     /// <summary>
-    /// The strategy the design wants to win (vision 4): it holds the door that opened last, standing a throw's
+    /// The strategy the design wants to win (vision 4). It holds the door that opened last, standing a throw's
     /// range inside it, so that what comes in is thrown at as it enters, and leaves the older doors to its
-    /// understudies. It steps to a piece of applause within <see cref="DoorsReach"/> of that post and goes back,
-    /// and when it is crowded it vanishes away from the crowd.
+    /// understudies; while a critic is at the box office it goes back and stands by the box office instead, and
+    /// returns to its door when none is (<see cref="DoorsStand"/>). It steps to a piece of applause within
+    /// <see cref="DoorsReach"/> of where it stands and goes back. It steps back from a critic that has turned
+    /// on it and is within <see cref="DoorsStepBackReach"/>, and when it is crowded all the same it vanishes
+    /// away from the crowd.
     /// </summary>
     public static MagicianInput Doors(Simulation simulation)
     {
         Vector2 position = simulation.MagicianPosition;
-        Vector2 post = DoorsPost(simulation);
-        if (IsCrowded(simulation, out Vector2 crowd) && simulation.VanishCooldownLeft == 0f)
+
+        // Away from the middle of those upon it; from the very middle of them, back towards the box office.
+        if (IsCrowded(simulation, CrowdSize, CrowdReach, out Vector2 crowd) && simulation.VanishCooldownLeft == 0f)
         {
-            // Away from the middle of the crowd; from the very middle of it, back towards the box office.
-            Vector2 away = position - crowd;
-            return new MagicianInput(
-                away == Vector2.Zero ? simulation.Tuning.BoxOfficePosition - position : away, Vanish: true);
+            return new MagicianInput(Away(crowd), Vanish: true);
         }
 
-        Direction(position - post, out float fromPost);
-        return fromPost <= DoorsReach && NearestApplause(simulation, post, DoorsReach) is Vector2 piece
+        if (IsCrowded(simulation, size: 1, DoorsStepBackReach, out Vector2 near))
+        {
+            return new MagicianInput(Direction(Away(near), out _));
+        }
+
+        Vector2 stand = DoorsStand(simulation);
+        Direction(position - stand, out float fromStand);
+        return fromStand <= DoorsReach && NearestApplause(simulation, stand, DoorsReach) is Vector2 piece
             ? Walk(simulation, piece)
-            : Walk(simulation, post);
+            : Walk(simulation, stand);
+
+        Vector2 Away(Vector2 from) =>
+            position == from ? simulation.Tuning.BoxOfficePosition - position : position - from;
     }
 
     /// <summary>
@@ -174,6 +205,7 @@ internal static class ScriptedPlayers
     public static Vector2 DoorsPost(Simulation simulation)
     {
         Tuning tuning = simulation.Tuning;
+
         // A tuning has a door that is open in the first act: one is always found.
         var newest = new StageDoor(default, int.MinValue);
         for (int door = 0; door < tuning.StageDoors.Count; door++)
@@ -189,6 +221,35 @@ internal static class ScriptedPlayers
     }
 
     /// <summary>
+    /// Where the doors player stands now: on its post (<see cref="DoorsPost"/>), or, while some critic is at the
+    /// box office, where it strikes, <see cref="DoorsDefenceDistance"/> from the box office's centre on the line
+    /// to the post. A post nearer the box office than that is where it stands either way.
+    /// </summary>
+    public static Vector2 DoorsStand(Simulation simulation)
+    {
+        Tuning tuning = simulation.Tuning;
+        Vector2 post = DoorsPost(simulation);
+        Vector2 toPost = Direction(post - tuning.BoxOfficePosition, out float postFromBoxOffice);
+        if (postFromBoxOffice <= DoorsDefenceDistance)
+        {
+            return post;
+        }
+
+        foreach (Critic critic in simulation.Critics)
+        {
+            // A critic strikes when it is within a step of touching the box office: a fifth of a unit is more
+            // than a step of either committed kind.
+            Direction(critic.Position - tuning.BoxOfficePosition, out float fromBoxOffice);
+            if (fromBoxOffice <= (tuning.BoxOfficeSize / 2f) + tuning.EnemyKinds[critic.Kind].Radius + 0.2f)
+            {
+                return tuning.BoxOfficePosition + (toPost * DoorsDefenceDistance);
+            }
+        }
+
+        return post;
+    }
+
+    /// <summary>
     /// Plays one performance with <paramref name="player"/> to its end. Between two acts it does what a person
     /// does: takes the card <see cref="Choose"/> names, at once, and goes on.
     /// </summary>
@@ -196,6 +257,7 @@ internal static class ScriptedPlayers
     {
         var simulation = new Simulation(tuning, seed);
         var acts = new List<ActRecord>();
+        var offers = new List<IReadOnlyList<Card>>();
         float reach = tuning.MagicianRadius + tuning.ApplausePickUpReach;
 
         // Where the pieces lie that were dropped in reach and are not picked up yet. The act's applause is gone
@@ -231,19 +293,21 @@ internal static class ScriptedPlayers
                 }
             }
 
-            Card? card = null;
-            if (simulation.Phase == Phase.Program)
-            {
-                int place = Choose(simulation.Offer);
-                card = simulation.Offer[place];
-                simulation.Pick(place);
-            }
-
             if (simulation.Phase is Phase.Curtain or Phase.Act)
             {
                 continue;
             }
 
+            Card[] offer = [.. simulation.Offer];
+            Card? card = null;
+            if (offer.Length > 0)
+            {
+                int place = Choose(offer);
+                card = offer[place];
+                simulation.Pick(place);
+            }
+
+            offers.Add(offer);
             acts.Add(new ActRecord(
                 simulation.ActEntriesMade,
                 simulation.ActApplause,
@@ -258,7 +322,7 @@ internal static class ScriptedPlayers
                 simulation.ComputeStateHash()));
             if (simulation.Phase != Phase.BetweenActs)
             {
-                return new Performance(simulation.Phase, acts);
+                return new Performance(simulation.Phase, acts, offers);
             }
 
             simulation.GoOn();
@@ -276,17 +340,17 @@ internal static class ScriptedPlayers
             / (simulation.Tuning.MagicianSpeed / Simulation.TicksPerSecond));
 
     /// <summary>
-    /// Whether <see cref="CrowdSize"/> critics that have turned on the magician are within
-    /// <see cref="CrowdReach"/> of it, and the middle of those that are.
+    /// Whether <paramref name="size"/> critics that have turned on the magician are within
+    /// <paramref name="reach"/> of it, and the middle of those that are.
     /// </summary>
-    private static bool IsCrowded(Simulation simulation, out Vector2 middle)
+    private static bool IsCrowded(Simulation simulation, int size, float reach, out Vector2 middle)
     {
         int near = 0;
         middle = Vector2.Zero;
         foreach (Critic critic in simulation.Critics)
         {
             Direction(critic.Position - simulation.MagicianPosition, out float apart);
-            if (apart <= CrowdReach && !critic.IsStunned && simulation.Tuning.EnemyKinds[critic.Kind].TurnsOnTheMagician)
+            if (apart <= reach && !critic.IsStunned && simulation.Tuning.EnemyKinds[critic.Kind].TurnsOnTheMagician)
             {
                 near++;
                 middle += critic.Position;
@@ -294,7 +358,7 @@ internal static class ScriptedPlayers
         }
 
         middle /= Math.Max(1, near);
-        return near >= CrowdSize;
+        return near >= size;
     }
 
     /// <summary>

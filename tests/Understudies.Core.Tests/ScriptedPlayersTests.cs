@@ -9,17 +9,19 @@ public class ScriptedPlayersTests
     private Tuning Tuning { get; } = CommittedTuning.Parse();
 
     /// <summary>
-    /// The committed numbers with fuller acts, in which a player is crowded and vanishes: on the committed ones
-    /// the doors player of seed 1 never has to, and the tests of where a player goes would say nothing of a Vanish.
+    /// The committed numbers with fuller acts, in which a player is crowded and vanishes and the box office is
+    /// struck: on the committed ones the doors player of seed 1 never has to vanish, and nothing is struck.
     /// </summary>
     private Tuning Crowded => Tuning with { FirstActBudget = 45, BudgetGrowthPerAct = 40 };
 
     /// <summary>
-    /// Plan decision 9's question, whether <c>float</c> gives one result on two machines: the doors player on seed
-    /// 1 on the committed numbers, pinned at the end of its third act and at the end of the performance, here
-    /// (macOS ARM) and in CI (Linux x64). The earlier pin says how early a disagreement starts. A change to
-    /// tuning.json, to a rule or to the doors player changes both: pin them again, and say so in the pull request.
-    /// If the two machines ever disagree, that is a finding for the owner and not a test to make pass.
+    /// Plan decision 9's question, whether <c>float</c> gives one result on two machines: two scripted
+    /// performances, each pinned at the end of its third act and at its end, here (macOS ARM) and in CI (Linux
+    /// x64). The earlier pin says how early a disagreement starts. The first is the doors player on the committed
+    /// numbers; the second, the orbit player on fuller acts, has what the first has not: the Vanish and its
+    /// cloud, stunned critics, blows on the box office and a crowd that pushes. A change to tuning.json, to a
+    /// rule or to a player changes them: pin them again from the failure's message, and say so in the pull
+    /// request. If the two machines ever disagree, that is a finding for the owner and not a test to make pass.
     /// </summary>
     [Test]
     public void Play_TheDoorsPlayerOnSeedOne_EndsInThePinnedStateHashOnEveryMachine()
@@ -28,44 +30,107 @@ public class ScriptedPlayersTests
 
         Assert.Multiple(() =>
         {
-            Assert.That(performance.Acts[2].StateHash, Is.EqualTo(6411592599900307806UL), "the end of act three");
-            Assert.That(performance.Acts[^1].StateHash, Is.EqualTo(9777240901492940968UL), "the end of the performance");
+            Assert.That(performance.Acts[2].StateHash, Is.EqualTo(15947794192376037625UL), "the end of act three");
+            Assert.That(performance.Acts[^1].StateHash, Is.EqualTo(8144588068359638438UL), "the end of the performance");
+        });
+    }
+
+    /// <inheritdoc cref="Play_TheDoorsPlayerOnSeedOne_EndsInThePinnedStateHashOnEveryMachine"/>
+    [Test]
+    public void Play_TheOrbitPlayerOnSeedOneInFullerActs_EndsInThePinnedStateHashOnEveryMachine()
+    {
+        int vanishes = 0;
+        int blows = 0;
+        int stunned = 0;
+        Func<Simulation, MagicianInput> orbit = ScriptedPlayers.Orbit(5f);
+
+        Performance performance = ScriptedPlayers.Play(Crowded, seed: 1, simulation =>
+        {
+            vanishes += simulation.Events.Count(happened => happened.Kind == TickEventKind.Vanish);
+            blows += simulation.Events.Count(happened => happened.Kind == TickEventKind.BoxOfficeStruck);
+            stunned += simulation.Critics.Count(critic => critic.IsStunned);
+            return orbit(simulation);
+        });
+
+        Assert.Multiple(() =>
+        {
+            // What this performance is pinned for is in it.
+            Assert.That(vanishes, Is.GreaterThan(0), "Vanishes");
+            Assert.That(blows, Is.GreaterThan(0), "blows on the box office");
+            Assert.That(stunned, Is.GreaterThan(0), "stunned critics");
+            Assert.That(performance.Acts[2].StateHash, Is.EqualTo(14376876089627623268UL), "the end of act three");
+            Assert.That(performance.Acts[^1].StateHash, Is.EqualTo(9298766178608383193UL), "the end of the performance");
         });
     }
 
     [Test]
     public void Play_TheSameSeedAndPlayerTwice_GiveTheSameRecord()
     {
-        Performance one = ScriptedPlayers.Play(Tuning, seed: 3, ScriptedPlayers.Orbit);
-        Performance other = ScriptedPlayers.Play(Tuning, seed: 3, ScriptedPlayers.Orbit);
+        Performance one = ScriptedPlayers.Play(Tuning, seed: 3, ScriptedPlayers.Orbit(5f));
+        Performance other = ScriptedPlayers.Play(Tuning, seed: 3, ScriptedPlayers.Orbit(5f));
 
         Assert.Multiple(() =>
         {
             Assert.That(other.Ended, Is.EqualTo(one.Ended));
             Assert.That(other.Acts, Is.EqualTo(one.Acts));
+            Assert.That(other.Offers, Is.EqualTo(one.Offers));
         });
     }
 
     [Test]
-    public void Play_ThePerActNumbers_AddUpToTheSimulationsOwn()
+    public void Play_TheRecordOfEveryAct_IsWhatThePlanTheEventsAndTheSimulationSay()
     {
-        Performance performance = ScriptedPlayers.Play(Tuning, seed: 2, ScriptedPlayers.Doors);
-        IReadOnlyList<IReadOnlyList<PlannedEntry>> plan = Waves.Plan(Tuning, seed: 2);
+        // The plan is drawn apart from the performance. The box office is read off the simulation as the next
+        // act's curtain rises, where nothing has changed since the act was over, and its blows are counted
+        // from the events.
+        IReadOnlyList<IReadOnlyList<PlannedEntry>> plan = Waves.Plan(Crowded, seed: 2);
+        var boxOfficeAtTheCurtain = new List<float>();
+        Func<Simulation, MagicianInput> orbit = ScriptedPlayers.Orbit(5f);
+        Performance performance = ScriptedPlayers.Play(Crowded, seed: 2, simulation =>
+        {
+            if (simulation.Act > boxOfficeAtTheCurtain.Count)
+            {
+                boxOfficeAtTheCurtain.Add(simulation.BoxOfficeHitPoints);
+            }
 
-        // The plan is drawn apart from the performance; the pieces are counted from the events, and the
-        // applause is the simulation's own count.
+            return orbit(simulation);
+        });
+
         Assert.That(performance.Acts.Sum(act => act.Applause), Is.GreaterThan(0), "the performance has applause to count");
+        Assert.That(performance.Acts[^1].BoxOffice, Is.LessThan(Crowded.BoxOfficeHitPoints), "and blows on the box office");
         for (int i = 0; i < performance.Acts.Count; i++)
         {
             ActRecord act = performance.Acts[i];
-            bool playedOut = i < performance.Acts.Count - 1 || performance.Ended == Phase.Ovation;
+            IReadOnlyList<Card> offer = performance.Offers[i];
+            bool last = i == performance.Acts.Count - 1;
             Assert.Multiple(() =>
             {
-                Assert.That(act.Entries, playedOut ? Is.EqualTo(plan[i].Count) : Is.LessThanOrEqualTo(plan[i].Count));
-                Assert.That(act.FellInReach + act.WalkedTo, Is.EqualTo(act.Applause));
-                Assert.That(act.Dropped, Is.GreaterThanOrEqualTo(act.Applause));
-                Assert.That(act.Share, Is.EqualTo((float)act.Applause / act.Entries));
-                Assert.That(act.Card is null, Is.EqualTo(act.Applause == 0 || i == performance.Acts.Count - 1));
+                Assert.That(
+                    act.Entries,
+                    !last || performance.Ended == Phase.Ovation ? Is.EqualTo(plan[i].Count) : Is.LessThanOrEqualTo(plan[i].Count),
+                    $"act {i + 1}: entries");
+                Assert.That(act.FellInReach + act.WalkedTo, Is.EqualTo(act.Applause), $"act {i + 1}: applause");
+                Assert.That(act.Dropped, Is.GreaterThanOrEqualTo(act.Applause), $"act {i + 1}: dropped");
+                Assert.That(act.Share, Is.EqualTo((float)act.Applause / act.Entries), $"act {i + 1}: share");
+
+                // Decision 21: nothing, under the first threshold, the first, the second; and a card offered
+                // for each of the band's places, but after the last act.
+                ApplauseBand band = act.Applause == 0 ? ApplauseBand.None
+                    : act.Share >= Crowded.ApplauseSecondThreshold ? ApplauseBand.Second
+                    : act.Share >= Crowded.ApplauseFirstThreshold ? ApplauseBand.First
+                    : ApplauseBand.UnderTheFirst;
+                Assert.That(act.Band, Is.EqualTo(band), $"act {i + 1}: band");
+                Assert.That(offer, Has.Count.EqualTo(last ? 0 : (int)band), $"act {i + 1}: offer");
+
+                // The card taken is the first of the order that the offer has.
+                Assert.That(
+                    act.Card,
+                    Is.EqualTo(offer.Count == 0 ? (Card?)null : ScriptedPlayers.CardOrder.First(offer.Contains)),
+                    $"act {i + 1}: card");
+                if (!last)
+                {
+                    Assert.That(act.BoxOffice, Is.EqualTo(boxOfficeAtTheCurtain[i + 1]), $"act {i + 1}: box office");
+                }
             });
         }
     }
@@ -75,88 +140,87 @@ public class ScriptedPlayersTests
     {
         Assert.Multiple(() =>
         {
+            // The order itself: another order is another instrument, and the guard's table is read anew.
+            Assert.That(ScriptedPlayers.CardOrder, Is.EqualTo(new[]
+            {
+                Card.OneMoreCard, Card.ChorusDamage, Card.Damage, Card.AttackSpeed, Card.Range, Card.VanishCooldown,
+            }));
             Assert.That(ScriptedPlayers.Choose([Card.Range, Card.OneMoreCard, Card.Damage]), Is.EqualTo(1));
             Assert.That(ScriptedPlayers.Choose([Card.VanishCooldown, Card.Range, Card.ChorusDamage]), Is.EqualTo(2));
             Assert.That(ScriptedPlayers.Choose([Card.AttackSpeed, Card.Damage]), Is.EqualTo(1));
+            Assert.That(ScriptedPlayers.Choose([Card.VanishCooldown, Card.Range]), Is.EqualTo(1));
             Assert.That(ScriptedPlayers.Choose([Card.VanishCooldown]), Is.EqualTo(0));
-
-            // Every card has its place in the order: none is taken or passed over by chance.
-            Assert.That(ScriptedPlayers.CardOrder, Is.EquivalentTo(Enum.GetValues<Card>()));
         });
     }
 
-    [Test]
-    public void Orbit_GoesRoundTheBoxOffice_AndNeverLeavesItsCircle()
+    [TestCase(0.5f)]
+    [TestCase(3f)]
+    [TestCase(5f)]
+    public void Orbit_GoesRoundTheBoxOffice_AndNeverLeavesItsCircle(float radius)
     {
         Vector2 centre = Tuning.BoxOfficePosition;
+        Func<Simulation, MagicianInput> orbit = ScriptedPlayers.Orbit(radius);
         float furthest = 0f;
         var least = new Vector2(float.PositiveInfinity);
         var most = new Vector2(float.NegativeInfinity);
         int vanishes = 0;
 
+        // The magician's mark is outside the smaller circles: it is watched from the moment it is in its circle.
+        bool inside = false;
         ScriptedPlayers.Play(Crowded, seed: 1, simulation =>
         {
-            vanishes += simulation.Events.Count(happened => happened.Kind == TickEventKind.Vanish);
-            furthest = MathF.Max(furthest, Vector2.Distance(simulation.MagicianPosition, centre));
-            least = Vector2.Min(least, simulation.MagicianPosition);
-            most = Vector2.Max(most, simulation.MagicianPosition);
-            return ScriptedPlayers.Orbit(simulation);
+            float fromCentre = Vector2.Distance(simulation.MagicianPosition, centre);
+            inside = simulation.Phase == Phase.Curtain ? false : inside || fromCentre <= radius;
+            if (inside)
+            {
+                vanishes += simulation.Events.Count(happened => happened.Kind == TickEventKind.Vanish);
+                furthest = MathF.Max(furthest, fromCentre);
+                least = Vector2.Min(least, simulation.MagicianPosition);
+                most = Vector2.Max(most, simulation.MagicianPosition);
+            }
+
+            return orbit(simulation);
         });
 
         Assert.Multiple(() =>
         {
-            Assert.That(vanishes, Is.GreaterThan(0), "the performance has a Vanish in it");
+            // A Vanish is as long as the circle of 3 is across, and longer than the smallest: only on the
+            // widest is there room for one.
+            if (radius >= 5f)
+            {
+                Assert.That(vanishes, Is.GreaterThan(0), "the performance has a Vanish in it");
+            }
 
             // On the circle the float's last digit may fall either side of it.
-            Assert.That(furthest, Is.LessThanOrEqualTo(ScriptedPlayers.OrbitRadius + 0.001f));
+            Assert.That(furthest, Is.LessThanOrEqualTo(radius + 0.001f));
 
             // All the way round: as far left, right, up and down as the circle goes.
-            var across = new Vector2(2f * ScriptedPlayers.OrbitRadius);
-            Assert.That(most.X - least.X, Is.EqualTo(across.X).Within(0.1f));
-            Assert.That(most.Y - least.Y, Is.EqualTo(across.Y).Within(0.1f));
+            Assert.That(most.X - least.X, Is.EqualTo(2f * radius).Within(0.1f));
+            Assert.That(most.Y - least.Y, Is.EqualTo(2f * radius).Within(0.1f));
         });
     }
 
     [Test]
-    public void Doors_HoldsThePostOfTheNewestDoor_AndIsFurtherThanItsReachOnlyAfterAVanish()
+    public void Doors_InEveryAct_GoesToThePostOfTheDoorThatOpenedLast()
     {
-        // From the mark it walks to the post; from then on in that act only a Vanish takes it further from the
-        // post than its reach, and it walks straight back: no longer than it takes to walk a Vanish's distance.
-        float step = Tuning.MagicianSpeed / Simulation.TicksPerSecond;
-        int ticksBack = (int)(Tuning.VanishDistance / step) + 2;
-        var postsHeld = new List<Vector2>();
-        int act = 0;
-        bool arrived = false;
-        int ticksSinceVanish = int.MaxValue;
-        int strays = 0;
-        int vanishes = 0;
-
-        ScriptedPlayers.Play(Crowded, seed: 1, simulation =>
+        // The tuning's own doors, whichever acts they open in: a throw's range in from the newest, towards the
+        // box office.
+        Vector2 Post(int act)
         {
-            Vector2 post = ScriptedPlayers.DoorsPost(simulation);
-            float fromPost = Vector2.Distance(simulation.MagicianPosition, post);
-            if (simulation.Act != act)
-            {
-                act = simulation.Act;
-                arrived = false;
-            }
+            StageDoor newest = Tuning.StageDoors.Where(door => door.OpensInAct <= act).MaxBy(door => door.OpensInAct);
+            return newest.Position
+                + (Vector2.Normalize(Tuning.BoxOfficePosition - newest.Position) * Tuning.ThrowRange);
+        }
 
-            if (!arrived && fromPost <= step)
-            {
-                arrived = true;
-                postsHeld.Add(post);
-            }
+        float step = Tuning.MagicianSpeed / Simulation.TicksPerSecond;
+        var actsOnThePost = new List<int>();
 
-            ticksSinceVanish = simulation.Events.Any(happened => happened.Kind == TickEventKind.Vanish)
-                ? 0
-                : ticksSinceVanish == int.MaxValue ? int.MaxValue : ticksSinceVanish + 1;
-            vanishes += ticksSinceVanish == 0 ? 1 : 0;
-            if (arrived
-                && !simulation.MagicianHasFallen
-                && fromPost > ScriptedPlayers.DoorsReach + 0.001f
-                && ticksSinceVanish > ticksBack)
+        ScriptedPlayers.Play(Tuning, seed: 1, simulation =>
+        {
+            if (!actsOnThePost.Contains(simulation.Act)
+                && Vector2.Distance(simulation.MagicianPosition, Post(simulation.Act)) <= step)
             {
-                strays++;
+                actsOnThePost.Add(simulation.Act);
             }
 
             return ScriptedPlayers.Doors(simulation);
@@ -164,40 +228,99 @@ public class ScriptedPlayersTests
 
         Assert.Multiple(() =>
         {
-            Assert.That(vanishes, Is.GreaterThan(0), "the performance has a Vanish in it");
-            Assert.That(strays, Is.Zero);
+            Assert.That(actsOnThePost, Is.EqualTo(Enumerable.Range(1, Tuning.ActsInPerformance)));
+            Assert.That(
+                Enumerable.Range(1, Tuning.ActsInPerformance).Select(Post).Distinct().Count(),
+                Is.GreaterThan(1),
+                "the tuning has more than one door to hold");
+        });
+    }
 
-            // The committed doors open in the acts 1, 3 and 6, and each is held from its act until the next
-            // opens: a throw's range in from the door, on the straight line from it to the box office.
-            StageDoor[] held = [.. new[] { 0, 0, 1, 1, 1, 2, 2, 2, 2, 2 }.Select(door => Tuning.StageDoors[door])];
-            Assert.That(postsHeld, Has.Count.EqualTo(held.Length));
-            for (int i = 0; i < Math.Min(held.Length, postsHeld.Count); i++)
-            {
-                float fromDoor = Vector2.Distance(held[i].Position, postsHeld[i]);
-                float toBoxOffice = Vector2.Distance(postsHeld[i], Tuning.BoxOfficePosition);
-                Assert.That(fromDoor, Is.EqualTo(Tuning.ThrowRange).Within(0.001f), $"act {i + 1}");
-                Assert.That(
-                    fromDoor + toBoxOffice,
-                    Is.EqualTo(Vector2.Distance(held[i].Position, Tuning.BoxOfficePosition)).Within(0.001f),
-                    $"act {i + 1}");
-            }
+    [Test]
+    public void Doors_StepsBackFromACriticThatHasTurnedOnIt_AndIsNotTouched()
+    {
+        // One critic that no card fells in the time: it walks in by the door the player holds, and turns on it.
+        Tuning tuning = Tuning.WithCritic(critic => critic with { HitPoints = 1000f }) with { CurtainTime = 0f };
+        Simulation simulation = Shows.WithOneCritic(tuning);
+        float nearest = float.PositiveInfinity;
+
+        for (int tick = 0; tick < 6 * Simulation.TicksPerSecond; tick++)
+        {
+            simulation.Step(ScriptedPlayers.Doors(simulation));
+            nearest = MathF.Min(nearest, Vector2.Distance(simulation.Critics[0].Position, simulation.MagicianPosition));
+        }
+
+        Assert.Multiple(() =>
+        {
+            // The two met, and the magician kept its distance: it still has the critic on it, in its throw.
+            Assert.That(nearest, Is.LessThan(tuning.CriticTurnRadius));
+            Assert.That(simulation.MagicianHitPoints, Is.EqualTo(tuning.MagicianHitPoints));
+            Assert.That(
+                Vector2.Distance(simulation.Critics[0].Position, simulation.MagicianPosition),
+                Is.LessThan(tuning.CriticTurnRadius));
+        });
+    }
+
+    [Test]
+    public void Doors_GoesBackToTheBoxOfficeWhileACriticIsAtIt_AndToItsDoorWhenNoneIs()
+    {
+        // One stagehand, which does not turn, with more hit points than the player takes off it on its way
+        // past: it gets to the box office and strikes it.
+        Tuning tuning = Tuning with
+        {
+            CurtainTime = 0f,
+            EnemyKinds = [Tuning.Critic(), Tuning.Stagehand() with { HitPoints = 40f }],
+        };
+        Simulation simulation = Shows.WithOneOfKind(tuning, kind: 1);
+        Vector2 post = ScriptedPlayers.DoorsPost(simulation);
+        float step = tuning.MagicianSpeed / Simulation.TicksPerSecond;
+        bool stoodByTheBoxOffice = false;
+
+        for (int tick = 0; tick < 60 * Simulation.TicksPerSecond; tick++)
+        {
+            simulation.Step(ScriptedPlayers.Doors(simulation));
+            float fromBoxOffice = Vector2.Distance(simulation.MagicianPosition, tuning.BoxOfficePosition);
+            stoodByTheBoxOffice |= simulation.Critics.Count > 0
+                && MathF.Abs(fromBoxOffice - ScriptedPlayers.DoorsDefenceDistance) <= step;
+        }
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(simulation.BoxOfficeHitPoints, Is.LessThan(tuning.BoxOfficeHitPoints), "the stagehand struck");
+            Assert.That(stoodByTheBoxOffice, "the player came back to it");
+            Assert.That(simulation.Critics, Is.Empty, "and felled it from there");
+            Assert.That(Vector2.Distance(simulation.MagicianPosition, post), Is.LessThanOrEqualTo(step), "and went back to its door");
         });
     }
 
     /// <summary>
-    /// The instrument, read out and not asserted (asserting it is plan T20): both players over the seeds 1 to 20
-    /// on the committed numbers, and decision 22's two counts at the foot.
+    /// The instrument, read out and not asserted (asserting it is plan T20): the orbit player on each of its
+    /// circles and the doors player over the seeds 1 to 20 on the committed numbers, and decision 22's two counts
+    /// at the foot.
     /// </summary>
     [Test]
     [Explicit("Prints how the orbit player and the doors player end over 20 seeds on the committed tuning, and the guard's two counts (a few seconds)")]
-    public void PrintTheGuardsTable()
+    public void PrintTheGuardsTable() => PrintTheTable(Tuning);
+
+    /// <summary>
+    /// The same table with more enemies and nothing else changed: where the players stand when the acts are
+    /// fuller, for whoever tunes to the guard.
+    /// </summary>
+    [TestCase(45, 40)]
+    [TestCase(60, 60)]
+    [TestCase(40, 80)]
+    [Explicit("Prints the guard's table on the committed tuning with another budget: the first act's, and what every act has more than the one before")]
+    public void PrintTheTableOnAFullerBudget(int firstActBudget, int budgetGrowthPerAct) =>
+        PrintTheTable(Tuning with { FirstActBudget = firstActBudget, BudgetGrowthPerAct = budgetGrowthPerAct });
+
+    private static void PrintTheTable(Tuning tuning)
     {
         const int Seeds = 20;
         (string Name, Func<Simulation, MagicianInput> Player)[] players =
         [
-            ("orbit", ScriptedPlayers.Orbit), ("doors", ScriptedPlayers.Doors),
+            .. ScriptedPlayers.OrbitRadii.Select(radius => ($"orbit {Number(radius)}", ScriptedPlayers.Orbit(radius))),
+            ("doors", ScriptedPlayers.Doors),
         ];
-        Tuning tuning = Tuning;
         var performances = new Performance[players.Length * Seeds];
         var clock = Stopwatch.StartNew();
 
@@ -206,19 +329,22 @@ public class ScriptedPlayersTests
         Parallel.For(0, performances.Length, i =>
             performances[i] = ScriptedPlayers.Play(tuning, (ulong)(i % Seeds) + 1, players[i / Seeds].Player));
         clock.Stop();
+        Performance Of(int player, int seed) => performances[(player * Seeds) + seed - 1];
+        bool LostByActSix(Performance played) => played.Ended == Phase.Closed && played.Act <= 6;
 
         TextWriter table = TestContext.Out;
-        table.WriteLine("seed  player  ended    act  box office");
-        for (int i = 0; i < performances.Length; i++)
+        table.WriteLine(
+            $"first act's budget {tuning.FirstActBudget}, {tuning.BudgetGrowthPerAct} more every act; how each performance ended, in which act, the box office left");
+        table.WriteLine("seed  " + string.Join("  ", players.Select(player => $"{player.Name,-15}")));
+        for (int seed = 1; seed <= Seeds; seed++)
         {
-            Performance played = performances[i];
-            table.WriteLine(
-                $"{(i % Seeds) + 1,4}  {players[i / Seeds].Name,-6}  {(played.Ended == Phase.Ovation ? "ovation" : "closed"),-7}  {played.Act,3}  {Number(played.BoxOffice),10}");
+            table.WriteLine($"{seed,4}  " + string.Join("  ", players.Select((_, player) =>
+                $"{(Of(player, seed).Ended == Phase.Ovation ? "ovation" : "closed"),-7} {Of(player, seed).Act,2} {Number(Of(player, seed).BoxOffice, "0"),4}")));
         }
 
         for (int player = 0; player < players.Length; player++)
         {
-            var mine = performances.Skip(player * Seeds).Take(Seeds).ToList();
+            var mine = Enumerable.Range(1, Seeds).Select(seed => Of(player, seed)).ToList();
             table.WriteLine();
             table.WriteLine($"{players[player].Name}: the acts' averages over the performances that played the act");
             table.WriteLine("act  played  entries  share  band 0/<1/1/2  dropped  in reach  walked to  fell  box office  cards taken");
@@ -231,17 +357,34 @@ public class ScriptedPlayersTests
                     .Where(taken => taken.Taken > 0)
                     .Select(taken => $"{taken.Card}:{taken.Taken}"));
                 table.WriteLine(
-                    $"{act + 1,3}  {acts.Count,6}  {Number(acts.Average(a => a.Entries)),7}  {Number(acts.Average(a => a.Share), "0.00"),5}  {bands,13}  {Number(acts.Average(a => a.Dropped)),7}  {Number(acts.Average(a => a.FellInReach)),8}  {Number(acts.Average(a => a.WalkedTo)),9}  {acts.Count(a => a.Fell),4}  {Number(acts.Average(a => a.BoxOffice)),10}  {cards}");
+                    $"{act + 1,3}  {acts.Count,6}  {Number(acts.Average(a => a.Entries)),7}  {Number(acts.Average(a => a.Share), "0.00"),5}  {bands,13}  {Number(acts.Average(a => a.Dropped)),7}  {Number(acts.Average(a => a.FellInReach)),8}  {Number(acts.Average(a => a.WalkedTo)),9}  {acts.Count(a => a.Fell),4}  {Number(acts.Average(a => a.BoxOffice)),10}  {cards}".TrimEnd());
             }
+
+            table.WriteLine(
+                $"cards taken in a performance: {Number(mine.Average(played => played.Acts.Count(a => a.Card is not null)))}");
         }
 
         table.WriteLine();
         table.WriteLine(
-            $"The guard (decision 22, at least 16 of {Seeds} each): the orbit player lost the box office by the end of act six in "
-            + $"{performances.Take(Seeds).Count(played => played.Ended == Phase.Closed && played.Act <= 6)} of {Seeds}; "
-            + $"the doors player finished act ten in {performances.Skip(Seeds).Count(played => played.Ended == Phase.Ovation)} of {Seeds}.");
-        table.WriteLine($"{performances.Length} performances in {Number(clock.Elapsed.TotalSeconds)} s.");
+            $"in reach: a piece dropped within the pick-up reach ({Number(tuning.MagicianRadius + tuning.ApplausePickUpReach, "0.0#")}) of where the magician stood. "
+            + $"A critic that touches the magician stands {Number(tuning.MagicianRadius + tuning.EnemyKinds[0].Radius, "0.0#")} from it, "
+            + "so this counts only what a squeezed crowd drops: it is near nothing by the numbers' geometry and says nothing of how safe a player stood.");
+        table.WriteLine();
+        int orbits = players.Length - 1;
+        table.WriteLine($"The guard (decision 22, at least 16 of {Seeds} each).");
+        for (int player = 0; player < orbits; player++)
+        {
+            table.WriteLine(
+                $"  {players[player].Name} lost the box office by the end of act six in {Enumerable.Range(1, Seeds).Count(seed => LostByActSix(Of(player, seed)))} of {Seeds}.");
+        }
 
-        static string Number(double value, string format = "0.0") => value.ToString(format, CultureInfo.InvariantCulture);
+        table.WriteLine(
+            "  The orbit player, on whichever circle does best, lost the box office by the end of act six in "
+            + $"{Enumerable.Range(1, Seeds).Count(seed => Enumerable.Range(0, orbits).All(player => LostByActSix(Of(player, seed))))} of {Seeds}.");
+        table.WriteLine(
+            $"  The doors player finished act ten in {Enumerable.Range(1, Seeds).Count(seed => Of(orbits, seed).Ended == Phase.Ovation)} of {Seeds}.");
+        table.WriteLine($"{performances.Length} performances in {Number(clock.Elapsed.TotalSeconds)} s.");
     }
+
+    private static string Number(double value, string format = "0.0") => value.ToString(format, CultureInfo.InvariantCulture);
 }
