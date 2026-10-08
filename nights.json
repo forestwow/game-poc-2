@@ -1,6 +1,6 @@
 [
   { "night": 1, "name": "A quiet Tuesday", "actsInPerformance": 5, "budgetScale": 0.6, "kindsAllowed": ["critic"], "waveBurstShare": 0 },
   { "night": 2, "name": "The crew arrives", "actsInPerformance": 7, "budgetScale": 0.7, "kindsAllowed": ["critic", "stagehand"], "waveBurstShare": 0 },
-  { "night": 3, "name": "Touts outside", "actsInPerformance": 7, "budgetScale": 0.75, "kindsAllowed": ["critic", "stagehand", "scalper"], "waveBurstShare": 0, "note": "The quiet floor: an enemy that falls on the darker floor round the box office leaves no applause." },
+  { "night": 3, "name": "Touts outside", "actsInPerformance": 7, "budgetScale": 0.75, "kindsAllowed": ["critic", "stagehand", "scalper"], "waveBurstShare": 0, "note": "The quiet floor: an enemy that falls inside the broken line round the box office leaves no applause." },
   { "night": 10, "name": "Opening night" }
 ]

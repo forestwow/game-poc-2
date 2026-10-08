@@ -585,7 +585,10 @@ public class ScriptedPlayersTests
     /// fall leaves a piece (22.8 for 22.8, and 23.4 for 24.4), which is what the kind's leavesApplause is for.
     /// What they do not show: two thirds of the cost is that a scalper pays nothing where a critic in its place
     /// would have, and one third what it eats (plan T58 has the control); and no script hesitates, so "fetch
-    /// it now" is asked of nobody here.
+    /// it now" is asked of nobody here. Nor does anything here fail if eating stops costing encores: with a
+    /// scalper that leaves no piece and eats nothing both margins would still pass (2.1 where 1.5 are asked, 3.1
+    /// where 2.0 are), and the count of pieces eaten passes under T57's rule too. The eating's own share (0.9
+    /// and 1.5 encores) is too thin to assert on twenty seeds.
     /// </summary>
     [TestCase(1)]
     [TestCase(101)]
