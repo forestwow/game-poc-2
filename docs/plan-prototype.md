@@ -354,7 +354,7 @@ Mended:
 - **R** goes through `StartAgain`, which sets back every field the view keeps for a show: the clock's owed part of a tick, the walk clock, a Vanish asked for, the magician's facing and the program's highlight and taken card were left behind before.
 - **The back wall's words.** The middle line was drawn over the act's line wherever it was long: "The magician has fallen…" in every act (seen in a capture of tick 42900, where the doors player falls in act ten). It is now fitted between the act's line and the clock: in the middle where there is room, aside where not, and smaller where it is longer than what is left.
 - **Dead code and stale notes.** `DrawUpright` is gone; `CLAUDE.md` has the stagehand from act four; `art/ludo/styles/manifest.json` says that its folders, its frames and the `--art` flag were removed. `TickEventKind.Throw`'s doc was right already (T28).
-- `art/frames`: 410, 12000, 26621 and 39570 are taken again (walks, and the pale flash where a critic has just fallen); 4560, 4575 and 45600 came out the same to the byte.
+- `art/frames`: 410, 12000, 26621 and 39570 are taken again (walks, the scraps, which fly otherwise now that the shake no longer draws from their `Random`, and the pale flash where a critic has just fallen); 4560, 4575 and 45600 came out the same to the byte.
 
 Left:
 - **The font file.** None is in the repository and nothing was downloaded: which font ships is the owner's choice (the road, below).

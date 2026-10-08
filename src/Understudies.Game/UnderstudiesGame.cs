@@ -72,12 +72,12 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
     // every sixth place of the route to the next: a tenth of a second, under a unit at the magician's speed.
     private const float UnderstudyOpacity = 0.5f;
     private const float RouteOpacity = 0.22f;
+    private const float RouteWidth = 0.12f;
+    private const int RouteStride = 6;
 
     // The moment after a Vanish in which nothing hurts the magician is seen: the magician is this much there and
     // washed with the smoke of its cloud, and is itself again when a touch counts again.
     private const float InvulnerableOpacity = 0.7f;
-    private const float RouteWidth = 0.12f;
-    private const int RouteStride = 6;
 
     // A piece of applause is a diamond with a pale heart: this wide, and never fainter than ApplauseFaintest, so
     // that a piece about to go is still seen to be there. Its lower tip is on the place it lies, which is the
@@ -897,12 +897,15 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
         {
             // The three share one line of the wall, and the middle one has what the other two leave: in the
             // middle of the stage where it has the room, moved aside where it has not, and smaller where it is
-            // longer than all that is left, so that it is never drawn over the act or the clock.
+            // longer than all that is left, so that it keeps off the act and the clock (to within the rounding of its
+            // size to a whole pixel, which the gap beside it takes).
             float from = 1f + Wide(WordsHeight, act) + WordsGap;
             float to = Tuning.StageSize.X - 1f - Wide(WordsHeight, clock) - WordsGap;
             float height = WordsHeight * MathF.Min(1f, (to - from) / Wide(WordsHeight, said));
             float half = MathF.Min(Wide(height, said), to - from) / 2f;
-            float middle = Math.Clamp(Tuning.StageSize.X / 2f, from + half, to - half);
+            // Not Math.Clamp: where the line fills its room the two bounds are one number on paper and can cross by a
+            // hair in float, and a clamp between crossed bounds throws.
+            float middle = MathF.Max(from + half, MathF.Min(Tuning.StageSize.X / 2f, to - half));
             Write(height, said, new Vector2(middle, line), 0.5f, Magician);
         }
 
