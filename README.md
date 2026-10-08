@@ -59,6 +59,6 @@ Two scripted players measure whether hiding at the box office loses and going ou
 
     dotnet test tests/Understudies.Core.Tests --configuration Release --filter "FullyQualifiedName~ScriptedPlayersTests.PrintTheGuardsTable" --logger "console;verbosity=detailed"
 
-With `PrintTheTableOnAnotherBudget` in the place of `PrintTheGuardsTable` it prints the same on three other budgets, with nothing else changed.
+For another budget, or any other variant of the tuning, there is `PrintTheVariants` (below).
 
 Two more of the ordinary tests pin the state hash of a scripted performance: the same seed and the same player must end in the same state on macOS ARM and on Linux x64. A change to `tuning.json`, to a rule or to a player changes those hashes, and the tests' numbers are pinned again.

@@ -48,7 +48,8 @@ public class ScriptedPlayersTests
         int stunned = 0;
 
         // On a circle of nine, wider than the guard's: on those no fall leaves applause (plan decision 27), and
-        // the orbit does not live to a third act.
+        // an orbit without an encore pins less. Its budget is its own and has no rise: the rise is pinned by the
+        // doors player's performance alone.
         Func<Simulation, MagicianInput> orbit = ScriptedPlayers.Orbit(9f);
 
         Performance performance = ScriptedPlayers.Play(Crowded, seed: 1, simulation =>
@@ -65,6 +66,7 @@ public class ScriptedPlayersTests
             Assert.That(vanishes, Is.GreaterThan(0), "Vanishes");
             Assert.That(blows, Is.GreaterThan(0), "blows on the box office");
             Assert.That(stunned, Is.GreaterThan(0), "stunned critics");
+            Assert.That(performance.Acts.Sum(act => act.Encores), Is.GreaterThan(0), "encores");
             Assert.That(performance.Acts[2].StateHash, Is.EqualTo(4345378464534316888UL), "the end of act three");
             Assert.That(performance.Acts[^1].StateHash, Is.EqualTo(6328738384288175142UL), "the end of the performance");
         });
@@ -331,16 +333,6 @@ public class ScriptedPlayersTests
     [Test]
     [Explicit("Prints how the orbit player and the doors player end over 20 seeds on the committed tuning, and the guard's two counts (a few seconds)")]
     public void PrintTheGuardsTable() => PrintTheTable(Tuning);
-
-    /// <summary>
-    /// The same table on another budget and nothing else changed, for whoever tunes to the guard.
-    /// </summary>
-    [TestCase(40, 80)]
-    [TestCase(30, 40)]
-    [TestCase(60, 40)]
-    [Explicit("Prints the guard's table on the committed tuning with another budget: the first act's, and what the second has more than the first")]
-    public void PrintTheTableOnAnotherBudget(int firstActBudget, int budgetGrowthPerAct) =>
-        PrintTheTable(Tuning with { FirstActBudget = firstActBudget, BudgetGrowthPerAct = budgetGrowthPerAct });
 
     /// <summary>
     /// The guard's table in short, for whoever weighs one tuning against another: every variant on the seeds 1
