@@ -78,6 +78,9 @@ internal sealed class Juice(Random random)
     public const float TrailOpacity = 0.5f;
 
     private readonly Dictionary<int, (float HitPoints, float FlashedAt)> _critics = [];
+
+    // How many self cards each understudy had when it was last looked at, in the order of their acts.
+    private readonly List<int> _understudyCards = [];
     private readonly List<(Vector2 Position, float FellAt)> _bodies = [];
     private readonly List<Scrap> _scraps = [];
     private readonly List<(Effect Kind, Vector2 Middle, float At)> _effects = [];
@@ -138,6 +141,27 @@ internal sealed class Juice(Random random)
 
             bool hurt = critic.HitPoints < seen.HitPoints;
             _critics[critic.Id] = (critic.HitPoints, hurt ? FlashNow(seen.FlashedAt) : seen.FlashedAt);
+        }
+
+        // An understudy that has more cards than when it was last looked at has just gained one of its act's
+        // encores (plan T24): a puff at it, as for a piece picked up. No event says so. An act that begins sets an
+        // understudy back to the cards it began with, which is fewer and no puff.
+        for (int i = 0; i < simulation.Understudies.Count; i++)
+        {
+            Understudy understudy = simulation.Understudies[i];
+            SelfCards cards = understudy.Cards;
+            int has = cards.Damage + cards.AttackSpeed + cards.Range + cards.VanishCooldown + cards.OneMoreCard;
+            if (i == _understudyCards.Count)
+            {
+                _understudyCards.Add(has);
+            }
+
+            if (has > _understudyCards[i] && understudy.IsOnStage)
+            {
+                Burst(understudy.Position, PickUpScraps);
+            }
+
+            _understudyCards[i] = has;
         }
 
         foreach (TickEvent happened in simulation.Events)
