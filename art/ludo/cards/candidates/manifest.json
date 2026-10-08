@@ -1,8 +1,8 @@
 {
   "tool": "ludo.ai, through its CLI (ludo 0.1.6)",
   "ticket": "T47, the cards' pictures (the plan's row S5a): candidates, none in the game yet",
-  "credits": 15,
-  "note": "Candidates for the owner to pick from; sheet.png shows them all. Each is 768 pixels with twelve to a sprite pixel and a transparent background. A name with -b or -c is a second or third try of that card with a changed prompt; pierce (no letter) was the first picture made and its card stops short of the critics. A job that returned two pictures is listed twice with the credits of the whole job.",
+  "credits": 18,
+  "note": "Candidates for the owner to pick from; sheet.png shows them all, and sheet-picks.png the pick and the runner-up of each card, cut to what is drawn. Each is 768 pixels with twelve to a sprite pixel and a transparent background. A name with -b or -c is a second or third try of that card with a changed prompt; pierce (no letter) was the first picture made and its card stops short of the critics. A job that returned two pictures is listed twice with the credits of the whole job.",
   "generations_made": [
     {
       "returned": "pierce-v1.png",
@@ -452,6 +452,96 @@
       },
       "job_id": "7e23e24b-df35-4ed4-9d02-9669bdafd26c",
       "created_at": "2026-10-08T17:30:15.978Z",
+      "credits_of_the_job": 1
+    },
+    {
+      "returned": "burst-c-v1.png",
+      "command": "ludo image create",
+      "settings": {
+        "image_type": "item-icon",
+        "perspective": "Any perspective",
+        "aspect_ratio": "ar_1_1",
+        "art_style": "16-Bit",
+        "prompt": "Three whole figures side by side, each one complete from bowler hat to shoes with his overcoat and legs: a surreal theatre critic, a short stout man in a blue-grey overcoat whose whole head is one huge white eyeball with a blue iris under a small black bowler hat. The middle critic is struck in the chest by a white playing card with a red diamond, and round him lies one big thick bold gold and red ring, a shock wave with sharp rays pointing outward like a sun, centred on him. The ring passes through the critic on the left and the critic on the right, each knocked back and leaning away with a red impact star where the ring hits his overcoat. Three complete critics with bodies, no loose eyeballs. The subject fills the frame from edge to edge. Pixel art game icon with a thick dark outline and a small limited palette of black, white, red, blue-grey and gold, big bold simple shapes that read at a very small size, seen flat, centred and filling the frame, on a plain empty background, no text, no letters, no numbers, no border, no frame.",
+        "n": 2
+      },
+      "job_id": "3efecb26-9ed1-446b-9187-956ace0423b4",
+      "created_at": "2026-10-08T17:43:35.781Z",
+      "credits_of_the_job": 1
+    },
+    {
+      "returned": "burst-c-v2.png",
+      "command": "ludo image create",
+      "settings": {
+        "image_type": "item-icon",
+        "perspective": "Any perspective",
+        "aspect_ratio": "ar_1_1",
+        "art_style": "16-Bit",
+        "prompt": "Three whole figures side by side, each one complete from bowler hat to shoes with his overcoat and legs: a surreal theatre critic, a short stout man in a blue-grey overcoat whose whole head is one huge white eyeball with a blue iris under a small black bowler hat. The middle critic is struck in the chest by a white playing card with a red diamond, and round him lies one big thick bold gold and red ring, a shock wave with sharp rays pointing outward like a sun, centred on him. The ring passes through the critic on the left and the critic on the right, each knocked back and leaning away with a red impact star where the ring hits his overcoat. Three complete critics with bodies, no loose eyeballs. The subject fills the frame from edge to edge. Pixel art game icon with a thick dark outline and a small limited palette of black, white, red, blue-grey and gold, big bold simple shapes that read at a very small size, seen flat, centred and filling the frame, on a plain empty background, no text, no letters, no numbers, no border, no frame.",
+        "n": 2
+      },
+      "job_id": "3efecb26-9ed1-446b-9187-956ace0423b4",
+      "created_at": "2026-10-08T17:43:35.781Z",
+      "credits_of_the_job": 1
+    },
+    {
+      "returned": "sleight-of-hand-c-v1.png",
+      "command": "ludo image create",
+      "settings": {
+        "image_type": "item-icon",
+        "perspective": "Any perspective",
+        "aspect_ratio": "ar_1_1",
+        "art_style": "16-Bit",
+        "prompt": "One white-gloved hand in a black tailcoat sleeve with a white cuff, shown three times as three afterimages of the same quick flick, fanned in an arc one above the other from the same wrist: the first two afterimages paler and see-through, the last solid. Each of the three hands flicks exactly one white playing card with a red diamond, so there are three hands and three single cards, each card just leaving its own fingertips. Curved motion arcs between the hands. The subject fills the frame from edge to edge. Only the hands and their cards, no body, no row of cards. Pixel art game icon with a thick dark outline and a small limited palette of black, white, red, blue-grey and gold, big bold simple shapes that read at a very small size, seen flat, centred and filling the frame, on a plain empty background, no text, no letters, no numbers, no border, no frame.",
+        "n": 2
+      },
+      "job_id": "e770b166-68d4-44b6-bcda-8bb07bb380f8",
+      "created_at": "2026-10-08T17:43:43.567Z",
+      "credits_of_the_job": 1
+    },
+    {
+      "returned": "sleight-of-hand-c-v2.png",
+      "command": "ludo image create",
+      "settings": {
+        "image_type": "item-icon",
+        "perspective": "Any perspective",
+        "aspect_ratio": "ar_1_1",
+        "art_style": "16-Bit",
+        "prompt": "One white-gloved hand in a black tailcoat sleeve with a white cuff, shown three times as three afterimages of the same quick flick, fanned in an arc one above the other from the same wrist: the first two afterimages paler and see-through, the last solid. Each of the three hands flicks exactly one white playing card with a red diamond, so there are three hands and three single cards, each card just leaving its own fingertips. Curved motion arcs between the hands. The subject fills the frame from edge to edge. Only the hands and their cards, no body, no row of cards. Pixel art game icon with a thick dark outline and a small limited palette of black, white, red, blue-grey and gold, big bold simple shapes that read at a very small size, seen flat, centred and filling the frame, on a plain empty background, no text, no letters, no numbers, no border, no frame.",
+        "n": 2
+      },
+      "job_id": "e770b166-68d4-44b6-bcda-8bb07bb380f8",
+      "created_at": "2026-10-08T17:43:43.567Z",
+      "credits_of_the_job": 1
+    },
+    {
+      "returned": "long-arm-b-v1.png",
+      "command": "ludo image create",
+      "settings": {
+        "image_type": "item-icon",
+        "perspective": "Any perspective",
+        "aspect_ratio": "ar_1_1",
+        "art_style": "16-Bit",
+        "prompt": "One absurdly long, thin, rubbery arm in a black tailcoat sleeve that snakes across the whole picture from edge to edge in a big S shape with two clear bends, starting at the bottom left corner and ending at the top right, where its big white-gloved hand with a white cuff hands one white playing card with a red diamond to a tiny figure standing there, a surreal theatre critic, a short stout man in a blue-grey overcoat whose whole head is one huge white eyeball with a blue iris under a small black bowler hat, drawn very small, much smaller than the hand, so that the arm is many times longer than he is tall. The arm fills the frame from edge to edge. Only the arm and the tiny critic, no magician's body. Pixel art game icon with a thick dark outline and a small limited palette of black, white, red, blue-grey and gold, big bold simple shapes that read at a very small size, seen flat, centred and filling the frame, on a plain empty background, no text, no letters, no numbers, no border, no frame.",
+        "n": 2
+      },
+      "job_id": "26f2028f-332f-459a-9d6e-058f5dc734a1",
+      "created_at": "2026-10-08T17:43:57.716Z",
+      "credits_of_the_job": 1
+    },
+    {
+      "returned": "long-arm-b-v2.png",
+      "command": "ludo image create",
+      "settings": {
+        "image_type": "item-icon",
+        "perspective": "Any perspective",
+        "aspect_ratio": "ar_1_1",
+        "art_style": "16-Bit",
+        "prompt": "One absurdly long, thin, rubbery arm in a black tailcoat sleeve that snakes across the whole picture from edge to edge in a big S shape with two clear bends, starting at the bottom left corner and ending at the top right, where its big white-gloved hand with a white cuff hands one white playing card with a red diamond to a tiny figure standing there, a surreal theatre critic, a short stout man in a blue-grey overcoat whose whole head is one huge white eyeball with a blue iris under a small black bowler hat, drawn very small, much smaller than the hand, so that the arm is many times longer than he is tall. The arm fills the frame from edge to edge. Only the arm and the tiny critic, no magician's body. Pixel art game icon with a thick dark outline and a small limited palette of black, white, red, blue-grey and gold, big bold simple shapes that read at a very small size, seen flat, centred and filling the frame, on a plain empty background, no text, no letters, no numbers, no border, no frame.",
+        "n": 2
+      },
+      "job_id": "26f2028f-332f-459a-9d6e-058f5dc734a1",
+      "created_at": "2026-10-08T17:43:57.716Z",
       "credits_of_the_job": 1
     }
   ]
