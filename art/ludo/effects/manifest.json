@@ -1,0 +1,102 @@
+{
+  "tool": "ludo.ai, through its CLI (ludo 0.1.6)",
+  "ticket": "T22, the cards' effects",
+  "credits": 5.0,
+  "note": "raw/ keeps the stills as returned. The two sheets are kept only under the names the game reads: three rows of three frames, a file pixel to a sprite pixel. A job that returned two pictures is listed twice with the credits of the whole job.",
+  "game_files": {
+    "hit-burst.png": "the animation of raw/hit-v2.png",
+    "kill-burst.png": "the animation of raw/kill-v1.png"
+  },
+  "generations_made": [
+    {
+      "returned": "hit-v1.png",
+      "command": "ludo image create",
+      "settings": {
+        "image_type": "sprite-vfx",
+        "aspect_ratio": "ar_1_1",
+        "art_style": "16-Bit",
+        "prompt": "A small sharp impact burst where a thrown playing card strikes: a white and gold four-pointed star flash with a few tiny red hearts and black spades flying out of it. Pixel art visual effect with a thick dark outline and a small limited palette, 16-bit game style, captured at its peak, centred, seen flat, no character, no text, no ground.",
+        "n": 2
+      },
+      "job_id": "73222200-7c87-42be-ac30-e75245af923d",
+      "created_at": "2026-10-08T10:11:30.283Z",
+      "credits_of_the_job": 1
+    },
+    {
+      "returned": "hit-v2.png",
+      "command": "ludo image create",
+      "settings": {
+        "image_type": "sprite-vfx",
+        "aspect_ratio": "ar_1_1",
+        "art_style": "16-Bit",
+        "prompt": "A small sharp impact burst where a thrown playing card strikes: a white and gold four-pointed star flash with a few tiny red hearts and black spades flying out of it. Pixel art visual effect with a thick dark outline and a small limited palette, 16-bit game style, captured at its peak, centred, seen flat, no character, no text, no ground.",
+        "n": 2
+      },
+      "job_id": "73222200-7c87-42be-ac30-e75245af923d",
+      "created_at": "2026-10-08T10:11:30.283Z",
+      "credits_of_the_job": 1
+    },
+    {
+      "returned": "kill-v1.png",
+      "command": "ludo image create",
+      "settings": {
+        "image_type": "sprite-vfx",
+        "aspect_ratio": "ar_1_1",
+        "art_style": "16-Bit",
+        "prompt": "A burst where a theatre critic is destroyed: a splash of black ink in the middle with torn newspaper pages and a few white feathers flying outward from it in all directions. Pixel art visual effect with a thick dark outline and a small limited palette, 16-bit game style, captured at its peak, centred, seen flat, no character, no text, no ground.",
+        "n": 2
+      },
+      "job_id": "e0b16d96-4c0f-4e6b-b8d9-8f011646d1d3",
+      "created_at": "2026-10-08T10:11:32.215Z",
+      "credits_of_the_job": 1
+    },
+    {
+      "returned": "kill-v2.png",
+      "command": "ludo image create",
+      "settings": {
+        "image_type": "sprite-vfx",
+        "aspect_ratio": "ar_1_1",
+        "art_style": "16-Bit",
+        "prompt": "A burst where a theatre critic is destroyed: a splash of black ink in the middle with torn newspaper pages and a few white feathers flying outward from it in all directions. Pixel art visual effect with a thick dark outline and a small limited palette, 16-bit game style, captured at its peak, centred, seen flat, no character, no text, no ground.",
+        "n": 2
+      },
+      "job_id": "e0b16d96-4c0f-4e6b-b8d9-8f011646d1d3",
+      "created_at": "2026-10-08T10:11:32.215Z",
+      "credits_of_the_job": 1
+    },
+    {
+      "returned": "kill-burst-1.png",
+      "command": "ludo sprite animate",
+      "settings": {
+        "initial_image": "kill-v1.png",
+        "image_type": "sprite-vfx",
+        "motion_prompt": "the ink splashes outward, the torn pages and feathers fly apart, and everything fades away to nothing",
+        "model": "forge-pixel",
+        "duration": 1,
+        "frames": 9,
+        "frame_size": 64,
+        "loop": false
+      },
+      "job_id": "253cabda-c5d1-4109-95b3-4767548b9142",
+      "created_at": "2026-10-08T10:12:23.392Z",
+      "credits_of_the_job": 1.5
+    },
+    {
+      "returned": "hit-burst-1.png",
+      "command": "ludo sprite animate",
+      "settings": {
+        "initial_image": "hit-v2.png",
+        "image_type": "sprite-vfx",
+        "motion_prompt": "the star flashes and bursts outward, the hearts and spades fly apart, and everything fades away to nothing",
+        "model": "forge-pixel",
+        "duration": 1,
+        "frames": 9,
+        "frame_size": 32,
+        "loop": false
+      },
+      "job_id": "fe55d77c-980e-4fec-8c62-2e1e5c91b3d4",
+      "created_at": "2026-10-08T10:12:23.392Z",
+      "credits_of_the_job": 1.5
+    }
+  ]
+}
