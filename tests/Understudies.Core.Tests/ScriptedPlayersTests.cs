@@ -520,7 +520,7 @@ public class ScriptedPlayersTests
     [TestCase(101)]
     public void NightOne_OnTheCommittedNights_WhoeverMovesWinsEverySeedAndTheOrbitStillLoses(int firstSeed)
     {
-        Performance[] performances = TheNight(1, firstSeed);
+        Performance[] performances = PlayTheGuard(CommittedNights.Tuning(1), firstSeed);
 
         Assert.Multiple(() =>
         {
@@ -539,14 +539,16 @@ public class ScriptedPlayersTests
     /// each finish act seven on at least 18 seeds of 20 (both finish 20 on both sets). Hiding loses sooner than
     /// on night 1: the orbit's box office falls by the end of act five on every circle on at least 16 (it falls
     /// in act four on every seed of both sets). And the document's lesson of the night, "a lane left alone
-    /// leaks", is in the counts: the kiter, which leaves the doors alone, is struck from act four on and ends
-    /// with 377 and 376 of the box office, where the doors player ends with all 400; asserted as no less.
+    /// leaks", is what tells it from night 1 with more acts: the kiter, which leaves the doors alone, is struck
+    /// from act four on and ends with 377 and 376 of the box office, where the doors player ends with all 400;
+    /// asserted as at least 10 less on average. With the stagehand taken out of the night both end on 400 and
+    /// this fails, which is what it is for.
     /// </summary>
     [TestCase(1)]
     [TestCase(101)]
-    public void NightTwo_OnTheCommittedNights_WhoeverMovesWinsTheOrbitLosesByActFiveAndTheDoorsLeakLeast(int firstSeed)
+    public void NightTwo_OnTheCommittedNights_WhoeverMovesWinsTheOrbitLosesByActFiveAndALaneLeftAloneLeaks(int firstSeed)
     {
-        Performance[] performances = TheNight(2, firstSeed);
+        Performance[] performances = PlayTheGuard(CommittedNights.Tuning(2), firstSeed);
         List<Performance> doors = Of(performances, Doors);
         List<Performance> kiter = Of(performances, Kiter);
 
@@ -559,9 +561,9 @@ public class ScriptedPlayersTests
                 Is.GreaterThanOrEqualTo(16),
                 "seeds on which the orbit player lost the box office by the end of act five on every circle");
             Assert.That(
-                doors.Average(played => played.BoxOffice),
-                Is.GreaterThanOrEqualTo(kiter.Average(played => played.BoxOffice)),
-                "the box office at the end: the doors player's against the kiter's");
+                kiter.Average(played => played.BoxOffice),
+                Is.LessThanOrEqualTo(doors.Average(played => played.BoxOffice) - 10f),
+                "the box office at the end: the kiter's, which leaves the doors alone, against the doors player's");
         });
     }
 
@@ -617,7 +619,8 @@ public class ScriptedPlayersTests
             var json = JsonNode.Parse(CommittedTuning.Json)!.AsObject();
             JsonObject? overlay = night is null
                 ? null
-                : JsonNode.Parse(CommittedNights.Json)!.AsArray().Single(entry => (int)entry!["night"]! == night)!.DeepClone().AsObject();
+                : (JsonNode.Parse(CommittedNights.Json)!.AsArray().FirstOrDefault(entry => (int)entry!["night"]! == night)
+                    ?? throw new ArgumentException($"UNDERSTUDIES_NIGHT is {night}, and nights.json has no night {night}.")).DeepClone().AsObject();
             foreach ((string key, JsonNode? value) in JsonNode.Parse(parts[1])!.AsObject())
             {
                 // Tuning.Parse refuses a key it does not know, so a misspelt one is not played in silence.
@@ -904,20 +907,6 @@ public class ScriptedPlayersTests
         101 => Played[1].Value,
         _ => throw new ArgumentOutOfRangeException(nameof(firstSeed), firstSeed, "the guard is read from the seeds 1 and 101"),
     };
-
-    /// <summary>
-    /// The guard's players on the committed nights 1 and 2 (plan T52), each over the seeds from 1 and from 101,
-    /// played once for every test that reads them.
-    /// </summary>
-    private static readonly Lazy<Performance[]>[] NightsPlayed =
-    [
-        .. from night in new[] { 1, 2 }
-           from firstSeed in new[] { 1, 101 }
-           select new Lazy<Performance[]>(() => PlayTheGuard(CommittedNights.Tuning(night), firstSeed)),
-    ];
-
-    private static Performance[] TheNight(int night, int firstSeed) =>
-        NightsPlayed[((night - 1) * 2) + (firstSeed == 1 ? 0 : 1)].Value;
 
     /// <summary>
     /// On how many seeds hiding lost by the end of <paramref name="act"/>: the box office fell by then on every
