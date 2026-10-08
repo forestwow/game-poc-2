@@ -42,9 +42,8 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
     // A circle is laid of this many strips: there is no texture but the one pixel.
     private const int DiscStrips = 48;
 
-    // The same in every capture, so that a frame can be compared with the one before. A seed on which the doors
-    // player finishes act ten: since plan T37 it does on eight of the guard's first twenty, and not on seed 1.
-    private const ulong CaptureSeed = 2;
+    // The same in every capture, so that a frame can be compared with the one before.
+    private const ulong CaptureSeed = 1;
 
     // How tall the words on the back wall are and the number at the box office's bar, in world units: the font is
     // asked for at that many screen pixels, whatever the window's size.
@@ -407,8 +406,8 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
         // Nobody is here to press a key, so the capture is played by the doors player of the guard (plan decision
         // 22; `ScriptedPlayers.cs`, the tests' own file, compiled into the game as well): it goes out to the
         // newest door, picks up its applause and takes its cards by the players' one order. The capture's seed is one
-        // the guard plays, and on the committed numbers that performance reaches the ovation. Not every seed's
-        // does (plan T37): if a change makes this one lose, CaptureSeed gets one that wins.
+        // the guard plays, and on the committed numbers that performance reaches the ovation. The guard lets four
+        // seeds of twenty lose: if a retuning makes this one lose, CaptureSeed gets one that wins.
         // Every act opens with its curtain, whose ticks are counted here with the rest.
         const int second = Simulation.TicksPerSecond;
         Phase before = _simulation.Phase;
