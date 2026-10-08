@@ -274,6 +274,37 @@ The cliff of T23 goes, and what holds the guard is the applause rule and no long
   - Act three is two and a quarter times act two, a little over the twice that was aimed at.
   - No capture shows a crowd, an encore or a second act any more: the script that plays the committed numbers is still a ticket of its own.
 
+### The road from here
+
+On 2026-10-08 the owner brought in three documents and said they are what is to be built: the review of the skeleton with its proposed tickets R1 to R9 (`docs/reviews/2026-10-08-skeleton-review.md`), the cast and the cards (`docs/design/2026-10-08-enemies-and-cards.md`) and the chorus's synergies with the notices (`docs/design/2026-10-08-chorus-synergies-and-notices.md`). They are the specification of what follows; this section is the order and the plan's own numbers. A ticket is written out here in full when it is taken, from its document, and each still runs the guard and pins the hashes.
+
+What the documents could not know, since they were written on `main` before T23:
+
+- Their tickets T26 to T30 are numbered by the document. T26 in this plan is the waves' shape; the table gives the plan's numbers.
+- R4 is done: the chorus card has its price (decision 26, as the owner changed it). R2 is done in part by T26: the waves have their shape, and neither a cap on the living nor a grid for the push was needed on its numbers (152 critics at once at most for a winning player); both wait until a ticket brings more.
+- Applause near the box office earns nothing (decision 27). The documents' guard flags that speak of the orbit's few pieces are to be read again with that rule.
+- The "rival's understudy" of the cast is the tougher kind that T26's measuring found to be the one thing that threatens the box office late, and the answer to the owner's report from play.
+
+| order | ticket | from | what |
+|---|---|---|---|
+| 1 | **T27 A capture that plays** | T26's review | the capture's script walks out to the first door in act one, as it already does in act two, so that a frame can show applause, an encore, a program, an understudy, a crowd and a later act again. Review by frame is nearly blind until it is done |
+| 2 | **T28 Events say who** | synergies doc, its T26; review R5 in part | `Throw`, `Hit` and `Kill` name the thrower and the critic; the view stops comparing hit points; an understudy's throw is seen and heard apart from the magician's |
+| 3 | **T29 The rival's understudy** | cast §3.2 | the first new enemy: slow, long-lived, never turns, strikes the box office for three (`strikeDamage` a kind), with its sprite. Tuned so that the late acts threaten the box office |
+| 4 | **T25 Cards that change what a card does** | this plan; cast §6.1 | the pierce, the ricochet, the burst |
+| 5 | **T30 The notices**, then **T31 Stop 2 asked** | synergies doc, its T29 and T30; review R3 in part | the ceremony after an act and a real curtain; then the owner's written answer to stop 2's question |
+| 6 | **T32 Chorus cards as kinds**, then **T33 to T36**, a synergy each | synergies doc, its T27 and T28 | Crossfire, Hand-off, the Chorus line, the Duet |
+| 7 | more of the cast, a ticket each, numbered when taken | cast §10 | the scalper, the heckler, the prompter; then the Diva and the Reviewer; then self cards, chorus cards and evolutions in the order given there |
+
+Taken between those, when they are next in the way:
+
+- **R1, an honest guard** (held-out seeds as a second assertion, a third player that kites, the doors player anchored at its doors): before the first card or synergy that its document flags for the guard, and before the next retuning of the waves. T26's instrument already plays the second set of seeds and the wider circles.
+- **R6, the small bugs**, and **R7, macOS in CI**: a small pull request each.
+- **R3's other half** (an understudy that reads at a glance: its opacity, a mark of its act, its route as a ribbon), with or after the notices.
+- **R5's other half and R8** (a card described by Core, kinds by name, a sprite atlas, a hash that does not walk every route): when a ticket is slowed by the lack of them.
+- **R9** (the package and three friends now) is against what the owner said on the same day (§6: a good deal is to be added before anything is given out). It stays the owner's to call.
+
+The cast's five open questions for the owner (the three flagged cards, the intern and the cap, the bosses' names, the chorus card's price, the heckler's tomato) are answered when their tickets are taken; the fourth is answered already.
+
 ## 6. Stops
 
 | Stop | After | The question the owner answers by playing |

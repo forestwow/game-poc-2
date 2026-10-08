@@ -1,6 +1,7 @@
 # Chorus synergies and the notices: ticket-shaped specs
 
 - **Status:** written 2026-10-08 at the owner's word ("the two for now sound great, go"), after the owner floated a loose idea of borrowing from Balatro. Of the four borrowings weighed in conversation (synergies between understudies, a house rule per act, a scoring ceremony, the deck as ammunition), the owner took the two cheap ones: **synergies between understudies as chorus cards** (Balatro's jokers, which play with each other) and **a ceremony after the act** (Balatro's scoring, with the count-up and the rising pitch). Both leave the core verb alone.
+- **Numbers in the plan:** this document's T26, T27, T28, T29 and T30 are the plan's T28, T32, T33 to T36, T30 and T31 (`docs/plan-prototype.md`, "The road from here"); the plan's T26 is another ticket.
 - **What this is:** five tickets in the plan's own shape (`docs/plan-prototype.md` §5), with their tests, their `tuning.json` keys and what each needs in Core, so they can be lifted into the plan when the owner names them. Nothing here is agreed until then. No code.
 - **Facts from the code that shaped them** (`main` at a7098df): `ChorusCards` is one count, so there is one kind of chorus card; `TickEvent` carries a kind and a position and nothing else, so the view cannot tell a magician's kill from an understudy's without comparing hit points (`Juice.cs:132–141`); Resonance was cut from the vision because it rewarded the live magician for standing near a ghost; the guard of decision 22 and the two pinned hashes apply after every change of rule.
 
