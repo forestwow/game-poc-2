@@ -1,0 +1,161 @@
+{
+  "tool": "ludo.ai, through its CLI (ludo 0.1.6)",
+  "ticket": "T07b, the art spike",
+  "generations": 10,
+  "credits": 5.0,
+  "note": "Every file a generation names is what the tool returned (the PNG; the WebP twin of each was not kept). The three the game reads are the picked ones scaled down with `sips -Z <longest side>` and nothing else: the game trims the empty margin itself.",
+  "game_files": [
+    {
+      "file": "magician.png",
+      "from": "magician-papercraft-v2.png",
+      "longest_side": 256
+    },
+    {
+      "file": "critic.png",
+      "from": "critic-v1.png",
+      "longest_side": 192
+    },
+    {
+      "file": "box-office.png",
+      "from": "box-office-create-v1.png",
+      "longest_side": 384
+    }
+  ],
+  "generations_made": [
+    {
+      "file": "magician-papercraft-v1.png",
+      "command": "ludo image create",
+      "settings": {
+        "image_type": "sprite",
+        "art_style": "Paper Craft",
+        "perspective": "High Angle",
+        "aspect_ratio": "ar_1_1",
+        "prompt": "a stage magician standing idle, facing the viewer, full body from head to feet: black top hat, black tailcoat with a red lining, white gloves, a short cape, holding a fan of playing cards in one hand. Paper theatre puppet, flat cut-out of coloured paper with clean bold shapes and a thin dark outline, no text. Top-down three-quarter view as in a survivors game: seen from the front and slightly from above. Single character, nothing else.",
+        "n": 2
+      },
+      "job_id": "856813b9-de1f-444b-a97e-f1b12c9e71d6",
+      "created_at": "2026-10-08T08:49:14.298Z"
+    },
+    {
+      "file": "magician-papercraft-v2.png",
+      "command": "ludo image create",
+      "settings": {
+        "image_type": "sprite",
+        "art_style": "Paper Craft",
+        "perspective": "High Angle",
+        "aspect_ratio": "ar_1_1",
+        "prompt": "a stage magician standing idle, facing the viewer, full body from head to feet: black top hat, black tailcoat with a red lining, white gloves, a short cape, holding a fan of playing cards in one hand. Paper theatre puppet, flat cut-out of coloured paper with clean bold shapes and a thin dark outline, no text. Top-down three-quarter view as in a survivors game: seen from the front and slightly from above. Single character, nothing else.",
+        "n": 2
+      },
+      "job_id": "856813b9-de1f-444b-a97e-f1b12c9e71d6",
+      "created_at": "2026-10-08T08:49:14.298Z",
+      "picked_as": "magician.png"
+    },
+    {
+      "file": "magician-flat-v1.png",
+      "command": "ludo image create",
+      "settings": {
+        "image_type": "sprite",
+        "art_style": "Flat Design",
+        "perspective": "High Angle",
+        "aspect_ratio": "ar_1_1",
+        "prompt": "a stage magician standing idle, facing the viewer, full body from head to feet: black top hat, black tailcoat with a red lining, white gloves, a short cape, holding a fan of playing cards in one hand. Paper theatre puppet, flat cut-out of coloured paper with clean bold shapes and a thin dark outline, no text. Top-down three-quarter view as in a survivors game: seen from the front and slightly from above. Single character, nothing else.",
+        "n": 2
+      },
+      "job_id": "8e6fc5a6-5b22-4c48-9fe6-11229dc43961",
+      "created_at": "2026-10-08T08:49:40.061Z"
+    },
+    {
+      "file": "magician-flat-v2.png",
+      "command": "ludo image create",
+      "settings": {
+        "image_type": "sprite",
+        "art_style": "Flat Design",
+        "perspective": "High Angle",
+        "aspect_ratio": "ar_1_1",
+        "prompt": "a stage magician standing idle, facing the viewer, full body from head to feet: black top hat, black tailcoat with a red lining, white gloves, a short cape, holding a fan of playing cards in one hand. Paper theatre puppet, flat cut-out of coloured paper with clean bold shapes and a thin dark outline, no text. Top-down three-quarter view as in a survivors game: seen from the front and slightly from above. Single character, nothing else.",
+        "n": 2
+      },
+      "job_id": "8e6fc5a6-5b22-4c48-9fe6-11229dc43961",
+      "created_at": "2026-10-08T08:49:40.061Z"
+    },
+    {
+      "file": "critic-v1.png",
+      "command": "ludo image generate-with-style",
+      "settings": {
+        "style_image": "magician-papercraft-v2.png",
+        "image_type": "sprite",
+        "prompt": "a theatre critic standing, facing the viewer, full body from head to feet: a short stout man in a blue-grey overcoat and a bowler hat, round spectacles, a notebook in one hand and a pencil in the other, a sour look. Shorter and rounder than a tall thin figure. Paper theatre puppet, flat cut-out of coloured paper, seen from the front and slightly from above. Single character, nothing else, no text.",
+        "n": 2
+      },
+      "job_id": "bba6ea47-223a-444c-a363-02558b1b89da",
+      "created_at": "2026-10-08T08:50:25.384Z",
+      "picked_as": "critic.png"
+    },
+    {
+      "file": "critic-v2.png",
+      "command": "ludo image generate-with-style",
+      "settings": {
+        "style_image": "magician-papercraft-v2.png",
+        "image_type": "sprite",
+        "prompt": "a theatre critic standing, facing the viewer, full body from head to feet: a short stout man in a blue-grey overcoat and a bowler hat, round spectacles, a notebook in one hand and a pencil in the other, a sour look. Shorter and rounder than a tall thin figure. Paper theatre puppet, flat cut-out of coloured paper, seen from the front and slightly from above. Single character, nothing else, no text.",
+        "n": 2
+      },
+      "job_id": "bba6ea47-223a-444c-a363-02558b1b89da",
+      "created_at": "2026-10-08T08:50:25.384Z"
+    },
+    {
+      "file": "box-office-v1.png",
+      "command": "ludo image generate-with-style",
+      "settings": {
+        "style_image": "magician-papercraft-v2.png",
+        "image_type": "sprite",
+        "prompt": "a small theatre box office booth, a square ticket kiosk as wide as it is tall: dark red wooden walls with gold trim, a ticket window with a brass grille in the front, a striped awning above it, a small blank sign on top. Flat cut-out of coloured paper, seen from the front and slightly from above. Single object, no people, no text, no ground.",
+        "n": 2
+      },
+      "job_id": "dfe94d12-6877-43ab-92f4-0c69ff58fc13",
+      "created_at": "2026-10-08T08:50:53.692Z"
+    },
+    {
+      "file": "box-office-v2.png",
+      "command": "ludo image generate-with-style",
+      "settings": {
+        "style_image": "magician-papercraft-v2.png",
+        "image_type": "sprite",
+        "prompt": "a small theatre box office booth, a square ticket kiosk as wide as it is tall: dark red wooden walls with gold trim, a ticket window with a brass grille in the front, a striped awning above it, a small blank sign on top. Flat cut-out of coloured paper, seen from the front and slightly from above. Single object, no people, no text, no ground.",
+        "n": 2
+      },
+      "job_id": "dfe94d12-6877-43ab-92f4-0c69ff58fc13",
+      "created_at": "2026-10-08T08:50:53.692Z"
+    },
+    {
+      "file": "box-office-create-v1.png",
+      "command": "ludo image create",
+      "settings": {
+        "image_type": "sprite",
+        "art_style": "Paper Craft",
+        "perspective": "High Angle",
+        "aspect_ratio": "ar_1_1",
+        "prompt": "a small theatre box office booth seen straight from the front, a squat square ticket kiosk exactly as wide as it is tall: dark red walls with gold trim, one ticket window with a brass grille, a red and cream striped awning, a blank sign on the roof. Flat layered cut-out of coloured paper like a paper theatre prop, a single flat front face with no side walls and no 3D depth. Single object, no people, no text, no ground.",
+        "n": 2
+      },
+      "job_id": "38c197ad-d255-4de1-928b-041cf1f25460",
+      "created_at": "2026-10-08T08:51:39.103Z",
+      "picked_as": "box-office.png"
+    },
+    {
+      "file": "box-office-create-v2.png",
+      "command": "ludo image create",
+      "settings": {
+        "image_type": "sprite",
+        "art_style": "Paper Craft",
+        "perspective": "High Angle",
+        "aspect_ratio": "ar_1_1",
+        "prompt": "a small theatre box office booth seen straight from the front, a squat square ticket kiosk exactly as wide as it is tall: dark red walls with gold trim, one ticket window with a brass grille, a red and cream striped awning, a blank sign on the roof. Flat layered cut-out of coloured paper like a paper theatre prop, a single flat front face with no side walls and no 3D depth. Single object, no people, no text, no ground.",
+        "n": 2
+      },
+      "job_id": "38c197ad-d255-4de1-928b-041cf1f25460",
+      "created_at": "2026-10-08T08:51:39.103Z"
+    }
+  ]
+}

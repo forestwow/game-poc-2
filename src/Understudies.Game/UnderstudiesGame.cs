@@ -121,6 +121,12 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
     private readonly SimulationClock _clock = new();
     private readonly string? _capturePath;
     private readonly int _captureTicks;
+
+    // The art spike (plan T07b): null draws every figure as shapes.
+    private readonly string? _artFolder;
+
+    // By Figure: the image and the part of it that is not empty. A figure that has none is drawn as shapes.
+    private readonly (Texture2D Image, Rectangle Opaque)?[] _sprites = new (Texture2D, Rectangle)?[4];
     private readonly Sound _sound;
     private Simulation _simulation;
     private Juice _juice;
@@ -139,8 +145,10 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
     private FontSystem? _fonts;
 
     /// <summary>With a <paramref name="capturePath"/> the game does not play: it saves one frame there and exits.</summary>
-    public UnderstudiesGame(Tuning tuning, string? capturePath, int captureTicks)
+    /// <param name="artFolder">Where the figures' images are; null draws them as shapes.</param>
+    public UnderstudiesGame(Tuning tuning, string? capturePath, int captureTicks, string? artFolder = null)
     {
+        _artFolder = artFolder;
         _simulation = capturePath is null ? NewShow(tuning) : new Simulation(tuning, CaptureSeed);
         _juice = new Juice(capturePath is null ? Random.Shared : new Random((int)CaptureSeed));
         _sound = new Sound(silent: capturePath is not null);
@@ -166,6 +174,13 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
         _spriteBatch = new SpriteBatch(GraphicsDevice);
         _pixel = new Texture2D(GraphicsDevice, 1, 1);
         _pixel.SetData([Color.White]);
+
+        if (_artFolder is not null)
+        {
+            _sprites[(int)Figure.Magician] = ReadSprite("magician.png");
+            _sprites[(int)Figure.Critic] = ReadSprite("critic.png");
+            _sprites[(int)Figure.BoxOffice] = ReadSprite("box-office.png");
+        }
 
         if (FontFiles.FirstOrDefault(File.Exists) is { } fontFile)
         {
@@ -800,6 +815,28 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
             _ => Tuning.BoxOfficeSize,
         };
 
+        if (_sprites[(int)figure] is var (image, opaque))
+        {
+            // As tall as the shapes were, and as wide as the image makes it. ponytail: the flash is not drawn on a
+            // sprite, and a tint only darkens one; the white copy and the understudy's treatment are plan T07c.
+            float unit = tall / opaque.Height;
+            float width = opaque.Width * unit;
+            Color color = (pale ? CriticStunnedBody : tint ?? Color.White) * opacity;
+            // Standing: the bottom middle of the image is on the feet. Fallen: turned onto its side, its middle
+            // where the shapes have theirs.
+            _spriteBatch.Draw(
+                image,
+                fallen ? feet - new Vector2(0f, width / 2f) : feet,
+                opaque,
+                color,
+                fallen ? MathF.PI / 2f : 0f,
+                new Microsoft.Xna.Framework.Vector2(opaque.Width / 2f, fallen ? opaque.Height / 2f : opaque.Height),
+                unit,
+                SpriteEffects.None,
+                Depth(feet));
+            return;
+        }
+
         void Part(float width, float height, Color color, float lift = 0f)
         {
             color = Color.Lerp(color, Color.White, white) * opacity;
@@ -843,6 +880,28 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
                 Part(Tuning.BoxOfficeSize, Tuning.BoxOfficeSize, BoxOffice);
                 break;
         }
+    }
+
+    /// <summary>An image of the art folder, and the rectangle of it that anything is drawn in.</summary>
+    private (Texture2D Image, Rectangle Opaque) ReadSprite(string name)
+    {
+        // The batch blends colours that are already multiplied by their alpha.
+        Texture2D image = Texture2D.FromFile(
+            GraphicsDevice, Path.Combine(_artFolder!, name), DefaultColorProcessors.PremultiplyAlpha);
+        var pixels = new Color[image.Width * image.Height];
+        image.GetData(pixels);
+        int left = image.Width, top = image.Height, right = -1, bottom = -1;
+        for (int i = 0; i < pixels.Length; i++)
+        {
+            // A tool's cut-out leaves a faint haze in its margin: under this it does not count.
+            if (pixels[i].A > 16)
+            {
+                (int x, int y) = (i % image.Width, i / image.Width);
+                (left, top, right, bottom) = (Math.Min(left, x), Math.Min(top, y), Math.Max(right, x), Math.Max(bottom, y));
+            }
+        }
+
+        return (image, new Rectangle(left, top, right - left + 1, bottom - top + 1));
     }
 
     /// <summary>
