@@ -231,8 +231,11 @@ public class UnderstudyTests
             events.AddRange(simulation.Events);
         });
 
-        // Its card hurts like any card: this one was the critic's last.
-        Assert.That(events, Is.EqualTo(new[] { new TickEvent(TickEventKind.Kill, Door) }));
+        // An understudy's throw is a throw, reported at the place it throws from. And its card hurts like any
+        // card: this one was the critic's last.
+        Assert.That(
+            events,
+            Is.EqualTo(new[] { new TickEvent(TickEventKind.Throw, inRange), new TickEvent(TickEventKind.Kill, Door) }));
         Assert.That(simulation.Critics, Is.Empty);
         simulation.GoOn();
 
@@ -277,6 +280,53 @@ public class UnderstudyTests
         // An act begins with every understudy's throw ready, though the first threw thirty ticks ago.
         simulation.Step(default);
         Assert.That(Thrown(byTheMagician: false), Is.EqualTo(5));
+    }
+
+    [Test]
+    public void Step_ABlowClosesTheShow_NothingIsThrownAfterItOnThatTick()
+    {
+        // The critic walks a unit a tick at a magician that one touch fells, six units below the door. The magician
+        // has the critic in range and a throw ready on every tick; its cards are slow and none has landed.
+        Tuning tuning = InRangeOnTheMark with
+        {
+            MagicianHitPoints = 1f,
+            ThrowCooldown = 1f / Simulation.TicksPerSecond,
+            CriticSpeed = 60f,
+            CriticTurnRadius = 100f,
+        };
+        var simulation = new Simulation(tuning, seed: 1);
+        simulation.Step(default);
+        simulation.Step(default);
+        Assert.That(simulation.ThrownCards, Has.Count.EqualTo(1));
+        Assert.That(simulation.ShowClosed, Is.False);
+
+        int thrown = 0;
+        while (!simulation.ShowClosed)
+        {
+            thrown = simulation.ThrownCards.Count;
+            simulation.Step(default);
+        }
+
+        Assert.That(simulation.MagicianHasFallen, Is.True);
+        Assert.That(simulation.ThrownCards, Has.Count.EqualTo(thrown));
+        Assert.That(simulation.Events.Select(happened => happened.Kind), Has.None.EqualTo(TickEventKind.Throw));
+    }
+
+    [Test]
+    public void Step_AVanishInTheFirstActAndNoneInTheSecond_OnlyTheFirstActsUnderstudyLeavesACloud()
+    {
+        var simulation = new Simulation(Scene, seed: 1);
+        Play(simulation, tick => new MagicianInput(Vector2.Zero, Vanish: tick == 20));
+        simulation.GoOn();
+        Play(simulation, _ => default);
+        simulation.GoOn();
+
+        // An act's recording starts empty: the second act's has no Vanish of the first in it. So the third act has
+        // one cloud, the first understudy's, on its tick and where it was left.
+        Play(simulation, _ => default, tick => Assert.That(
+            simulation.Clouds.Select(cloud => cloud.Position),
+            Is.EqualTo(tick == 20 ? new[] { Mark } : []),
+            $"tick {tick}"));
     }
 
     [Test]

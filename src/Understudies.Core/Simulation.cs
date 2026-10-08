@@ -138,11 +138,15 @@ public sealed class Simulation(Tuning tuning, ulong seed)
 
         // The magician throws first, then each understudy in the order of their acts: the cards fly in the order
         // they were thrown, so of the cards that reach one critic on one tick the magician's own lands first, and
-        // a fall it could have had is its own.
-        _ticksToNextThrow = ThrowACard(MagicianPosition, _ticksToNextThrow, byTheMagician: true);
+        // a fall it could have had is its own. Once a blow of this tick has closed the show nobody throws.
+        if (!ShowClosed)
+        {
+            _ticksToNextThrow = ThrowACard(MagicianPosition, _ticksToNextThrow, byTheMagician: true);
+        }
+
         foreach (Understudy understudy in _understudies)
         {
-            if (understudy.IsOnStage)
+            if (understudy.IsOnStage && !ShowClosed)
             {
                 understudy.TicksToNextThrow =
                     ThrowACard(understudy.Position, understudy.TicksToNextThrow, byTheMagician: false);
@@ -358,6 +362,9 @@ public sealed class Simulation(Tuning tuning, ulong seed)
     {
         // The magician's place for this tick has just been recorded, so the recording's length less one is the
         // tick of the act that is played, the first being 0.
+        // ponytail: the act's tick is read off the recording, which today grows on every tick of the act. When a
+        // recording stops early (the magician's fall, T13) this count stops with it and every understudy would
+        // freeze where it stands; the act then needs a counter of its own.
         int tick = _route.Count - 1;
         foreach (Understudy understudy in _understudies)
         {
@@ -634,6 +641,7 @@ public sealed class Simulation(Tuning tuning, ulong seed)
         }
 
         _thrownCards.Add(new ThrownCard(from, direction, Tuning.ThrowRange, byTheMagician));
+        _events.Add(new TickEvent(TickEventKind.Throw, from));
         return Ticks(Tuning.ThrowCooldown);
     }
 
