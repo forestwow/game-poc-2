@@ -38,7 +38,9 @@
       "cost": 1,
       "weight": 3,
       "fromAct": 1,
-      "turnsOnTheMagician": true
+      "turnsOnTheMagician": true,
+      "understudyDamageShare": 1,
+      "inAnAct": 0
     },
     {
       "name": "stagehand",
@@ -50,7 +52,9 @@
       "cost": 1,
       "weight": 1,
       "fromAct": 4,
-      "turnsOnTheMagician": false
+      "turnsOnTheMagician": false,
+      "understudyDamageShare": 1,
+      "inAnAct": 0
     },
     {
       "name": "rival",
@@ -62,7 +66,9 @@
       "cost": 1,
       "weight": 1,
       "fromAct": 4,
-      "turnsOnTheMagician": false
+      "turnsOnTheMagician": false,
+      "understudyDamageShare": 1,
+      "inAnAct": 0
     },
     {
       "name": "headliner",
@@ -74,7 +80,9 @@
       "cost": 1,
       "weight": 1,
       "fromAct": 8,
-      "turnsOnTheMagician": false
+      "turnsOnTheMagician": false,
+      "understudyDamageShare": 1,
+      "inAnAct": 0
     }
   ],
   "firstActBudget": 40,

@@ -283,11 +283,19 @@ public readonly record struct StageDoor(Vector2 Position, int OpensInAct);
 /// <param name="Cost">What one takes from an act's budget, 1 or more.</param>
 /// <param name="Weight">
 /// How likely an act is to buy this kind and not another it can afford: the weight's share of all their weights. A
-/// kind with no weight is never bought.
+/// kind with no weight is never drawn.
 /// </param>
 /// <param name="FromAct">The number of the first act that may buy the kind.</param>
 /// <param name="TurnsOnTheMagician">
 /// Whether the kind turns on a magician that comes within <see cref="Tuning.CriticTurnRadius"/>.
+/// </param>
+/// <param name="UnderstudyDamageShare">
+/// The share of its damage that an understudy's card, or its burst, takes off a critic of the kind: 1 for a kind
+/// that an understudy hurts as the magician does, and less for one that is the magician's to fell (plan T46).
+/// </param>
+/// <param name="InAnAct">
+/// How many of the kind every act from <paramref name="FromAct"/> has whatever is drawn, paid for before anything
+/// is drawn and spread evenly over the act (plan T46): with nothing the kind is only drawn for, by its weight.
 /// </param>
 public readonly record struct EnemyKind(
     string Name,
@@ -299,4 +307,6 @@ public readonly record struct EnemyKind(
     int Cost,
     int Weight,
     int FromAct,
-    bool TurnsOnTheMagician);
+    bool TurnsOnTheMagician,
+    float UnderstudyDamageShare,
+    int InAnAct);

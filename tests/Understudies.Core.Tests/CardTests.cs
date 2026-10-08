@@ -1437,6 +1437,40 @@ public class CardTests
         Assert.That(Of(events, TickEventKind.Burst).Select(burst => burst.Event.Thrower), Is.All.EqualTo(0));
     }
 
+    // Plan T46: a kind that hardly notices an understudy. The scene of the test above with the burst card: an
+    // understudy's card takes the kind's share of what it would off the critic it strikes, and its burst the
+    // same share of the burst's off the other.
+    [Test]
+    public void Step_AnUnderstudysCardAndItsBurst_TakeTheKindsShareOfTheirDamage()
+    {
+        Simulation simulation = WithACrowd(
+            Scene with { CardChorusDamage = 0f, CardBurstRadius = 4f, CardBurstShare = 0.5f },
+            [Card.Burst],
+            new(40f, 0.6f), new(42f, 0.6f));
+        simulation.Tuning = simulation.Tuning.WithCritic(critic => critic with { UnderstudyDamageShare = 0.25f }) with
+        {
+            MagicianMark = new Vector2(5f, 20f),
+        };
+        simulation.GoOn();
+
+        PlayTheAct(simulation);
+
+        Assert.That(Lost(simulation), Is.EqualTo(new[] { 0.25f, 0.125f }).Within(0.001f));
+    }
+
+    // And the magician's own card and its burst take all of theirs, whatever the kind's share.
+    [Test]
+    public void Step_TheMagiciansCardAndItsBurst_TakeAllOfTheirDamageWhateverTheKindsShare()
+    {
+        Simulation simulation = WithACrowd(
+            Scene with { CardBurstRadius = 2f, CardBurstShare = 0.5f }, [Card.Burst], new(14f, 10f), new(15.5f, 10f));
+        simulation.Tuning = simulation.Tuning.WithCritic(critic => critic with { UnderstudyDamageShare = 0.25f });
+
+        PlayTheAct(simulation);
+
+        Assert.That(Lost(simulation), Is.EqualTo(new[] { 1f, 0.5f }).Within(0.001f));
+    }
+
     [Test]
     public void Step_AnUnderstudysBurstFellsACritic_NoApplauseIsLeft()
     {
