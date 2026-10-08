@@ -467,7 +467,17 @@ Decision 30; the screens in words are in `docs/design/2026-10-08-screens/README.
 | S4 | **An understudy that reads** | the figure filled with its act's tint over the magician's picture, its route a dashed line: the review's R3, its other half, which the road puts before stop 2 is asked | S1; may be taken before S3 |
 | S5 | **The encore's screen** | the three cards as paper with a head strip, the chosen one lifted and ringed, the timer's bar, the keys as key caps, the clock greyed; a place for the flavour line of decision 29 | S1 to S3, and T25 |
 | S6 | **The program's screen** | the chorus card with the four panels: the act on the books, the understudy that joins with its cards, what the next act brings, the cast at the curtain. The first panel and T30's notices count the same things: when T30 is taken the two are made one | S5; what the act did is tallied in the view from events, or asked of Core where a number is missing |
-| S7 | **The main menu** | the start screen and the way back to it (§7): the title, "Perform", "Quit", the line of the controls, the magician and its cast. "Perform the same seed" needs the last show's seed kept; "Matinee or gala" is a choice of difficulty, which is a rule and has none yet: asked of the owner when this ticket is taken | S1, S2 |
+| S7 | **The main menu** | the start screen and the way back to it (§7): the title, "Perform", "Quit", the line of the controls, the magician and its cast. "Perform the same seed" and "Matinee or gala" are not built: the game has neither (the questions below) | S1, S2 |
+
+**What the design shows that the game does not have is left out, and noted** (the owner, 2026-10-08: if the design shows something we do not have, or something is missing, drop it and write it down as a question for later). A ticket builds the screen from what the game knows today and adds to this list instead of to the rules:
+
+- *Perform the same seed* (the main menu): the game keeps no seed of the last show. Is it wanted, and where is the seed shown?
+- *Matinee or gala* (the main menu): a choice of difficulty is a rule and there is none. What would each change?
+- *What the next act brings* (the program's right panel): a sentence about the doors, the kinds that come and the encore's cost. The cost and the doors can be read from the simulation; "comes tougher by the act" and the like are words somebody must write for every kind. Built from what can be read, or left out?
+- *The act on the books* (the program's left panel): applause picked up, encores taken and the box office are known; "the magician stood to the end" is known. Nothing is missing, but T30's notices count the same things: one screen or two?
+- *The announcing line* in an act ("Act 6. The back door opens."): the game announces the first understudy and a fallen magician today, and nothing about a door. Which moments are announced?
+- *The flavour line* of a card (decision 29) has no place on the design's cards.
+- *The sprites' size* (S2): the design draws every figure larger than its rule's footprint. If the frames of a crowd say it does not read, does the design or the footprint give way?
 
 Against the road above: S1 to S4 come next, before more of the cast, since they change what every later frame looks like and S4 is owed before T31; S5 and S6 after T25; S7 last. The limit on copies (after T25) and the rival's second search do not wait for them.
 
