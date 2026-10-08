@@ -17,6 +17,7 @@ namespace Understudies.Core.Tests;
 /// every critic that fell touching it: it is no measure of how safe a player stood.
 /// </param>
 /// <param name="WalkedTo">Of the pieces picked up, the others: those the magician had to go to.</param>
+/// <param name="MostCritics">The most enemies there were on the stage at once in the act, of every kind.</param>
 /// <param name="StateHash">The simulation's state hash at that moment.</param>
 internal readonly record struct ActRecord(
     int Entries,
@@ -27,6 +28,7 @@ internal readonly record struct ActRecord(
     int Dropped,
     int FellInReach,
     int WalkedTo,
+    int MostCritics,
     ulong StateHash);
 
 /// <summary>A scripted performance played to its end: the ovation or the close.</summary>
@@ -267,9 +269,11 @@ internal static class ScriptedPlayers
         int dropped = 0;
         int fellInReach = 0;
         int walkedTo = 0;
+        int mostCritics = 0;
         while (true)
         {
             simulation.Step(player(simulation));
+            mostCritics = Math.Max(mostCritics, simulation.Critics.Count);
             foreach (TickEvent happened in simulation.Events)
             {
                 if (happened.Kind == TickEventKind.ApplauseDropped)
@@ -318,6 +322,7 @@ internal static class ScriptedPlayers
                 dropped,
                 fellInReach,
                 walkedTo,
+                mostCritics,
                 simulation.ComputeStateHash()));
             if (simulation.Phase != Phase.BetweenActs)
             {
@@ -327,7 +332,7 @@ internal static class ScriptedPlayers
             simulation.GoOn();
             taken = [];
             inReach.Clear();
-            dropped = fellInReach = walkedTo = 0;
+            dropped = fellInReach = walkedTo = mostCritics = 0;
         }
     }
 

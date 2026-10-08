@@ -9,10 +9,10 @@ public class ScriptedPlayersTests
     private Tuning Tuning { get; } = CommittedTuning.Parse();
 
     /// <summary>
-    /// The committed numbers on another budget, with a first act three times as full: the tests that play it
+    /// The committed numbers on another budget, with a first act four times as full and acts that grow by less: the tests that play it
     /// assert what they play it for, a player that is crowded and vanishes and a box office that is struck.
     /// </summary>
-    private Tuning Crowded => Tuning with { FirstActBudget = 45, BudgetGrowthPerAct = 40 };
+    private Tuning Crowded => Tuning with { FirstActBudget = 60, BudgetGrowthPerAct = 40 };
 
     /// <summary>
     /// Plan decision 9's question, whether <c>float</c> gives one result on two machines: two scripted
@@ -32,8 +32,8 @@ public class ScriptedPlayersTests
         {
             // An act that stood for an encore is in what is pinned.
             Assert.That(performance.Acts.Sum(act => act.Encores), Is.GreaterThan(0), "encores");
-            Assert.That(performance.Acts[2].StateHash, Is.EqualTo(13885894256537837588UL), "the end of act three");
-            Assert.That(performance.Acts[^1].StateHash, Is.EqualTo(16447972836273208917UL), "the end of the performance");
+            Assert.That(performance.Acts[2].StateHash, Is.EqualTo(3163424947657937603UL), "the end of act three");
+            Assert.That(performance.Acts[^1].StateHash, Is.EqualTo(15353404476281283108UL), "the end of the performance");
         });
     }
 
@@ -60,8 +60,8 @@ public class ScriptedPlayersTests
             Assert.That(vanishes, Is.GreaterThan(0), "Vanishes");
             Assert.That(blows, Is.GreaterThan(0), "blows on the box office");
             Assert.That(stunned, Is.GreaterThan(0), "stunned critics");
-            Assert.That(performance.Acts[2].StateHash, Is.EqualTo(3232927010837077928UL), "the end of act three");
-            Assert.That(performance.Acts[^1].StateHash, Is.EqualTo(11559302210917232874UL), "the end of the performance");
+            Assert.That(performance.Acts[2].StateHash, Is.EqualTo(8518830487565442418UL), "the end of act three");
+            Assert.That(performance.Acts[^1].StateHash, Is.EqualTo(10320038926145958029UL), "the end of the performance");
         });
     }
 
@@ -383,7 +383,7 @@ public class ScriptedPlayersTests
             var mine = Enumerable.Range(1, Seeds).Select(seed => Of(player, seed)).ToList();
             table.WriteLine();
             table.WriteLine($"{players[player].Name}: the acts' averages over the performances that played the act");
-            table.WriteLine("act  played  entries  dropped  in reach  walked to  applause  encores  fell  box office  cards taken in the encores");
+            table.WriteLine("act  played  entries  dropped  in reach  walked to  applause  encores  fell  box office  most critics at once  cards taken in the encores");
             for (int act = 0; act < mine.Max(played => played.Acts.Count); act++)
             {
                 var acts = mine.Where(played => played.Acts.Count > act).Select(played => played.Acts[act]).ToList();
@@ -393,11 +393,11 @@ public class ScriptedPlayersTests
                     .Where(count => count.Taken > 0)
                     .Select(count => $"{count.Card}:{count.Taken}"));
                 table.WriteLine(
-                    $"{act + 1,3}  {acts.Count,6}  {Number(acts.Average(a => a.Entries)),7}  {Number(acts.Average(a => a.Dropped)),7}  {Number(acts.Average(a => a.FellInReach)),8}  {Number(acts.Average(a => a.WalkedTo)),9}  {Number(acts.Average(a => a.Applause)),8}  {Number(acts.Average(a => a.Encores)),7}  {acts.Count(a => a.Fell),4}  {Number(acts.Average(a => a.BoxOffice)),10}  {cards}".TrimEnd());
+                    $"{act + 1,3}  {acts.Count,6}  {Number(acts.Average(a => a.Entries)),7}  {Number(acts.Average(a => a.Dropped)),7}  {Number(acts.Average(a => a.FellInReach)),8}  {Number(acts.Average(a => a.WalkedTo)),9}  {Number(acts.Average(a => a.Applause)),8}  {Number(acts.Average(a => a.Encores)),7}  {acts.Count(a => a.Fell),4}  {Number(acts.Average(a => a.BoxOffice)),10}  {acts.Max(a => a.MostCritics),21}  {cards}".TrimEnd());
             }
 
             table.WriteLine(
-                $"encores taken in a performance: {Number(mine.Average(played => played.Acts.Sum(a => a.Encores)))}");
+                $"encores taken in a performance: {Number(mine.Average(played => played.Acts.Sum(a => a.Encores)))}; in the first act in {mine.Count(played => played.Acts[0].Encores > 0)} of {Seeds}; the most critics at once: {mine.Max(played => played.Acts.Max(a => a.MostCritics))}");
         }
 
         table.WriteLine();
