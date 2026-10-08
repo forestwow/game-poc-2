@@ -144,6 +144,9 @@ internal sealed partial class UnderstudiesGame
     /// </summary>
     private bool StageStands => IsOffered || _simulation.Phase == Phase.BetweenActs;
 
+    /// <summary>A count of pieces of applause, as words: one is a piece.</summary>
+    private static string Pieces(int count) => count == 1 ? "1 piece" : $"{count} pieces";
+
     /// <summary>How many critics fell in this act to the cards of a thrower, as a <see cref="TickEvent"/> names one.</summary>
     private int KillsOf(int thrower) =>
         thrower - TickEvent.TheMagician < _actKills.Count ? _actKills[thrower - TickEvent.TheMagician] : 0;
@@ -244,7 +247,7 @@ internal sealed partial class UnderstudiesGame
             Write(
                 Face.Sentence,
                 SmallWordsHeight,
-                $"{(encores == 1 ? "1 encore" : $"{encores} encores")} so far. This one was earned with {_simulation.EncoreCost} pieces of applause.",
+                $"{(encores == 1 ? "1 encore" : $"{encores} encores")} so far. This one was earned with {Pieces(_simulation.EncoreCost)} of applause.",
                 new Vector2(middle, Tuning.StageFloorTop + EncoresLineDrop),
                 0.5f,
                 ApplauseHeart);
@@ -421,6 +424,9 @@ internal sealed partial class UnderstudiesGame
         // kinds' own names in the tuning, which door opens and what the first encore costs.
         int next = act + 1;
         Vector2 brings = Panel(rightColumn, PanelsTop, PanelUpperTall, $"NEXT: ACT {next} OF {Tuning.ActsInPerformance}", Magician);
+        // An act that a reload of the tuning added has no plan (the guard of Simulation.ActEntries).
+        // ponytail: a kind's plural is its name and an s. A plural of its own in the tuning, for a kind whose
+        // name does not take one.
         IReadOnlyList<PlannedEntry> entries = act < _simulation.Plan.Count ? _simulation.Plan[act] : [];
         IEnumerable<string> kinds = entries
             .GroupBy(entry => Math.Min(entry.Kind, Tuning.EnemyKinds.Count - 1))
@@ -429,9 +435,11 @@ internal sealed partial class UnderstudiesGame
 
         // ponytail: a door is named by where it stands, in the top edge or in a half of the stage. Names of
         // their own in the tuning, when a fourth door or one elsewhere is added.
-        IEnumerable<string> opening = Tuning.StageDoors
+        // ponytail: which doors the next act has open is Simulation.DoorIsOpen's rule said again for another
+        // act: a door that shuts would make this panel wrong. The simulation asked for an act, when one does.
+        List<string> opening = [.. Tuning.StageDoors
             .Where(door => door.OpensInAct == next)
-            .Select(door => door.Position.Y <= Tuning.StageFloorTop ? "back" : door.Position.X < Tuning.StageSize.X / 2f ? "left" : "right");
+            .Select(door => door.Position.Y <= Tuning.StageFloorTop ? "back" : door.Position.X < Tuning.StageSize.X / 2f ? "left" : "right")];
         int doors = Tuning.StageDoors.Count;
         int open = Tuning.StageDoors.Count(door => door.OpensInAct <= next);
         Sentences(
@@ -440,9 +448,9 @@ internal sealed partial class UnderstudiesGame
             PanelWordsHeight,
             PanelRowPitch,
             Words,
-            $"{entries.Count} enter: {string.Join(", ", kinds)}.",
-            $"{(opening.Any() ? $"The {string.Join(" and the ", opening)} door opens" : "No new door opens")}: {open} of {doors} open.",
-            $"Next encore: {_simulation.EncoreCost} pieces of applause in one act.");
+            entries.Count == 0 ? "Nobody enters." : $"{entries.Count} enter: {string.Join(", ", kinds)}.",
+            $"{(opening.Count == 0 ? "No new door opens" : opening.Count == 1 ? $"The {opening[0]} door opens" : $"The {string.Join(" and the ", opening)} doors open")}: {open} of {doors} open.",
+            $"Next encore: {Pieces(_simulation.EncoreCost)} of applause in one act.");
 
         // The cast at the curtain: the HUD's squares, the one that joins among them, and under each what its
         // cards felled in the act just over, which is what the notices name every understudy by.
