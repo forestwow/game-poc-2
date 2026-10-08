@@ -1,0 +1,255 @@
+{
+  "tool": "ludo.ai, through its CLI (ludo 0.1.6)",
+  "ticket": "T07b, the art spike, second round",
+  "what": "A second round of the art spike (plan T07b), after the owner said the paper cut-outs looked like a default and asked for a look that mixes abstraction and imagination. A magician and a critic in four directions, for the owner to pick from. Nothing here is read by the game. Then, at the owner's word, a box office in each direction and an upright critic for the collage (collage-critic-b), so that each direction has the three things of the ticket. Then, at the owner's word, a fifth direction: pixel art, with the figures of the collage.",
+  "generations": 18,
+  "credits": 9.0,
+  "note": "failed/ has the first try of the collage direction, which came back as silhouettes because the prompt asked for a strong silhouette; the second try has its own prompt.",
+  "generations_made": [
+    {
+      "file": "shadow-critic.png",
+      "command": "ludo image create",
+      "settings": {
+        "image_type": "sprite",
+        "perspective": "Top-Down",
+        "aspect_ratio": "ar_1_1",
+        "art_style": "Silhouette",
+        "prompt": "A theatre critic as a shadow-theatre figure: a squat pitch-black silhouette in an overcoat and bowler hat, with only his round spectacles glowing cold blue like two lamps, and a glowing pencil. Game sprite seen from above at a three-quarter top-down angle, as in a top-down action RPG: the top of the head and shoulders are visible, the figure is foreshortened. Full body, single figure, readable as a small sprite, strong silhouette, no text, no ground."
+      },
+      "credits": 0.5,
+      "job_id": "54e63ce7-da69-4d37-b618-57945568eac9",
+      "created_at": "2026-10-08T09:00:15.430Z"
+    },
+    {
+      "file": "deco-critic.png",
+      "command": "ludo image create",
+      "settings": {
+        "image_type": "sprite",
+        "perspective": "Top-Down",
+        "aspect_ratio": "ar_1_1",
+        "art_style": "Flat Design",
+        "prompt": "An art deco theatre poster figure, 1930s, geometric: a theatre critic as a heavy black and teal trapezoid in a bowler hat, a mask-like blank silver face with two round lenses, a pencil like a dagger. Game sprite seen from above at a three-quarter top-down angle, as in a top-down action RPG: the top of the head and shoulders are visible, the figure is foreshortened. Full body, single figure, readable as a small sprite, strong silhouette, no text, no ground."
+      },
+      "credits": 0.5,
+      "job_id": "eee5a393-1f3e-4605-8117-d82bbb546d06",
+      "created_at": "2026-10-08T09:00:17.882Z"
+    },
+    {
+      "file": "deco-magician.png",
+      "command": "ludo image create",
+      "settings": {
+        "image_type": "sprite",
+        "perspective": "Top-Down",
+        "aspect_ratio": "ar_1_1",
+        "art_style": "Flat Design",
+        "prompt": "An art deco theatre poster figure, 1930s, geometric and elongated: a stage magician built of sharp gold, black and teal shapes, a mask-like blank golden face, a top hat, a cape of radiating sunburst lines, a fan of cards like a deco ornament. Game sprite seen from above at a three-quarter top-down angle, as in a top-down action RPG: the top of the head and shoulders are visible, the figure is foreshortened. Full body, single figure, readable as a small sprite, strong silhouette, no text, no ground."
+      },
+      "credits": 0.5,
+      "job_id": "9e05ab49-fc14-4b82-a387-de61dc3f7163",
+      "created_at": "2026-10-08T09:00:31.827Z"
+    },
+    {
+      "file": "dream-critic.png",
+      "command": "ludo image create",
+      "settings": {
+        "image_type": "sprite",
+        "perspective": "Top-Down",
+        "aspect_ratio": "ar_1_1",
+        "art_style": "Digital Painting",
+        "prompt": "A dreamlike metaphysical painting figure in the manner of de Chirico: a theatre critic who is an empty grey overcoat and bowler hat standing by itself with nobody inside, a notebook floating where the hand would be, casting a very long hard shadow. Ochre, dusty teal and grey. Game sprite seen from above at a three-quarter top-down angle, as in a top-down action RPG: the top of the head and shoulders are visible, the figure is foreshortened. Full body, single figure, readable as a small sprite, strong silhouette, no text, no ground."
+      },
+      "credits": 0.5,
+      "job_id": "43d59238-37b0-4e06-a822-8f39be007460",
+      "created_at": "2026-10-08T09:00:44.009Z"
+    },
+    {
+      "file": "shadow-magician.png",
+      "command": "ludo image create",
+      "settings": {
+        "image_type": "sprite",
+        "perspective": "Top-Down",
+        "aspect_ratio": "ar_1_1",
+        "art_style": "Silhouette",
+        "prompt": "A stage magician as a shadow-theatre figure: a pitch-black silhouette in a top hat and cape, with only three things glowing warm white-gold: his gloves, a fan of playing cards, and the lining of the cape, as if lit by one spotlight. Game sprite seen from above at a three-quarter top-down angle, as in a top-down action RPG: the top of the head and shoulders are visible, the figure is foreshortened. Full body, single figure, readable as a small sprite, strong silhouette, no text, no ground."
+      },
+      "credits": 0.5,
+      "job_id": "ee134561-b81d-4e65-a777-e47745abe84c",
+      "created_at": "2026-10-08T09:00:45.857Z"
+    },
+    {
+      "file": "failed/collage-magician.png",
+      "command": "ludo image create",
+      "settings": {
+        "image_type": "sprite",
+        "perspective": "Top-Down",
+        "aspect_ratio": "ar_1_1",
+        "art_style": "Any style",
+        "prompt": "A surreal cut-out collage figure in the manner of Victorian engraving collage and Magritte: a stage magician in an engraved tailcoat whose head is a white dove bursting out of a top hat, hands of antique etched gloves fanning oversized playing cards, a scrap of red velvet for a cape. Muted sepia engraving with one saturated red. Game sprite seen from above at a three-quarter top-down angle, as in a top-down action RPG: the top of the head and shoulders are visible, the figure is foreshortened. Full body, single figure, readable as a small sprite, strong silhouette, no text, no ground."
+      },
+      "credits": 0.5,
+      "job_id": "158f1f53-8927-4f28-a1fe-149d419cf8ff",
+      "created_at": "2026-10-08T09:01:00.085Z"
+    },
+    {
+      "file": "failed/collage-critic.png",
+      "command": "ludo image create",
+      "settings": {
+        "image_type": "sprite",
+        "perspective": "Top-Down",
+        "aspect_ratio": "ar_1_1",
+        "art_style": "Any style",
+        "prompt": "A surreal cut-out collage figure in the manner of Victorian engraving collage and Magritte: a theatre critic in an engraved grey overcoat whose head is a single huge staring eyeball under a bowler hat, holding a notebook and a quill. Muted sepia engraving with one saturated cold blue. Game sprite seen from above at a three-quarter top-down angle, as in a top-down action RPG: the top of the head and shoulders are visible, the figure is foreshortened. Full body, single figure, readable as a small sprite, strong silhouette, no text, no ground."
+      },
+      "credits": 0.5,
+      "job_id": "a45519cd-9ac2-45fc-84fb-1d16adcce011",
+      "created_at": "2026-10-08T09:01:09.495Z"
+    },
+    {
+      "file": "dream-magician.png",
+      "command": "ludo image create",
+      "settings": {
+        "image_type": "sprite",
+        "perspective": "Top-Down",
+        "aspect_ratio": "ar_1_1",
+        "art_style": "Digital Painting",
+        "prompt": "A dreamlike metaphysical painting figure in the manner of de Chirico: a stage magician who is a faceless wooden tailor's mannequin in a worn tailcoat and top hat, casting a very long hard shadow, holding playing cards that drift upward out of his hand like birds. Ochre, dusty teal and one red. Game sprite seen from above at a three-quarter top-down angle, as in a top-down action RPG: the top of the head and shoulders are visible, the figure is foreshortened. Full body, single figure, readable as a small sprite, strong silhouette, no text, no ground."
+      },
+      "credits": 0.5,
+      "job_id": "31236665-8ba0-4856-a6c9-01c2f7261511",
+      "created_at": "2026-10-08T09:01:14.293Z"
+    },
+    {
+      "file": "collage-critic.png",
+      "command": "ludo image create",
+      "settings": {
+        "image_type": "sprite",
+        "perspective": "Top-Down",
+        "aspect_ratio": "ar_1_1",
+        "art_style": "Inked Painterly",
+        "prompt": "A surreal paper collage figure assembled from cut-out antique engravings, in the manner of Max Ernst and Terry Gilliam animation, full colour detail visible, not a silhouette: a theatre critic in a finely cross-hatched engraved grey overcoat whose head is replaced by one huge engraved human eye wearing a small bowler hat, holding a notebook and a quill. Sepia ink engraving texture with one saturated cold blue. Game sprite seen from above at a three-quarter top-down angle, as in a top-down action RPG. Full body, single figure, no text, no ground."
+      },
+      "credits": 0.5,
+      "job_id": "b186fafa-a4ed-437c-8b6c-d90b8c1e8c70",
+      "created_at": "2026-10-08T09:02:02.684Z"
+    },
+    {
+      "file": "collage-magician.png",
+      "command": "ludo image create",
+      "settings": {
+        "image_type": "sprite",
+        "perspective": "Top-Down",
+        "aspect_ratio": "ar_1_1",
+        "art_style": "Inked Painterly",
+        "prompt": "A surreal paper collage figure assembled from cut-out antique engravings, in the manner of Max Ernst and Terry Gilliam animation, full colour detail visible, not a silhouette: a stage magician in a finely cross-hatched engraved tailcoat whose head is replaced by a white dove sitting in an upturned top hat, engraved gloved hands fanning oversized playing cards, a torn scrap of real red velvet as a cape. Sepia ink engraving texture with one saturated red. Game sprite seen from above at a three-quarter top-down angle, as in a top-down action RPG. Full body, single figure, no text, no ground."
+      },
+      "credits": 0.5,
+      "job_id": "360ad06e-6ef0-4087-a83c-9e9244b15fdb",
+      "created_at": "2026-10-08T09:02:07.189Z"
+    },
+    {
+      "file": "collage-critic-b.png",
+      "command": "ludo image create",
+      "settings": {
+        "image_type": "sprite",
+        "perspective": "High Angle",
+        "aspect_ratio": "ar_1_1",
+        "art_style": "Inked Painterly",
+        "prompt": "A surreal paper collage figure assembled from cut-out antique engravings, in the manner of Max Ernst and Terry Gilliam animation, full colour detail visible, not a silhouette: a theatre critic standing upright, head at the top and feet at the bottom, in a finely cross-hatched engraved grey overcoat, whose head is replaced by one huge engraved human eye wearing a small bowler hat, holding a notebook and a quill. Sepia ink engraving texture with one saturated cold blue. Game sprite seen from the front and from above at a three-quarter top-down angle. Full body, single figure, no text, no ground."
+      },
+      "credits": 0.5,
+      "job_id": "15e73977-7826-4719-9f18-853577af0b8a",
+      "created_at": "2026-10-08T09:07:10.622Z"
+    },
+    {
+      "file": "dream-box-office.png",
+      "command": "ludo image generate-with-style",
+      "settings": {
+        "style_image": "dream-magician.png",
+        "image_type": "sprite",
+        "prompt": "A dreamlike metaphysical painting of a theatre box office booth in the manner of de Chirico: a lonely ochre ticket kiosk with a dark arched window and a small red flag on top, casting a very long hard shadow. Ochre, dusty teal and one red. Seen from the front and slightly from above, as a building stands in a top-down action RPG. A squat kiosk about as wide as it is tall. Single object, no people, no text, no ground."
+      },
+      "credits": 0.5,
+      "job_id": "12d7adda-1ead-4ed2-95c5-964bc98d0a5d",
+      "created_at": "2026-10-08T09:07:18.185Z"
+    },
+    {
+      "file": "deco-box-office.png",
+      "command": "ludo image generate-with-style",
+      "settings": {
+        "style_image": "deco-magician.png",
+        "image_type": "sprite",
+        "prompt": "An art deco theatre box office booth, 1930s: a ticket kiosk built of sharp gold, black and teal geometric shapes, a sunburst above the ticket window, stepped skyscraper-like roof. Seen from the front and slightly from above, as a building stands in a top-down action RPG. A squat kiosk about as wide as it is tall. Single object, no people, no text, no ground."
+      },
+      "credits": 0.5,
+      "job_id": "90553c49-dab1-442b-94fb-6107685a769a",
+      "created_at": "2026-10-08T09:07:47.255Z"
+    },
+    {
+      "file": "shadow-box-office.png",
+      "command": "ludo image generate-with-style",
+      "settings": {
+        "style_image": "shadow-magician.png",
+        "image_type": "sprite",
+        "prompt": "A small theatre box office booth as a shadow-theatre shape: a pitch-black silhouette of a ticket kiosk with an awning, and only its ticket window glowing warm white-gold like a lit lamp. Seen from the front and slightly from above, as a building stands in a top-down action RPG. A squat kiosk about as wide as it is tall. Single object, no people, no text, no ground."
+      },
+      "credits": 0.5,
+      "job_id": "ed4f691d-5be6-4e45-be69-e0fb3c865ce9",
+      "created_at": "2026-10-08T09:07:54.539Z"
+    },
+    {
+      "file": "collage-box-office.png",
+      "command": "ludo image generate-with-style",
+      "settings": {
+        "style_image": "collage-magician.png",
+        "image_type": "sprite",
+        "prompt": "A surreal collage theatre box office booth assembled from antique engravings: a finely cross-hatched ticket kiosk whose ticket window is a huge open human mouth with red velvet curtains for lips, a striped awning above it. Sepia engraving with one saturated red. Seen from the front and slightly from above, as a building stands in a top-down action RPG. A squat kiosk about as wide as it is tall. Single object, no people, no text, no ground."
+      },
+      "credits": 0.5,
+      "job_id": "0ff91da7-99a4-464c-beff-d6c78813f722",
+      "created_at": "2026-10-08T09:08:05.191Z"
+    },
+    {
+      "file": "pixel-magician.png",
+      "command": "ludo image create",
+      "settings": {
+        "image_type": "sprite",
+        "perspective": "Top-Down",
+        "aspect_ratio": "ar_1_1",
+        "art_style": "16-Bit",
+        "prompt": "A surreal stage magician standing upright: black tailcoat with a red-lined cape, white gloves holding a fan of playing cards, and instead of a head a white dove sitting in an upturned top hat. Pixel art game sprite with a thick dark outline and a small limited palette, seen from the front and slightly from above as in a top-down action RPG. Full body, single subject, no text, no ground."
+      },
+      "credits": 0.5,
+      "job_id": "e06641bb-6556-480c-9efa-b477ca831e7c",
+      "created_at": "2026-10-08T09:20:00.763Z"
+    },
+    {
+      "file": "pixel-critic.png",
+      "command": "ludo image create",
+      "settings": {
+        "image_type": "sprite",
+        "perspective": "Top-Down",
+        "aspect_ratio": "ar_1_1",
+        "art_style": "16-Bit",
+        "prompt": "A surreal theatre critic standing upright: a squat figure in a grey overcoat, whose head is one huge blue eyeball wearing a small bowler hat, holding a notebook and a quill. Pixel art game sprite with a thick dark outline and a small limited palette, seen from the front and slightly from above as in a top-down action RPG. Full body, single subject, no text, no ground."
+      },
+      "credits": 0.5,
+      "job_id": "dafa7587-f1df-4401-8c6e-0c8d3920f3a5",
+      "created_at": "2026-10-08T09:20:07.522Z"
+    },
+    {
+      "file": "pixel-box-office.png",
+      "command": "ludo image create",
+      "settings": {
+        "image_type": "sprite",
+        "perspective": "Top-Down",
+        "aspect_ratio": "ar_1_1",
+        "art_style": "16-Bit",
+        "prompt": "A surreal theatre box office booth, a squat ticket kiosk about as wide as it is tall: weathered wood, a red and cream striped awning, and instead of a ticket window a huge open mouth with red lips framed by red velvet curtains. Pixel art game sprite with a thick dark outline and a small limited palette, seen from the front and slightly from above as in a top-down action RPG. Full body, single subject, no text, no ground."
+      },
+      "credits": 0.5,
+      "job_id": "d5e7bb3d-14c4-47d5-abc2-b4c83cc4e530",
+      "created_at": "2026-10-08T09:20:11.045Z"
+    }
+  ],
+  "game_files": "shadow/, collage/, deco/ and dream/ each hold magician.png, critic.png and box-office.png: the pictures of that direction scaled with `sips -Z` to 256, 192 and 384 on the longest side (the collage critic is collage-critic-b). A capture reads one with `--art ludo/styles/<direction>`; the frames are in art/frames/styles/. pixel/ holds the three pixel pictures as returned (768 pixels, one sprite pixel is 12 of them): scaling them would smooth them."
+}
