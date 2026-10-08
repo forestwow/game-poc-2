@@ -986,7 +986,6 @@ public sealed class Simulation(Tuning tuning, ulong seed, IReadOnlyList<IReadOnl
     /// </summary>
     private int ThrowACard(Vector2 from, int ticksToNextThrow, SelfCards cards, int thrower)
     {
-        bool byTheMagician = thrower == TickEvent.TheMagician;
         // The throw is ready a cooldown after the last one, and stays ready while there is nobody to throw at.
         if (ticksToNextThrow > 0)
         {
@@ -1001,7 +1000,7 @@ public sealed class Simulation(Tuning tuning, ulong seed, IReadOnlyList<IReadOnl
         float range = Tuning.ThrowRange + (cards.Range * Tuning.CardRange);
         float damage = Tuning.ThrownCardDamage
             + (cards.Damage * Tuning.CardDamage)
-            + (byTheMagician ? 0f : ChorusCards * Tuning.CardChorusDamage);
+            + (thrower == TickEvent.TheMagician ? 0f : ChorusCards * Tuning.CardChorusDamage);
 
         // One card, and one more for each card of that name, each at a critic of its own: the first at the nearest
         // whose centre is in range, the next at the nearest of the rest, and of two as near at the one that entered

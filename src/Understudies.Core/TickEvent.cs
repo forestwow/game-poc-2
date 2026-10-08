@@ -45,7 +45,7 @@ public enum TickEventKind
 /// </param>
 /// <param name="Thrower">
 /// Who threw the card, for a throw, a hit and a kill: <see cref="TheMagician"/>, or an understudy by its place in
-/// <see cref="Simulation.Understudies"/>. It says nothing for any other kind, where it is left as it is made.
+/// <see cref="Simulation.Understudies"/>. For any other kind it is left as it is made, the magician: true of applause dropped, which only the magician's card leaves, and saying nothing of the rest.
 /// </param>
 /// <param name="CriticId">
 /// The <see cref="Critic.Id"/> of the critic a card struck, for a hit and a kill, and of the critic that left

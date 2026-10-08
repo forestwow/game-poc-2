@@ -38,7 +38,8 @@ internal sealed class Sound
     private const float UnderstudyPitch = -0.3f;
 
     // A sound does not start again within this long of its own last start: a crowd strikes the box office many
-    // times a second, and every blow of one tick would start at once.
+    // times a second, and every blow of one tick would start at once. A throw, a hit and a kill may start twice in
+    // that time and no more: an understudy's, and then the magician's own, which a quieter one must not silence.
     // ponytail: one gap for all seven, so a sound longer than the gap still lies on itself under a crowd, the buzz
     // of a hurt magician four deep. A gap of its own for each sound, near its length, when that is too much.
     private const float RepeatGap = 0.05f;
