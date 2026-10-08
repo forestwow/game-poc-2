@@ -30,8 +30,8 @@ public class ScriptedPlayersTests
 
         Assert.Multiple(() =>
         {
-            Assert.That(performance.Acts[2].StateHash, Is.EqualTo(18416097257097476696UL), "the end of act three");
-            Assert.That(performance.Acts[^1].StateHash, Is.EqualTo(5429885305550085217UL), "the end of the performance");
+            Assert.That(performance.Acts[2].StateHash, Is.EqualTo(432137003744917736UL), "the end of act three");
+            Assert.That(performance.Acts[^1].StateHash, Is.EqualTo(1058144452013409792UL), "the end of the performance");
         });
     }
 
@@ -58,8 +58,8 @@ public class ScriptedPlayersTests
             Assert.That(vanishes, Is.GreaterThan(0), "Vanishes");
             Assert.That(blows, Is.GreaterThan(0), "blows on the box office");
             Assert.That(stunned, Is.GreaterThan(0), "stunned critics");
-            Assert.That(performance.Acts[2].StateHash, Is.EqualTo(8628429157010245494UL), "the end of act three");
-            Assert.That(performance.Acts[^1].StateHash, Is.EqualTo(12465959235886267719UL), "the end of the performance");
+            Assert.That(performance.Acts[2].StateHash, Is.EqualTo(18147367642670866462UL), "the end of act three");
+            Assert.That(performance.Acts[^1].StateHash, Is.EqualTo(2824543301893543098UL), "the end of the performance");
         });
     }
 

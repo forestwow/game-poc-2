@@ -199,6 +199,14 @@ The radius and the reach are constants of the players. A test run by name (`[Exp
 `tuning.json` changed until decision 22 holds, with the guard as an ordinary test. The pull request names every value changed, old and new, and the table of T19's test before and after.
 - If no tuning makes it hold, that is the finding and not a reason to go on: the pull request lands the best tuning with its table, the guard stays a test run by name, and at stop 3 the owner decides whether the fallback of vision §13 goes in.
 
+### After the verdict
+
+What the owner asked for after stop 3 (§6), a ticket each as it is named.
+
+**T21 Applause within reach.**
+The owner's report from play: a piece is picked up only by walking onto it exactly, with the feet. Two causes: the reach was 0.4 past the magician's circle, and the piece was drawn 0.8 above the place it lies, so the eye aimed the body at a place the feet had to find. `applausePickUpReach` goes to 1.4 (two units from the middle of the magician's circle) and the diamond is drawn with its tip on its place.
+- The guard still holds on the new number, and the two pinned hashes are pinned again.
+
 ## 6. Stops
 
 | Stop | After | The question the owner answers by playing |
