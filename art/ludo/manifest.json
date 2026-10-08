@@ -1,9 +1,9 @@
 {
   "tool": "ludo.ai, through its CLI (ludo 0.1.6)",
   "ticket": "T07b, the art spike",
-  "generations": 10,
-  "credits": 5.0,
-  "note": "Every file a generation names is what the tool returned (the PNG; the WebP twin of each was not kept). The three the game reads are the picked ones scaled down with `sips -Z <longest side>` and nothing else: the game trims the empty margin itself.",
+  "generations": 11,
+  "credits": 14.0,
+  "note": "Every file a generation names is what the tool returned (the PNG; the WebP twin of each was not kept). The three the game reads are the picked ones scaled down with `sips -Z <longest side>` and nothing else: the game trims the empty margin itself. The eleventh generation is a walk cycle made from the picked magician, to see whether the tool turns a still into a sprite: the game does not read it (plan T07b has no animation).",
   "game_files": [
     {
       "file": "magician.png",
@@ -156,6 +156,27 @@
       },
       "job_id": "38c197ad-d255-4de1-928b-041cf1f25460",
       "created_at": "2026-10-08T08:51:39.103Z"
+    },
+    {
+      "file": "magician-walk.png",
+      "also": "magician-walk.gif",
+      "command": "ludo sprite animate",
+      "settings": {
+        "initial_image": "magician-papercraft-v2.png",
+        "motion_prompt": "walking",
+        "frames": 16,
+        "frame_size": 256,
+        "gif": true,
+        "model": "hydra (the default)"
+      },
+      "result": {
+        "num_frames": 16,
+        "num_cols": 4,
+        "num_rows": 4,
+        "duration": 2.5
+      },
+      "credits": 9,
+      "job_id": "1ceef5bd-7c9c-4ad4-9c28-819ffcd6be23"
     }
   ]
 }
