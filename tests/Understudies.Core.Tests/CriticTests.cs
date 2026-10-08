@@ -15,12 +15,12 @@ public class CriticTests
     [Test]
     public void Step_TheFirstTick_ACriticEntersAtTheFirstDoor()
     {
-        var simulation = new Simulation(Tuning, seed: 1);
+        var simulation = Shows.WithOneCritic(Tuning);
 
         simulation.Step(default);
 
         // The committed first door is on the left edge, so it runs up and down.
-        Vector2 door = Tuning.StageDoors[0];
+        Vector2 door = Tuning.StageDoors[0].Position;
         Assert.That(simulation.Critics, Has.Count.EqualTo(1));
         Assert.That(simulation.Critics[0].Position.X, Is.EqualTo(door.X));
         Assert.That(simulation.Critics[0].Position.Y, Is.EqualTo(door.Y).Within(Tuning.StageDoorWidth / 2f));
@@ -33,8 +33,8 @@ public class CriticTests
         // The floor starts three units down the stage and the door is at the foot of the wall there: it runs along
         // the wall, so the critic enters on the floor's top edge and no higher.
         var door = new Vector2(20f, 3f);
-        Tuning tuning = Tuning with { StageFloorTop = 3f, StageDoors = [door] };
-        var simulation = new Simulation(tuning, seed: 1);
+        Tuning tuning = Tuning with { StageFloorTop = 3f, StageDoors = [new StageDoor(door, 1)] };
+        var simulation = Shows.WithOneCritic(tuning);
 
         simulation.Step(default);
 
@@ -47,8 +47,8 @@ public class CriticTests
     public void Step_AFirstDoorInTheRightEdge_TheCriticEntersSomewhereAlongIt()
     {
         var door = new Vector2(Tuning.StageSize.X, 9f);
-        Tuning tuning = Tuning with { StageDoors = [door] };
-        var simulation = new Simulation(tuning, seed: 1);
+        Tuning tuning = Tuning with { StageDoors = [new StageDoor(door, 1)] };
+        var simulation = Shows.WithOneCritic(tuning);
 
         simulation.Step(default);
 
@@ -60,8 +60,8 @@ public class CriticTests
     [Test]
     public void Step_AnotherSeed_TheCriticEntersAtAnotherPointOfTheDoor()
     {
-        var one = new Simulation(Tuning, seed: 1);
-        var other = new Simulation(Tuning, seed: 2);
+        Simulation one = Shows.WithACriticEvery(Simulation.TicksPerSecond, Tuning, seed: 1);
+        Simulation other = Shows.WithACriticEvery(Simulation.TicksPerSecond, Tuning, seed: 2);
 
         one.Step(default);
         other.Step(default);
@@ -72,8 +72,8 @@ public class CriticTests
     [Test]
     public void Step_TheSameSeed_GivesTheSameCriticsAndTheSameBoxOffice()
     {
-        var one = new Simulation(Tuning, seed: 7);
-        var other = new Simulation(Tuning, seed: 7);
+        var one = new Simulation(Tuning, seed: 7UL);
+        var other = new Simulation(Tuning, seed: 7UL);
 
         Run(one, ticks: 40 * Simulation.TicksPerSecond);
         Run(other, ticks: 40 * Simulation.TicksPerSecond);
@@ -86,11 +86,11 @@ public class CriticTests
     }
 
     [Test]
-    public void Step_CriticsEnterAtASteadyRate_EachWithItsOwnId()
+    public void Step_CriticsEnterOneAfterAnother_EachWithItsOwnId()
     {
         // Critics enter on the first tick, then on the first tick after every two seconds.
         const int twoSeconds = 2 * Simulation.TicksPerSecond;
-        var simulation = new Simulation(Tuning with { CriticEntryInterval = 2f }, seed: 1);
+        Simulation simulation = Shows.WithACriticEvery(twoSeconds, Tuning);
 
         Run(simulation, ticks: twoSeconds);
         Assert.That(simulation.Critics, Has.Count.EqualTo(1));
@@ -108,19 +108,21 @@ public class CriticTests
     [Test]
     public void Step_ATimeBetweenTwoTicks_CountsTheNearerNumberOfTicks()
     {
-        // 1.6 ticks are two ticks, not one: critics enter on ticks 1 and 3, and the fifth tick is not played.
-        Tuning tuning = Tuning with { CriticEntryInterval = 1.6f / Simulation.TicksPerSecond };
-        var simulation = new Simulation(tuning, seed: 1);
+        // 1.6 ticks are two ticks, not one: so long an act is over after its second tick, and not after its first.
+        Simulation simulation = Shows.WithOneCritic(Tuning with { ActLength = 1.6f / Simulation.TicksPerSecond });
+        Assert.That(simulation.ActTicksLeft, Is.EqualTo(2));
 
-        Run(simulation, ticks: 4);
+        Run(simulation, ticks: 1);
+        Assert.That(simulation.Phase, Is.EqualTo(Phase.Act));
 
-        Assert.That(simulation.Critics, Has.Count.EqualTo(2));
+        Run(simulation, ticks: 1);
+        Assert.That(simulation.Phase, Is.EqualTo(Phase.BetweenActs));
     }
 
     [Test]
     public void Step_OneSecond_ACriticWalksItsSpeedStraightAtTheBoxOffice()
     {
-        var simulation = new Simulation(OneCritic, seed: 1);
+        var simulation = Shows.WithOneCritic(Tuning);
         simulation.Step(default);
         Vector2 entered = simulation.Critics[0].Position;
 
@@ -128,14 +130,14 @@ public class CriticTests
 
         Vector2 walked = simulation.Critics[0].Position - entered;
         Vector2 toBoxOffice = Vector2.Normalize(Tuning.BoxOfficePosition - entered);
-        Assert.That(walked.Length(), Is.EqualTo(Tuning.CriticSpeed).Within(Tolerance));
+        Assert.That(walked.Length(), Is.EqualTo(Tuning.Critic().Speed).Within(Tolerance));
         Assert.That(Vector2.Distance(Vector2.Normalize(walked), toBoxOffice), Is.Zero.Within(Tolerance));
     }
 
     [Test]
     public void Step_KeepsACriticsPositionBeforeTheTickForTheView()
     {
-        var simulation = new Simulation(OneCritic, seed: 1);
+        var simulation = Shows.WithOneCritic(Tuning);
         Run(simulation, ticks: 3);
         Vector2 before = simulation.Critics[0].Position;
 
@@ -148,14 +150,14 @@ public class CriticTests
     [Test]
     public void Step_ACriticStopsWhereItsCircleTouchesTheBoxOffices()
     {
-        var simulation = new Simulation(OneCritic, seed: 1);
+        var simulation = Shows.WithOneCritic(Tuning);
 
         Run(simulation, ticks: 20 * Simulation.TicksPerSecond);
 
         Critic critic = simulation.Critics[0];
         Assert.That(
             Vector2.Distance(critic.Position, Tuning.BoxOfficePosition),
-            Is.EqualTo((Tuning.BoxOfficeSize / 2f) + Tuning.CriticRadius).Within(Tolerance));
+            Is.EqualTo((Tuning.BoxOfficeSize / 2f) + Tuning.Critic().Radius).Within(Tolerance));
         Assert.That(Vector2.Distance(critic.PreviousPosition, critic.Position), Is.Zero.Within(Tolerance));
     }
 
@@ -163,11 +165,11 @@ public class CriticTests
     public void Step_ACriticAtTheBoxOffice_StrikesItOncePerCooldown()
     {
         const int cooldown = Simulation.TicksPerSecond / 2;
-        Tuning tuning = OneCritic with
+        Tuning tuning = Tuning with
         {
             BoxOfficeHitPoints = 100f, CriticStrikeDamage = 3f, CriticBlowCooldown = 0.5f,
         };
-        var simulation = new Simulation(tuning, seed: 1);
+        var simulation = Shows.WithOneCritic(tuning);
         Assert.That(simulation.BoxOfficeHitPoints, Is.EqualTo(100f));
 
         // The first strike lands on the tick the critic arrives, and not before.
@@ -175,7 +177,7 @@ public class CriticTests
         Assert.That(simulation.BoxOfficeHitPoints, Is.EqualTo(97f));
         Assert.That(
             Vector2.Distance(simulation.Critics[0].Position, tuning.BoxOfficePosition),
-            Is.EqualTo((tuning.BoxOfficeSize / 2f) + tuning.CriticRadius).Within(Tolerance));
+            Is.EqualTo((tuning.BoxOfficeSize / 2f) + tuning.Critic().Radius).Within(Tolerance));
 
         Run(simulation, ticks: cooldown - 1);
         Assert.That(simulation.BoxOfficeHitPoints, Is.EqualTo(97f));
@@ -190,7 +192,7 @@ public class CriticTests
     [Test]
     public void Step_ACriticStrikesTheBoxOffice_ItIsReportedWhereTheCriticStandsForThatTickOnly()
     {
-        var simulation = new Simulation(OneCritic, seed: 1);
+        var simulation = Shows.WithOneCritic(Tuning);
 
         // The walk to the box office reports nothing.
         while (simulation.BoxOfficeHitPoints == Tuning.BoxOfficeHitPoints)
@@ -211,8 +213,8 @@ public class CriticTests
     public void Step_TheBoxOfficesHitPointsRunOut_TheShowCloses()
     {
         // Two strikes are not enough and the third is more than enough.
-        Tuning tuning = OneCritic with { BoxOfficeHitPoints = 5f, CriticStrikeDamage = 2f };
-        var simulation = new Simulation(tuning, seed: 1);
+        Tuning tuning = Tuning with { BoxOfficeHitPoints = 5f, CriticStrikeDamage = 2f };
+        var simulation = Shows.WithOneCritic(tuning);
 
         RunUntil(simulation, () => simulation.BoxOfficeHitPoints <= 1f);
         Assert.That(simulation.BoxOfficeHitPoints, Is.EqualTo(1f));
@@ -229,7 +231,7 @@ public class CriticTests
     [Test]
     public void Step_AfterTheShowCloses_ChangesNothing()
     {
-        var simulation = new Simulation(Tuning with { BoxOfficeHitPoints = 5f }, seed: 1);
+        Simulation simulation = Shows.WithACriticEvery(3 * Simulation.TicksPerSecond, Tuning with { BoxOfficeHitPoints = 5f });
         var right = new MagicianInput(new Vector2(1f, 0f));
         RunUntil(simulation, () => simulation.ShowClosed);
         Vector2 magician = simulation.MagicianPosition;
@@ -254,8 +256,8 @@ public class CriticTests
     public void Step_AfterTheShowCloses_LeavesNoEventsBehind()
     {
         // The first strike is more than enough: the tick that closes the show reports it.
-        Tuning tuning = OneCritic with { BoxOfficeHitPoints = 1f, CriticStrikeDamage = 2f };
-        var simulation = new Simulation(tuning, seed: 1);
+        Tuning tuning = Tuning with { BoxOfficeHitPoints = 1f, CriticStrikeDamage = 2f };
+        var simulation = Shows.WithOneCritic(tuning);
         RunUntil(simulation, () => simulation.ShowClosed);
         Assert.That(simulation.Events.Select(e => e.Kind), Is.EqualTo(new[] { TickEventKind.BoxOfficeStruck }));
 
@@ -268,11 +270,8 @@ public class CriticTests
     public void Step_TwoCriticsOnExactlyOnePoint_PartByTheNextTick()
     {
         // A door with no width lets every critic in at one point, and a critic with no speed stays there.
-        Tuning tuning = Tuning with
-        {
-            StageDoorWidth = 0f, CriticSpeed = 0f, CriticEntryInterval = 1f / Simulation.TicksPerSecond,
-        };
-        var simulation = new Simulation(tuning, seed: 1);
+        Tuning tuning = Tuning.WithCritic(critic => critic with { Speed = 0f }) with { StageDoorWidth = 0f };
+        Simulation simulation = Shows.WithCriticsOnTicks(tuning, 0, 1);
         Run(simulation, ticks: 2);
         Vector2 point = simulation.Critics[0].Position;
         Assert.That(simulation.Critics[1].Position, Is.EqualTo(point));
@@ -280,8 +279,8 @@ public class CriticTests
         simulation.Step(default);
 
         // Half the overlap each: the earlier one to the left, the later one to the right, until they only touch.
-        Assert.That(simulation.Critics[0].Position.X, Is.EqualTo(point.X - tuning.CriticRadius).Within(Tolerance));
-        Assert.That(simulation.Critics[1].Position.X, Is.EqualTo(point.X + tuning.CriticRadius).Within(Tolerance));
+        Assert.That(simulation.Critics[0].Position.X, Is.EqualTo(point.X - tuning.Critic().Radius).Within(Tolerance));
+        Assert.That(simulation.Critics[1].Position.X, Is.EqualTo(point.X + tuning.Critic().Radius).Within(Tolerance));
         Assert.That(simulation.Critics[0].Position.Y, Is.EqualTo(point.Y));
         Assert.That(simulation.Critics[1].Position.Y, Is.EqualTo(point.Y));
     }
@@ -297,7 +296,7 @@ public class CriticTests
         {
             for (int j = i + 1; j < positions.Count; j++)
             {
-                Assert.That(Vector2.Distance(positions[i], positions[j]), Is.GreaterThan(Tuning.CriticRadius));
+                Assert.That(Vector2.Distance(positions[i], positions[j]), Is.GreaterThan(Tuning.Critic().Radius));
             }
         }
     }
@@ -307,7 +306,7 @@ public class CriticTests
     {
         Simulation simulation = ACrowd();
 
-        float touching = (Tuning.BoxOfficeSize / 2f) + Tuning.CriticRadius;
+        float touching = (Tuning.BoxOfficeSize / 2f) + Tuning.Critic().Radius;
         Assert.That(
             simulation.Critics.Select(critic => Vector2.Distance(critic.Position, Tuning.BoxOfficePosition)),
             Has.All.GreaterThan(touching - Tolerance));
@@ -319,13 +318,10 @@ public class CriticTests
     /// </summary>
     private Simulation ACrowd()
     {
-        var simulation = new Simulation(Tuning with { CriticEntryInterval = 1f, CriticStrikeDamage = 0f }, seed: 1);
+        Simulation simulation = Shows.WithACriticEvery(Simulation.TicksPerSecond, Tuning with { CriticStrikeDamage = 0f });
         Run(simulation, ticks: 40 * Simulation.TicksPerSecond);
         return simulation;
     }
-
-    /// <summary>The committed numbers with the second critic an hour away, so the first is alone on the stage.</summary>
-    private Tuning OneCritic => Tuning with { CriticEntryInterval = 3600f };
 
     private static void RunUntil(Simulation simulation, Func<bool> reached)
     {

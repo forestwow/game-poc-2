@@ -21,16 +21,16 @@ public class ActTests
     /// A performance of three acts of two seconds, with one critic. The door has no width, so the critic enters on
     /// the first tick exactly at <see cref="Door"/>; from the second tick on it walks a unit a tick straight down the
     /// stage, to a box office it touches 17.5 units below the door: it strikes on the nineteenth tick and every half
-    /// second after, one of the box office's thousand hit points a strike. The second critic is an hour away. The
+    /// second after, one of the box office's thousand hit points a strike. No other critic enters. The
     /// magician is far from all of it on <see cref="Mark"/>, throws at nobody, and no critic turns on it; a Vanish
     /// takes it six units.
     /// </summary>
-    private Tuning Scene { get; } = CommittedTuning.Parse() with
+    private Tuning Scene { get; } = CommittedTuning.Parse().WithCritic(critic => critic with { Speed = 60f, Radius = 0.5f }) with
     {
         ActLength = 2f,
         ActsInPerformance = 3,
         StageFloorTop = 0f,
-        StageDoors = [Door],
+        StageDoors = [new StageDoor(Door, 1)],
         StageDoorWidth = 0f,
         BoxOfficePosition = Door + new Vector2(0f, 20f),
         BoxOfficeSize = 4f,
@@ -38,9 +38,6 @@ public class ActTests
         MagicianMark = Mark,
         VanishDistance = 6f,
         ThrowRange = 0f,
-        CriticSpeed = 60f,
-        CriticRadius = 0.5f,
-        CriticEntryInterval = 3600f,
         CriticTurnRadius = 0f,
         CriticStrikeDamage = 1f,
         CriticBlowCooldown = 0.5f,
@@ -49,7 +46,7 @@ public class ActTests
     [Test]
     public void Step_TheFirstActsTimer_CountsItsLengthDownATickATick()
     {
-        var simulation = new Simulation(Scene, seed: 1);
+        var simulation = Shows.WithOneCritic(Scene);
         Assert.That(simulation.Phase, Is.EqualTo(Phase.Act));
         Assert.That(simulation.Act, Is.EqualTo(1));
         Assert.That(simulation.ActTicksLeft, Is.EqualTo(ActTicks));
@@ -64,7 +61,7 @@ public class ActTests
     [Test]
     public void Step_TheActsTimerRunsOut_TheActIsOverWithItsCriticStillOnTheStage()
     {
-        var simulation = new Simulation(Scene, seed: 1);
+        var simulation = Shows.WithOneCritic(Scene);
 
         Run(simulation, ticks: ActTicks - 1);
         Assert.That(simulation.Phase, Is.EqualTo(Phase.Act));
@@ -83,7 +80,7 @@ public class ActTests
     public void Step_TheActsLastTick_IsPlayedInFull()
     {
         // An act of nineteen ticks: the critic's first strike is on the last of them.
-        var simulation = new Simulation(Scene with { ActLength = 19f / Simulation.TicksPerSecond }, seed: 1);
+        var simulation = Shows.WithOneCritic(Scene with { ActLength = 19f / Simulation.TicksPerSecond });
 
         Run(simulation, ticks: 19);
 
@@ -96,7 +93,7 @@ public class ActTests
     {
         // The act's last tick is a Vanish that goes nowhere: it is reported, its cloud lies on the floor with all
         // its time, its cooldown has begun, and nothing hurts the magician.
-        var simulation = new Simulation(Scene with { VanishDistance = 0f }, seed: 1);
+        var simulation = Shows.WithOneCritic(Scene with { VanishDistance = 0f });
         Run(simulation, ticks: ActTicks - 1);
         simulation.Step(Vanish);
         Assert.That(simulation.Phase, Is.EqualTo(Phase.BetweenActs));
@@ -127,7 +124,7 @@ public class ActTests
     [Test]
     public void GoOn_BetweenTwoActs_TheNextActBeginsWithTheCriticsOfTheLast()
     {
-        var simulation = new Simulation(Scene, seed: 1);
+        var simulation = Shows.WithOneCritic(Scene);
         Run(simulation, ticks: ActTicks);
         Critic critic = simulation.Critics[0];
         Vector2 stood = critic.Position;
@@ -151,7 +148,7 @@ public class ActTests
         // The critic turns on the magician wherever it is, and at a unit a tick it catches a magician that walks
         // away to the left: by the act's end it has hurt it more than once.
         Tuning tuning = Scene with { CriticTurnRadius = 100f };
-        var simulation = new Simulation(tuning, seed: 1);
+        var simulation = Shows.WithOneCritic(tuning);
         Run(simulation, ticks: ActTicks, Left);
         Assert.That(simulation.MagicianHitPoints, Is.LessThan(tuning.MagicianHitPoints - 1f));
         Assert.That(simulation.MagicianPosition.X, Is.LessThan(Mark.X - 1f));
@@ -167,7 +164,7 @@ public class ActTests
     [Test]
     public void GoOn_AfterAVanishOnTheActsLastTick_TheVanishIsReadyAndTheMomentNothingHurtsIsOver()
     {
-        var simulation = new Simulation(Scene, seed: 1);
+        var simulation = Shows.WithOneCritic(Scene);
         Run(simulation, ticks: ActTicks - 1);
         simulation.Step(Vanish);
         Assert.That(simulation.VanishCooldownLeft, Is.EqualTo(1f));
@@ -186,7 +183,7 @@ public class ActTests
     [Test]
     public void GoOn_AMagicianThatLastWalkedToTheLeft_FacesDownTheStageAgain()
     {
-        var simulation = new Simulation(Scene, seed: 1);
+        var simulation = Shows.WithOneCritic(Scene);
         Run(simulation, ticks: ActTicks, Left);
 
         simulation.GoOn();
@@ -205,14 +202,13 @@ public class ActTests
         // its cloud on the critics nearest the mark. One show's act ends there; the other's is twice as long.
         Tuning tuning = CommittedTuning.Parse() with
         {
-            CriticEntryInterval = 0.7f,
             CriticTurnRadius = 0f,
             ThrownCardSpeed = 1.2f,
             VanishDistance = 0f,
         };
         const int twentySeconds = 20 * Simulation.TicksPerSecond;
-        var twoActs = new Simulation(tuning with { ActLength = 20f }, seed: 1);
-        var oneAct = new Simulation(tuning with { ActLength = 40f }, seed: 1);
+        var twoActs = Shows.WithACriticEvery(42, tuning with { ActLength = 20f });
+        var oneAct = Shows.WithACriticEvery(42, tuning with { ActLength = 40f });
         foreach (Simulation simulation in new[] { twoActs, oneAct })
         {
             Run(simulation, ticks: twentySeconds - 10);
@@ -223,7 +219,7 @@ public class ActTests
         // Everything the act's end could wrongly clear is on the stage.
         Assert.That(twoActs.Phase, Is.EqualTo(Phase.BetweenActs));
         Assert.That(twoActs.Critics.Count(critic => critic.IsStunned), Is.GreaterThan(0));
-        Assert.That(twoActs.Critics.Count(critic => critic.HitPoints < tuning.CriticHitPoints), Is.GreaterThan(0));
+        Assert.That(twoActs.Critics.Count(critic => critic.HitPoints < tuning.Critic().HitPoints), Is.GreaterThan(0));
         Assert.That(twoActs.ThrownCards, Is.Not.Empty);
         Assert.That(twoActs.Clouds, Is.Not.Empty);
         Assert.That(twoActs.BoxOfficeHitPoints, Is.LessThan(tuning.BoxOfficeHitPoints));
@@ -255,7 +251,7 @@ public class ActTests
     [Test]
     public void GoOn_WhileAnActIsPlayed_DoesNothing()
     {
-        var simulation = new Simulation(Scene, seed: 1);
+        var simulation = Shows.WithOneCritic(Scene);
         Run(simulation, ticks: ActTicks / 2, Left);
         ulong state = simulation.ComputeStateHash();
         Vector2 magicianBefore = simulation.MagicianPreviousPosition;
@@ -273,7 +269,7 @@ public class ActTests
     [Test]
     public void Step_TheLastActsTimerRunsOut_ThePerformanceEndsInTheOvationAndNothingComesAfterIt()
     {
-        var simulation = new Simulation(Scene, seed: 1);
+        var simulation = Shows.WithOneCritic(Scene);
         Run(simulation, ticks: ActTicks);
         simulation.GoOn();
         Run(simulation, ticks: ActTicks);
@@ -308,7 +304,7 @@ public class ActTests
     public void Step_TenActs_EndThePerformance()
     {
         // Ten acts of a second: after each of the first nine the player goes on, and the tenth ends it.
-        var simulation = new Simulation(Scene with { ActLength = 1f, ActsInPerformance = 10 }, seed: 1);
+        var simulation = Shows.WithOneCritic(Scene with { ActLength = 1f, ActsInPerformance = 10 });
 
         for (int act = 1; act <= 9; act++)
         {
@@ -330,7 +326,7 @@ public class ActTests
     public void Step_TheBoxOfficeFallsInAnAct_TheShowClosesAtOnce()
     {
         // Three hit points: the critic's third strike, on tick 79, takes the last of them.
-        var simulation = new Simulation(Scene with { BoxOfficeHitPoints = 3f }, seed: 1);
+        var simulation = Shows.WithOneCritic(Scene with { BoxOfficeHitPoints = 3f });
         Run(simulation, ticks: 78);
         Assert.That(simulation.Phase, Is.EqualTo(Phase.Act));
 
@@ -357,7 +353,7 @@ public class ActTests
         {
             ActLength = 19f / Simulation.TicksPerSecond, ActsInPerformance = acts, BoxOfficeHitPoints = 1f,
         };
-        var simulation = new Simulation(tuning, seed: 1);
+        var simulation = Shows.WithOneCritic(tuning);
 
         Run(simulation, ticks: 19);
 
@@ -370,7 +366,7 @@ public class ActTests
     {
         // The critic turns on the magician wherever it is, and one touch is all this magician can take.
         Tuning tuning = Scene with { CriticTurnRadius = 100f, MagicianHitPoints = 1f };
-        var simulation = new Simulation(tuning, seed: 1);
+        var simulation = Shows.WithOneCritic(tuning);
 
         Run(simulation, ticks: ActTicks / 2);
 

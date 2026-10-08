@@ -6,11 +6,15 @@ namespace Understudies.Core;
 
 /// <summary>Owns the state of the game and advances it one tick at a time.</summary>
 /// <param name="seed">What is left to chance in the show comes from this: the same seed, the same show.</param>
-public sealed class Simulation(Tuning tuning, ulong seed)
+/// <param name="plan">
+/// Who enters when, in place of the plan the seed gives: the entries of every act, an act after an act, each act's
+/// in the order of their ticks. An act the plan does not reach has none.
+/// </param>
+public sealed class Simulation(Tuning tuning, ulong seed, IReadOnlyList<IReadOnlyList<PlannedEntry>> plan)
 {
     public const int TicksPerSecond = 60;
 
-    private readonly Rng _rng = new(seed);
+    private readonly Rng _doorPlaces = Rng.ForStream(seed, RngStream.DoorPlaces);
     private readonly List<Critic> _critics = [];
     private readonly List<ThrownCard> _thrownCards = [];
     private readonly List<Cloud> _clouds = [];
@@ -23,7 +27,9 @@ public sealed class Simulation(Tuning tuning, ulong seed)
     private readonly List<TickEvent> _events = [];
     private int _ticksPlayed;
     private int _criticsEntered;
-    private int _ticksToNextCritic;
+
+    // The ticks played of the act: the plan's entries are counted in them.
+    private int _actTick;
     private int _ticksToNextThrow;
 
     // One unit long: the way the magician was last asked to walk. When the curtain rises it faces the audience,
@@ -33,10 +39,30 @@ public sealed class Simulation(Tuning tuning, ulong seed)
     private int _ticksInvulnerable;
 
     /// <summary>
+    /// A show whose waves are planned here and now, from the seed and the tuning (<see cref="Waves.Plan"/>).
+    /// </summary>
+    public Simulation(Tuning tuning, ulong seed)
+        : this(tuning, seed, Waves.Plan(tuning, seed))
+    {
+    }
+
+    /// <summary>
     /// The numbers the rules run on. New ones may be set between ticks: the state stays as it is and the next tick
-    /// runs on them.
+    /// runs on them. The plan stays too: it was made when the show was, and new numbers do not plan a performance
+    /// under way again.
     /// </summary>
     public Tuning Tuning { get; set; } = tuning;
+
+    /// <summary>The entries of every act of the performance, as they were planned when the show was made.</summary>
+    public IReadOnlyList<IReadOnlyList<PlannedEntry>> Plan { get; } = plan;
+
+    /// <summary>The planned entries of the act that is played, or of the one just over, in the order they enter.</summary>
+    public IReadOnlyList<PlannedEntry> ActEntries => Act <= Plan.Count ? Plan[Act - 1] : [];
+
+    /// <summary>
+    /// How many of <see cref="ActEntries"/> have entered: those from this place on are still to come in this act.
+    /// </summary>
+    public int ActEntriesMade { get; private set; }
 
     /// <summary>
     /// Where the performance stands. A closed show is closed whatever its act's timer says; an act whose time has
@@ -108,6 +134,12 @@ public sealed class Simulation(Tuning tuning, ulong seed)
     public bool ShowClosed => BoxOfficeHitPoints <= 0f || MagicianHasFallen;
 
     /// <summary>
+    /// Whether a door, by its place in <see cref="Tuning.StageDoors"/>, is open in the act that is played or just
+    /// over.
+    /// </summary>
+    public bool DoorIsOpen(int door) => Tuning.StageDoors[door].OpensInAct <= Act;
+
+    /// <summary>
     /// Plays one tick of an act. Between two acts and when the performance is over the world stands: the tick
     /// reports nothing and changes nothing.
     /// </summary>
@@ -153,13 +185,8 @@ public sealed class Simulation(Tuning tuning, ulong seed)
             }
         }
 
-        // The first critic enters on the first tick.
-        if (--_ticksToNextCritic <= 0)
-        {
-            LetACriticIn();
-            _ticksToNextCritic = Ticks(Tuning.CriticEntryInterval);
-        }
-
+        // Whoever the plan has for this tick of the act enters last, and is first seen where it entered.
+        LetTheCriticsIn();
         _ticksPlayed++;
 
         // The act's time is counted last: its last tick is played in full, and the act is over when that tick is,
@@ -194,6 +221,8 @@ public sealed class Simulation(Tuning tuning, ulong seed)
 
         Act++;
         ActTicksLeft = Ticks(Tuning.ActLength);
+        ActEntriesMade = 0;
+        _actTick = 0;
 
         // Both positions: there is nothing between where the magician stood and the mark for the view to draw.
         MagicianPosition = Tuning.MagicianMark;
@@ -253,6 +282,7 @@ public sealed class Simulation(Tuning tuning, ulong seed)
         foreach (Critic critic in _critics)
         {
             hasher.AddInt(critic.Id);
+            hasher.AddInt(critic.Kind);
             AddPoint(critic.Position);
             hasher.AddFloat(critic.HitPoints);
             hasher.AddInt(critic.TicksToNextBlow);
@@ -293,9 +323,13 @@ public sealed class Simulation(Tuning tuning, ulong seed)
 
         AddRecording(_route, _vanishes);
         hasher.AddInt(_ticksToNextThrow);
-        hasher.AddInt(_ticksToNextCritic);
+
+        // How far through the act's entries the show is. The plan itself is not in the hash: it follows from the
+        // seed and the tuning, which two shows that are compared share.
+        hasher.AddInt(_actTick);
+        hasher.AddInt(ActEntriesMade);
         hasher.AddInt(_criticsEntered);
-        hasher.AddULong(_rng.State);
+        hasher.AddULong(_doorPlaces.State);
         return hasher.Value;
     }
 
@@ -460,7 +494,8 @@ public sealed class Simulation(Tuning tuning, ulong seed)
             Vector2 toCritic = critic.Position - start;
             float along = (toCritic.X * direction.X) + (toCritic.Y * direction.Y);
             float aside = (toCritic.X * direction.Y) - (toCritic.Y * direction.X);
-            float halfChordSquared = (Tuning.CriticRadius * Tuning.CriticRadius) - (aside * aside);
+            float radius = KindOf(critic).Radius;
+            float halfChordSquared = (radius * radius) - (aside * aside);
             if (halfChordSquared < 0f)
             {
                 continue;
@@ -497,15 +532,15 @@ public sealed class Simulation(Tuning tuning, ulong seed)
         // grid of cells one critic wide replaces the two loops when there are more. And one pass squeezes harder the
         // bigger the crowd (the closest two of forty overlap by a third, of a hundred and twenty by half); more
         // passes a tick are what loosens it.
-        float diameter = 2f * Tuning.CriticRadius;
         for (int i = 0; i < _critics.Count; i++)
         {
             for (int j = i + 1; j < _critics.Count; j++)
             {
+                float touching = KindOf(_critics[i]).Radius + KindOf(_critics[j]).Radius;
                 Vector2 apart = Direction(_critics[j].Position - _critics[i].Position, out float distance);
-                if (distance < diameter)
+                if (distance < touching)
                 {
-                    Vector2 push = apart * ((diameter - distance) / 2f);
+                    Vector2 push = apart * ((touching - distance) / 2f);
                     _critics[i].Position -= push;
                     _critics[j].Position += push;
                 }
@@ -521,16 +556,17 @@ public sealed class Simulation(Tuning tuning, ulong seed)
                 critic.TicksStunned--;
             }
 
-            if (TouchesACloud(critic.Position))
+            EnemyKind kind = KindOf(critic);
+            if (TouchesACloud(critic.Position, kind.Radius))
             {
                 critic.TicksStunned = Ticks(Tuning.VanishStunTime);
             }
 
             // A critic nearer to the magician than the turn radius has turned on it: it walks at the magician and
             // not at the box office. That is asked anew on every tick, so it goes back to the box office the moment
-            // the magician is out of the radius. A stunned critic does not turn.
+            // the magician is out of the radius. A stunned critic does not turn, nor one of a kind that never does.
             Vector2 apart = MagicianPosition - critic.Position;
-            bool turned = !critic.IsStunned
+            bool turned = kind.TurnsOnTheMagician && !critic.IsStunned
                 && (apart.X * apart.X) + (apart.Y * apart.Y) < Tuning.CriticTurnRadius * Tuning.CriticTurnRadius;
 
             // Straight at whichever it is, as far as where the two circles touch. From the box office a critic is
@@ -544,8 +580,8 @@ public sealed class Simulation(Tuning tuning, ulong seed)
             // the magician out of it too.
             Vector2 toTarget = Direction(
                 (turned ? MagicianPosition : Tuning.BoxOfficePosition) - critic.Position, out float distance);
-            float gap = distance - (turned ? Tuning.MagicianRadius : Tuning.BoxOfficeSize / 2f) - Tuning.CriticRadius;
-            float step = critic.IsStunned ? 0f : Tuning.CriticSpeed / TicksPerSecond;
+            float gap = distance - (turned ? Tuning.MagicianRadius : Tuning.BoxOfficeSize / 2f) - kind.Radius;
+            float step = critic.IsStunned ? 0f : kind.Speed / TicksPerSecond;
             float walk = MathF.Min(gap, step);
             critic.Position += toTarget * (turned ? MathF.Max(0f, walk) : walk);
 
@@ -584,10 +620,13 @@ public sealed class Simulation(Tuning tuning, ulong seed)
         }
     }
 
-    /// <summary>A critic's circle with its middle at <paramref name="critic"/> touches some cloud.</summary>
-    private bool TouchesACloud(Vector2 critic)
+    /// <summary>
+    /// A critic's circle of <paramref name="radius"/> with its middle at <paramref name="critic"/> touches some
+    /// cloud.
+    /// </summary>
+    private bool TouchesACloud(Vector2 critic, float radius)
     {
-        float reach = Tuning.VanishCloudRadius + Tuning.CriticRadius;
+        float reach = Tuning.VanishCloudRadius + radius;
         foreach (Cloud cloud in _clouds)
         {
             Vector2 apart = critic - cloud.Position;
@@ -646,7 +685,7 @@ public sealed class Simulation(Tuning tuning, ulong seed)
     }
 
     /// <summary>The file gives seconds and the rules count whole ticks: the nearest number of them.</summary>
-    private static int Ticks(float seconds) => (int)((seconds * TicksPerSecond) + 0.5f);
+    internal static int Ticks(float seconds) => (int)((seconds * TicksPerSecond) + 0.5f);
 
     /// <summary>
     /// Which way <paramref name="v"/> points, one unit long. A vector of no length points nowhere and is given a
@@ -658,14 +697,35 @@ public sealed class Simulation(Tuning tuning, ulong seed)
         return length > 0f ? v / length : Vector2.UnitX;
     }
 
-    private void LetACriticIn()
+    /// <summary>
+    /// What a critic is: its kind as the tuning has it now.
+    /// </summary>
+    // ponytail: a critic knows its kind, and an entry its door, by a place in the tuning's lists as they were when
+    // the plan was made. A reload that reorders a list changes who is what, and one that shortens it leaves those
+    // past its end as its last; the lists need names to be looked up by when a reload has to do better.
+    private EnemyKind KindOf(Critic critic) => Tuning.EnemyKinds[Math.Min(critic.Kind, Tuning.EnemyKinds.Count - 1)];
+
+    private void LetTheCriticsIn()
+    {
+        IReadOnlyList<PlannedEntry> entries = ActEntries;
+        while (ActEntriesMade < entries.Count && entries[ActEntriesMade].Tick <= _actTick)
+        {
+            LetACriticIn(entries[ActEntriesMade++]);
+        }
+
+        _actTick++;
+    }
+
+    private void LetACriticIn(PlannedEntry entry)
     {
         // A door in a side edge runs up and down it; any other, at the foot of the back wall or in the bottom edge,
         // runs along the stage's width.
-        Vector2 door = Tuning.StageDoors[0];
+        Vector2 door = Tuning.StageDoors[Math.Min(entry.Door, Tuning.StageDoors.Count - 1)].Position;
         bool inASide = door.X <= 0f || door.X >= Tuning.StageSize.X;
-        float along = (_rng.NextFloat() - 0.5f) * Tuning.StageDoorWidth;
+        float along = (_doorPlaces.NextFloat() - 0.5f) * Tuning.StageDoorWidth;
         Vector2 position = door + (inASide ? new Vector2(0f, along) : new Vector2(along, 0f));
-        _critics.Add(new Critic(_criticsEntered++, position, Tuning.CriticHitPoints));
+        var critic = new Critic(_criticsEntered++, entry.Kind, position);
+        critic.HitPoints = KindOf(critic).HitPoints;
+        _critics.Add(critic);
     }
 }

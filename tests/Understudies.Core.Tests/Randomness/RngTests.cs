@@ -15,6 +15,26 @@ public class RngTests
     }
 
     [Test]
+    public void ForStream_TwoStreamsOfOneSeed_GiveNumbersOfTheirOwn_AndTheSameStreamTheSame()
+    {
+        ulong Waves(ulong seed) => Rng.ForStream(seed, RngStream.Waves).NextULong();
+
+        ulong first = Waves(7);
+        Assert.That(Waves(7), Is.EqualTo(first));
+        Assert.That(Waves(8), Is.Not.EqualTo(first));
+        Assert.That(Rng.ForStream(7, RngStream.DoorPlaces).NextULong(), Is.Not.EqualTo(first));
+        Assert.That(new Rng(7).NextULong(), Is.Not.EqualTo(first));
+    }
+
+    [Test]
+    public void RngStream_TheNumbersOfTheStreams_AreNeverGivenAnew()
+    {
+        // A stream's number decides its numbers: renumbering one changes every show ever seeded.
+        Assert.That((ulong)RngStream.Waves, Is.EqualTo(1UL));
+        Assert.That((ulong)RngStream.DoorPlaces, Is.EqualTo(2UL));
+    }
+
+    [Test]
     public void NextULong_SameSeed_SameSequence()
     {
         var a = new Rng(12345);

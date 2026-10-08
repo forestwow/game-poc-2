@@ -33,22 +33,19 @@ public class VanishTests
     /// <summary>
     /// <see cref="Scene"/> with one critic. The door has no width, so the critic enters on the first tick exactly
     /// at <see cref="Door"/>; from the second tick on it walks a unit a tick straight down the stage, to a box
-    /// office it touches 17.5 units below the door. The second critic is an hour away. A cloud reaches two units
+    /// office it touches 17.5 units below the door. No other critic enters. A cloud reaches two units
     /// from its middle and is there for the tick of its Vanish only, so it stuns once, for half a second. Each test
     /// puts the mark where its cloud is to be; the Vanish itself goes down the stage, as it does before the first
     /// move. The stage has no back wall: its floor starts at the top edge, where the door is, so the mark can be
     /// near enough to the door for the cloud to reach it, where a wall would not let the magician stand.
     /// </summary>
-    private Tuning ACriticWalksDown => Scene with
+    private Tuning ACriticWalksDown => Scene.WithCritic(critic => critic with { Speed = 60f, Radius = 0.5f }) with
     {
         StageFloorTop = 0f,
-        StageDoors = [Door],
+        StageDoors = [new StageDoor(Door, 1)],
         StageDoorWidth = 0f,
         BoxOfficePosition = Door + new Vector2(0f, 20f),
         BoxOfficeSize = 4f,
-        CriticSpeed = 60f,
-        CriticRadius = 0.5f,
-        CriticEntryInterval = 3600f,
         VanishCloudRadius = 2f,
         VanishCloudTime = 1f / Simulation.TicksPerSecond,
         VanishStunTime = 0.5f,
@@ -57,7 +54,7 @@ public class VanishTests
     [Test]
     public void Step_TheVanishWhileWalking_TheMagicianIsAtOnceItsDistanceFurtherThatWay()
     {
-        var simulation = new Simulation(Scene, seed: 1);
+        var simulation = Shows.WithACriticEvery(3 * Simulation.TicksPerSecond, Scene);
 
         simulation.Step(new MagicianInput(new Vector2(1f, 0f), Vanish: true));
 
@@ -71,7 +68,7 @@ public class VanishTests
     [TestCase(-2f, 0f)]
     public void Step_TheVanishWhileWalking_GoesItsWholeDistanceHoweverHardTheMoveIsPushed(float x, float y)
     {
-        var simulation = new Simulation(Scene, seed: 1);
+        var simulation = Shows.WithACriticEvery(3 * Simulation.TicksPerSecond, Scene);
         var move = new Vector2(x, y);
 
         simulation.Step(new MagicianInput(move, Vanish: true));
@@ -84,7 +81,7 @@ public class VanishTests
     [Test]
     public void Step_TheVanishWhileStanding_GoesTheWayTheMagicianLastWalked()
     {
-        var simulation = new Simulation(Scene, seed: 1);
+        var simulation = Shows.WithACriticEvery(3 * Simulation.TicksPerSecond, Scene);
         simulation.Step(new MagicianInput(new Vector2(1f, 0f)));
         simulation.Step(new MagicianInput(new Vector2(0f, -1f)));
         Run(simulation, ticks: 5);
@@ -98,7 +95,7 @@ public class VanishTests
     [Test]
     public void Step_TheVanishBeforeTheFirstMove_GoesDownTheStageTowardsTheAudience()
     {
-        var simulation = new Simulation(Scene, seed: 1);
+        var simulation = Shows.WithACriticEvery(3 * Simulation.TicksPerSecond, Scene);
 
         simulation.Step(Vanish);
 
@@ -109,7 +106,7 @@ public class VanishTests
     public void Step_TheVanishTowardsAnEdgeNearerThanItsDistance_EndsWithTheWholeCircleOnTheStage()
     {
         Tuning tuning = Scene with { MagicianMark = new Vector2(Scene.StageSize.X - 3f, 13f) };
-        var simulation = new Simulation(tuning, seed: 1);
+        var simulation = Shows.WithACriticEvery(3 * Simulation.TicksPerSecond, tuning);
 
         simulation.Step(new MagicianInput(new Vector2(1f, 0f), Vanish: true));
 
@@ -122,7 +119,7 @@ public class VanishTests
         // The floor starts three units down the stage and the mark is four units below that; the magician's circle
         // reaches half a unit from its middle.
         Tuning tuning = Scene with { StageFloorTop = 3f, MagicianRadius = 0.5f, MagicianMark = new Vector2(24f, 7f) };
-        var simulation = new Simulation(tuning, seed: 1);
+        var simulation = Shows.WithACriticEvery(3 * Simulation.TicksPerSecond, tuning);
 
         simulation.Step(new MagicianInput(new Vector2(0f, -1f), Vanish: true));
 
@@ -132,7 +129,7 @@ public class VanishTests
     [Test]
     public void Step_TheVanish_LeavesTheViewNothingToDrawBetweenTheTwoPlaces()
     {
-        var simulation = new Simulation(Scene, seed: 1);
+        var simulation = Shows.WithACriticEvery(3 * Simulation.TicksPerSecond, Scene);
 
         simulation.Step(Vanish);
 
@@ -144,7 +141,7 @@ public class VanishTests
     public void Step_ASecondPressWhileTheCooldownRuns_IsRefused()
     {
         // Two seconds are 120 ticks: the Vanish of the first tick is ready again on tick 121.
-        var simulation = new Simulation(Scene, seed: 1);
+        var simulation = Shows.WithACriticEvery(3 * Simulation.TicksPerSecond, Scene);
         simulation.Step(Vanish);
         Vector2 stood = simulation.MagicianPosition;
 
@@ -162,7 +159,7 @@ public class VanishTests
     [Test]
     public void Step_ARefusedPress_IsNotKeptForLaterAndLeavesTheWalkAsItIs()
     {
-        var simulation = new Simulation(Scene, seed: 1);
+        var simulation = Shows.WithACriticEvery(3 * Simulation.TicksPerSecond, Scene);
         simulation.Step(Vanish);
         Vector2 stood = simulation.MagicianPosition;
 
@@ -180,7 +177,7 @@ public class VanishTests
     [Test]
     public void VanishCooldownLeft_IsAllOfItOnTheTickOfTheVanishAndNothingWhenTheNextIsReady()
     {
-        var simulation = new Simulation(Scene, seed: 1);
+        var simulation = Shows.WithACriticEvery(3 * Simulation.TicksPerSecond, Scene);
         Assert.That(simulation.VanishCooldownLeft, Is.Zero);
 
         simulation.Step(Vanish);
@@ -203,7 +200,7 @@ public class VanishTests
     public void VanishCooldownLeft_AfterNewTuningWithAShorterCooldown_IsNeverMoreThanAllOfIt()
     {
         // The countdown that runs is the old one, longer than the whole of the new.
-        var simulation = new Simulation(Scene, seed: 1);
+        var simulation = Shows.WithACriticEvery(3 * Simulation.TicksPerSecond, Scene);
         simulation.Step(Vanish);
 
         simulation.Tuning = Scene with { VanishCooldown = 1f };
@@ -217,7 +214,7 @@ public class VanishTests
     public void MagicianIsInvulnerable_ForItsTimeFromTheTickOfTheVanish()
     {
         // A quarter of a second is 15 ticks: the tick of the Vanish and the 14 after it.
-        var simulation = new Simulation(Scene, seed: 1);
+        var simulation = Shows.WithACriticEvery(3 * Simulation.TicksPerSecond, Scene);
         Run(simulation, ticks: 3);
         Assert.That(simulation.MagicianIsInvulnerable, Is.False);
 
@@ -239,7 +236,7 @@ public class VanishTests
     [Test]
     public void Step_TheVanish_IsReportedAtThePlaceTheMagicianLeftForThatTickOnly()
     {
-        var simulation = new Simulation(Scene, seed: 1);
+        var simulation = Shows.WithACriticEvery(3 * Simulation.TicksPerSecond, Scene);
         simulation.Step(Vanish);
         Assert.That(simulation.Events, Is.EqualTo(new[] { new TickEvent(TickEventKind.Vanish, Mark) }));
 
@@ -252,7 +249,7 @@ public class VanishTests
     [Test]
     public void Step_TheVanish_LeavesACloudWhereTheMagicianStood()
     {
-        var simulation = new Simulation(Scene, seed: 1);
+        var simulation = Shows.WithACriticEvery(3 * Simulation.TicksPerSecond, Scene);
         simulation.Step(new MagicianInput(new Vector2(1f, 0f)));
         Vector2 stood = simulation.MagicianPosition;
         Assert.That(simulation.Clouds, Is.Empty);
@@ -267,7 +264,7 @@ public class VanishTests
     public void Step_ACloud_IsGoneWhenItsTimeIsOver()
     {
         // Half a second is 30 ticks: the tick of the Vanish and the 29 after it.
-        var simulation = new Simulation(Scene, seed: 1);
+        var simulation = Shows.WithACriticEvery(3 * Simulation.TicksPerSecond, Scene);
         simulation.Step(Vanish);
         Assert.That(simulation.Clouds.Select(cloud => cloud.TicksLeft), Is.EqualTo(new[] { 30 }));
 
@@ -282,7 +279,7 @@ public class VanishTests
     public void Step_TwoCloudsAtOnce_AreKeptInTheOrderTheyWereLeftAndEachGoesWhenItsOwnTimeIsOver()
     {
         // A Vanish every tenth of a second: the second cloud is left on the seventh tick.
-        var simulation = new Simulation(Scene with { VanishCooldown = 0.1f }, seed: 1);
+        var simulation = Shows.WithACriticEvery(3 * Simulation.TicksPerSecond, Scene with { VanishCooldown = 0.1f });
         simulation.Step(Vanish);
         Run(simulation, ticks: 5);
         simulation.Step(Vanish);
@@ -299,7 +296,7 @@ public class VanishTests
     [Test]
     public void Step_ACloudTimeOfNothing_TheVanishLeavesNoCloud()
     {
-        var simulation = new Simulation(Scene with { VanishCloudTime = 0f }, seed: 1);
+        var simulation = Shows.WithACriticEvery(3 * Simulation.TicksPerSecond, Scene with { VanishCloudTime = 0f });
 
         simulation.Step(Vanish);
 
@@ -398,7 +395,7 @@ public class VanishTests
             CriticBlowCooldown = 0.5f,
             VanishStunTime = 0.75f,
         };
-        var simulation = new Simulation(tuning, seed: 1);
+        Simulation simulation = Shows.WithOneCritic(tuning);
         Run(simulation, ticks: 18);
         Assert.That(simulation.BoxOfficeHitPoints, Is.EqualTo(100f));
 
@@ -428,9 +425,8 @@ public class VanishTests
     {
         // A cloud that lasts lies on the door. The second critic enters a tick after the first, on the same point.
         Tuning tuning = ACriticWalksDown with { MagicianMark = Door + new Vector2(0f, 2.25f), VanishCloudTime = 10f };
-        var simulation = new Simulation(tuning with { CriticEntryInterval = 1f / Simulation.TicksPerSecond }, seed: 1);
+        Simulation simulation = Shows.WithCriticsOnTicks(tuning, 0, 1);
         simulation.Step(Vanish);
-        simulation.Tuning = tuning;
         Run(simulation, ticks: 1);
         Assert.That(simulation.Critics.Select(critic => critic.Position), Is.EqualTo(new[] { Door, Door }));
 
@@ -448,14 +444,13 @@ public class VanishTests
     {
         // The magician ends its Vanish 8.25 units below the critic, throws on that tick, and the card flies a unit
         // a tick: it is there within ten ticks, while the stun lasts thirty.
-        Tuning tuning = ACriticWalksDown with
+        Tuning tuning = ACriticWalksDown.WithCritic(critic => critic with { HitPoints = 3f }) with
         {
             MagicianMark = Door + new Vector2(0f, 2.25f),
             ThrowRange = 9f,
             ThrowCooldown = 3600f,
             ThrownCardSpeed = 60f,
             ThrownCardDamage = 1f,
-            CriticHitPoints = 3f,
         };
         Simulation simulation = ACriticAtTheDoor(tuning);
         simulation.Step(Vanish);
@@ -476,19 +471,18 @@ public class VanishTests
         {
             ThrowRange = 0f,
             CriticTurnRadius = 0f,
-            CriticEntryInterval = 1f,
             CriticStrikeDamage = 0f,
             VanishCloudRadius = 2.5f,
             VanishCloudTime = 1f,
             VanishStunTime = 1.5f,
         };
-        var simulation = new Simulation(tuning, seed: 1);
+        Simulation simulation = Shows.WithACriticEvery(Simulation.TicksPerSecond, tuning);
         Run(simulation, ticks: 40 * Simulation.TicksPerSecond);
 
         simulation.Step(Vanish);
         Assert.That(simulation.Critics.Count(critic => critic.IsStunned), Is.GreaterThan(5));
 
-        float touching = (tuning.BoxOfficeSize / 2f) + tuning.CriticRadius;
+        float touching = (tuning.BoxOfficeSize / 2f) + tuning.Critic().Radius;
         for (int i = 0; i < 3 * Simulation.TicksPerSecond; i++)
         {
             simulation.Step(default);
@@ -501,7 +495,7 @@ public class VanishTests
     /// <summary>The first tick of <paramref name="tuning"/>: the critic has entered and nothing else has happened.</summary>
     private static Simulation ACriticAtTheDoor(Tuning tuning)
     {
-        var simulation = new Simulation(tuning, seed: 1);
+        Simulation simulation = Shows.WithOneCritic(tuning);
         simulation.Step(default);
         Assert.That(simulation.Critics.Select(critic => critic.Position), Is.EqualTo(new[] { Door }));
         return simulation;

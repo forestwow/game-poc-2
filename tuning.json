@@ -4,9 +4,9 @@
   "stageSize": { "x": 48, "y": 27 },
   "stageFloorTop": 3,
   "stageDoors": [
-    { "x": 0, "y": 15 },
-    { "x": 48, "y": 9 },
-    { "x": 17, "y": 3 }
+    { "position": { "x": 0, "y": 15 }, "opensInAct": 1 },
+    { "position": { "x": 48, "y": 9 }, "opensInAct": 3 },
+    { "position": { "x": 17, "y": 3 }, "opensInAct": 6 }
   ],
   "stageDoorWidth": 3,
   "boxOfficePosition": { "x": 31, "y": 12 },
@@ -26,10 +26,21 @@
   "throwCooldown": 0.5,
   "thrownCardSpeed": 72,
   "thrownCardDamage": 1,
-  "criticSpeed": 4,
-  "criticRadius": 0.5,
-  "criticHitPoints": 3,
-  "criticEntryInterval": 3,
+  "enemyKinds": [
+    {
+      "name": "critic",
+      "speed": 4,
+      "radius": 0.5,
+      "hitPoints": 3,
+      "cost": 1,
+      "weight": 1,
+      "fromAct": 1,
+      "turnsOnTheMagician": true
+    }
+  ],
+  "firstActBudget": 25,
+  "budgetGrowthPerAct": 8,
+  "actQuietEnd": 5,
   "criticTurnRadius": 4,
   "criticStrikeDamage": 1,
   "criticTouchDamage": 1,

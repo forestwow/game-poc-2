@@ -11,11 +11,10 @@ public class StateHashTests
     /// strikes it within half a second of entering, and the magician stands in range of the door and throws on the
     /// second tick, at critics that outlast the test.
     /// </summary>
-    private Tuning EverythingAtOnce => Tuning with
+    private Tuning EverythingAtOnce => Tuning.WithCritic(critic => critic with { HitPoints = 1000f }) with
     {
-        BoxOfficePosition = Tuning.StageDoors[0] + new Vector2(4f, 0f),
-        MagicianMark = Tuning.StageDoors[0] + new Vector2(8f, 0f),
-        CriticHitPoints = 1000f,
+        BoxOfficePosition = Tuning.StageDoors[0].Position + new Vector2(4f, 0f),
+        MagicianMark = Tuning.StageDoors[0].Position + new Vector2(8f, 0f),
     };
 
     /// <summary>
@@ -26,7 +25,7 @@ public class StateHashTests
     /// </summary>
     private Tuning AVanishAtOnce => Tuning with
     {
-        MagicianMark = Tuning.StageDoors[0] + new Vector2(1f, 0f),
+        MagicianMark = Tuning.StageDoors[0].Position + new Vector2(1f, 0f),
         VanishDistance = 100f,
     };
 
@@ -63,9 +62,8 @@ public class StateHashTests
         yield return Case("the act's time left", 0, t => t with { ActLength = t.ActLength * 2f });
 
         // The first critic has entered.
-        yield return Case("the time to the next critic", 1, t => t with { CriticEntryInterval = t.CriticEntryInterval * 2f });
-        yield return Case("where a critic stands", 1, t => t with { StageDoors = [t.StageDoors[0] + Vector2.UnitY] });
-        yield return Case("a critic's hit points", 1, t => t with { CriticHitPoints = t.CriticHitPoints + 1f });
+        yield return Case("where a critic stands", 1, t => t with { StageDoors = [new StageDoor(t.StageDoors[0].Position + Vector2.UnitY, 1)] });
+        yield return Case("a critic's hit points", 1, t => t.WithCritic(critic => critic with { HitPoints = critic.HitPoints + 1f }));
 
         // The first card has been thrown.
         yield return Case("the throw's cooldown", 2, t => t with { ThrowCooldown = t.ThrowCooldown * 2f });
@@ -126,11 +124,12 @@ public class StateHashTests
     [Test]
     public void ComputeStateHash_TheSameMomentOfTwoActs_AreTwoHashes()
     {
-        // Ten ticks have been played of both shows by a magician that stood on its mark. One show's acts are twenty
+        // Ten ticks have been played of both shows by a magician that stood on its mark, and one critic entered
+        // on the first of them. One show's acts are twenty
         // ticks long; the other's are ten, and it has gone on to its second: each has ten ticks of an act left, and
         // all the two differ in is which act that is.
-        var inTheFirstAct = new Simulation(Tuning with { ActLength = 20f / Simulation.TicksPerSecond }, seed: 7);
-        var inTheSecondAct = new Simulation(Tuning with { ActLength = 10f / Simulation.TicksPerSecond }, seed: 7);
+        Simulation inTheFirstAct = Shows.WithOneCritic(Tuning with { ActLength = 20f / Simulation.TicksPerSecond });
+        Simulation inTheSecondAct = Shows.WithOneCritic(Tuning with { ActLength = 10f / Simulation.TicksPerSecond });
         for (int i = 0; i < 10; i++)
         {
             inTheFirstAct.Step(default);
@@ -159,10 +158,13 @@ public class StateHashTests
     private static TestCaseData Case(string what, int ticks, Func<Tuning, Tuning> change) =>
         new TestCaseData(ticks, change).SetArgDisplayNames(what);
 
-    /// <summary>The hash a show ends in when <paramref name="input"/> is held all through it.</summary>
+    /// <summary>
+    /// The hash a show ends in when <paramref name="input"/> is held all through it. A critic enters on the first
+    /// tick and every three seconds after it: the cases count on who is on the stage by which tick.
+    /// </summary>
     private static ulong Play(Tuning tuning, ulong seed, MagicianInput input, int ticks = 30 * Simulation.TicksPerSecond)
     {
-        var simulation = new Simulation(tuning, seed);
+        Simulation simulation = Shows.WithACriticEvery(3 * Simulation.TicksPerSecond, tuning, seed);
         for (int i = 0; i < ticks; i++)
         {
             simulation.Step(input);

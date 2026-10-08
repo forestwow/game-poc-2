@@ -270,7 +270,7 @@ internal sealed class UnderstudiesGame : Microsoft.Xna.Framework.Game
         // bar part full. There the magician stands for the rest of the act, out of the crowd's reach and with the
         // crowd in its own: it throws until few are left.
         // The three acts go three ways, so that their understudies do not stand in one pile. The second act: out
-        // to the lit door, to a place below the critics' way that has the door in range and is out of their reach,
+        // to the first door, the only one open, to a place below the critics' way that has the door in range and is out of their reach,
         // and every critic that enters falls there. The third: up, across behind the box office and down its far
         // side. In every later act the magician stands on its mark, and the performance is played to its ovation.
         const int second = Simulation.TicksPerSecond;
@@ -333,11 +333,12 @@ internal sealed class UnderstudiesGame : Microsoft.Xna.Framework.Game
         Fill(floorTopLeft with { X = -past.X }, across with { Y = Tuning.StageSize.Y - Tuning.StageFloorTop + past.Y }, Floor);
         for (int i = 0; i < Tuning.StageDoors.Count; i++)
         {
-            // A door is a mat as wide as the door, the half of it that is on the floor. Only the first door is open.
+            // A door is a mat as wide as the door, the half of it that is on the floor: lit when the door is open
+            // in this act, and dim while it is shut.
             var half = new Vector2(Tuning.StageDoorWidth / 2f);
-            Vector2 topLeft = Vector2.Max(Tuning.StageDoors[i] - half, floorTopLeft);
-            Vector2 bottomRight = Vector2.Min(Tuning.StageDoors[i] + half, Tuning.StageSize);
-            Fill(topLeft, bottomRight - topLeft, i == 0 ? OpenDoor : ShutDoor);
+            Vector2 topLeft = Vector2.Max(Tuning.StageDoors[i].Position - half, floorTopLeft);
+            Vector2 bottomRight = Vector2.Min(Tuning.StageDoors[i].Position + half, Tuning.StageSize);
+            Fill(topLeft, bottomRight - topLeft, _simulation.DoorIsOpen(i) ? OpenDoor : ShutDoor);
         }
 
         foreach (Understudy understudy in _simulation.Understudies)
@@ -522,8 +523,11 @@ internal sealed class UnderstudiesGame : Microsoft.Xna.Framework.Game
             _ => null,
         };
 
+        // Beside the act's number, how many of its critics are still to enter.
+        int toCome = _simulation.ActEntries.Count - _simulation.ActEntriesMade;
+        string act = $"Act {_simulation.Act} of {Tuning.ActsInPerformance}";
         _spriteBatch.Begin();
-        Write(WordsHeight, $"Act {_simulation.Act} of {Tuning.ActsInPerformance}", new Vector2(1f, line), 0f, Words);
+        Write(WordsHeight, _simulation.Phase == Phase.Act ? $"{act}: {toCome} to come" : act, new Vector2(1f, line), 0f, Words);
         Write(WordsHeight, $"{seconds / 60}:{seconds % 60:00}", new Vector2(Tuning.StageSize.X - 1f, line), 1f, Words);
         if (said is not null)
         {
@@ -597,7 +601,9 @@ internal sealed class UnderstudiesGame : Microsoft.Xna.Framework.Game
 
             // A body with a paler head on it, so that the critics of a crowd can be told apart.
             case Figure.Critic:
-                Part(Tuning.CriticRadius * 2f, CriticBodyHeight, pale ? CriticStunnedBody : CriticBody);
+                // ponytail: every critic is drawn as wide as the first kind. With a second kind (T15) the figure
+                // is given its critic's own.
+                Part(Tuning.EnemyKinds[0].Radius * 2f, CriticBodyHeight, pale ? CriticStunnedBody : CriticBody);
                 Part(CriticHeadSize, CriticHeadSize, CriticHead, lift: CriticBodyHeight);
                 break;
 

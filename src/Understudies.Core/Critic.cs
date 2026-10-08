@@ -8,16 +8,19 @@ namespace Understudies.Core;
 /// </summary>
 public sealed class Critic
 {
-    internal Critic(int id, Vector2 position, float hitPoints)
+    internal Critic(int id, int kind, Vector2 position)
     {
         Id = id;
+        Kind = kind;
         Position = position;
         PreviousPosition = position;
-        HitPoints = hitPoints;
     }
 
     /// <summary>The same for the critic's whole life, and no other critic of the show has it.</summary>
     public int Id { get; }
+
+    /// <summary>Its kind, by the kind's place in <see cref="Tuning.EnemyKinds"/>.</summary>
+    public int Kind { get; }
 
     /// <summary>The middle of the critic's circle on the floor, after the last tick.</summary>
     public Vector2 Position { get; internal set; }

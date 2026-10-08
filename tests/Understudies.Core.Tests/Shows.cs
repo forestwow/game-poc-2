@@ -1,0 +1,44 @@
+namespace Understudies.Core.Tests;
+
+/// <summary>
+/// Shows for the tests of the other rules, which say exactly who enters when and draw no plan: every critic is of
+/// the first kind and enters by the first door.
+/// </summary>
+internal static class Shows
+{
+    /// <summary>A show whose critics enter on these ticks of the first act, the first tick being 0.</summary>
+    public static Simulation WithCriticsOnTicks(Tuning tuning, params int[] ticks) =>
+        new(tuning, seed: 1, [[.. ticks.Select(tick => new PlannedEntry(tick, Door: 0, Kind: 0))]]);
+
+    /// <summary>A show with one critic, which enters on the first tick.</summary>
+    public static Simulation WithOneCritic(Tuning tuning) => WithCriticsOnTicks(tuning, 0);
+
+    /// <summary>
+    /// A show with a steady stream: a critic enters on the first tick of the performance and on every
+    /// <paramref name="ticks"/>th after it, counted on through the acts as <paramref name="tuning"/> has them, so
+    /// that two acts are let into as one of twice the length is.
+    /// </summary>
+    public static Simulation WithACriticEvery(int ticks, Tuning tuning, ulong seed = 1)
+    {
+        int actTicks = (int)((tuning.ActLength * Simulation.TicksPerSecond) + 0.5f);
+        var plan = new List<PlannedEntry>[tuning.ActsInPerformance];
+        for (int act = 0; act < plan.Length; act++)
+        {
+            plan[act] = [];
+        }
+
+        for (int tick = 0; tick < actTicks * plan.Length; tick += ticks)
+        {
+            plan[tick / actTicks].Add(new PlannedEntry(tick % actTicks, Door: 0, Kind: 0));
+        }
+
+        return new Simulation(tuning, seed, plan);
+    }
+
+    /// <summary>The first kind of enemy, which is the critic.</summary>
+    public static EnemyKind Critic(this Tuning tuning) => tuning.EnemyKinds[0];
+
+    /// <summary>The tuning with its first kind of enemy changed, and that kind alone on its list.</summary>
+    public static Tuning WithCritic(this Tuning tuning, Func<EnemyKind, EnemyKind> change) =>
+        tuning with { EnemyKinds = [change(tuning.Critic())] };
+}
