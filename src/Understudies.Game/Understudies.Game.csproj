@@ -24,6 +24,8 @@
     <!-- A copy of the committed numbers goes beside the executable, for a build that leaves the repository. -->
     <None Include="..\..\tuning.json" Link="tuning.json" CopyToOutputDirectory="PreserveNewest" />
     <None Include="..\..\art\ludo\sprites\*.png" Link="art\ludo\sprites\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+    <!-- The cards' pictures (plan T47): the nine the game reads, and nothing of the candidates' folder. -->
+    <None Include="..\..\art\ludo\cards\*.png" Link="art\ludo\cards\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
     <!-- The two faces, each family's licence text with it: the licence asks that it goes where the files go. -->
     <None Include="..\..\fonts\**\*.ttf;..\..\fonts\**\OFL.txt" Link="fonts\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
