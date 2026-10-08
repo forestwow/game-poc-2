@@ -93,16 +93,23 @@ public class WaveTests
         }
     }
 
-    // The rival's understudy (plan T29) and the headliner (plan T41), by their places.
+    // The rival's understudy (plan T29), the headliner (plan T41) and the scalper (plan T57), by their places.
     [TestCase(2, 4)]
     [TestCase(3, 8)]
+    [TestCase(4, 3)]
     public void Plan_ACommittedLaterKind_ChangesNoActBeforeItsOwn_AndIsBoughtInEveryActFromIt(int kind, int notBefore)
     {
         // A kind that an act may not buy yet takes no part in that act's draws: the plan with it is, up to its
-        // act, the plan without it and without those after it, entry for entry.
+        // act, the plan without it and without those after it in the list that come no earlier, entry for entry.
+        // They keep their places and are bought by nothing, as a night shuts a kind out: a kind after it in the
+        // list that comes earlier (the scalper, the last, from act three) stays.
         int from = Tuning.EnemyKinds[kind].FromAct;
         Assert.That(from, Is.GreaterThanOrEqualTo(notBefore), "the acts before are as they were");
-        Tuning without = Tuning with { EnemyKinds = [.. Tuning.EnemyKinds.Take(kind)] };
+        Tuning without = Tuning with
+        {
+            EnemyKinds = [.. Tuning.EnemyKinds.Select((its, place) =>
+                place >= kind && its.FromAct >= from ? its with { Weight = 0, InAnAct = 0 } : its)],
+        };
         foreach (ulong seed in Seeds)
         {
             IReadOnlyList<IReadOnlyList<PlannedEntry>> plan = Waves.Plan(Tuning, seed);

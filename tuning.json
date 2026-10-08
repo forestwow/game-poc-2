@@ -40,7 +40,8 @@
       "fromAct": 1,
       "turnsOnTheMagician": true,
       "understudyDamageShare": 1,
-      "inAnAct": 0
+      "inAnAct": 0,
+      "eatsApplause": false
     },
     {
       "name": "stagehand",
@@ -54,7 +55,8 @@
       "fromAct": 4,
       "turnsOnTheMagician": false,
       "understudyDamageShare": 1,
-      "inAnAct": 0
+      "inAnAct": 0,
+      "eatsApplause": false
     },
     {
       "name": "rival",
@@ -68,7 +70,8 @@
       "fromAct": 4,
       "turnsOnTheMagician": false,
       "understudyDamageShare": 1,
-      "inAnAct": 0
+      "inAnAct": 0,
+      "eatsApplause": false
     },
     {
       "name": "headliner",
@@ -82,7 +85,23 @@
       "fromAct": 8,
       "turnsOnTheMagician": false,
       "understudyDamageShare": 0.03,
-      "inAnAct": 16
+      "inAnAct": 16,
+      "eatsApplause": false
+    },
+    {
+      "name": "scalper",
+      "speed": 6,
+      "radius": 0.4,
+      "hitPoints": 1,
+      "hitPointsPerAct": 0,
+      "strikeDamage": 1,
+      "cost": 1,
+      "weight": 1,
+      "fromAct": 3,
+      "turnsOnTheMagician": false,
+      "understudyDamageShare": 1,
+      "inAnAct": 0,
+      "eatsApplause": true
     }
   ],
   "firstActBudget": 40,

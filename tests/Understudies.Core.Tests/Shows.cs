@@ -51,6 +51,9 @@ internal static class Shows
     /// <summary>The third kind of enemy, which is the rival's understudy.</summary>
     public static EnemyKind Rival(this Tuning tuning) => tuning.EnemyKinds[2];
 
+    /// <summary>The fifth kind of enemy, which is the scalper (plan T57).</summary>
+    public static EnemyKind Scalper(this Tuning tuning) => tuning.EnemyKinds[4];
+
     /// <summary>The tuning with every kind's strike on the box office taking this much.</summary>
     public static Tuning WithStrikesOf(this Tuning tuning, float damage) =>
         tuning with { EnemyKinds = [.. tuning.EnemyKinds.Select(kind => kind with { StrikeDamage = damage })] };
