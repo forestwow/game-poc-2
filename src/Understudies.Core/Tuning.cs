@@ -45,7 +45,10 @@ namespace Understudies.Core;
 /// The magician throws at a critic whose centre is no further than this, and a thrown card flies this far.
 /// </param>
 /// <param name="ThrowCooldown">Seconds from one throw to the next.</param>
-/// <param name="ThrownCardSpeed">Units per second.</param>
+/// <param name="ThrownCardSpeed">
+/// Units per second. The slower the card, the further ahead of a moving target it is thrown, and the further a
+/// target that stops or turns has strayed when it gets there.
+/// </param>
 /// <param name="ThrownCardDamage">The hit points one card takes off a critic.</param>
 /// <param name="EnemyKinds">
 /// The kinds of enemy an act may buy, at least one. A planned entry names its kind by its place in this list.

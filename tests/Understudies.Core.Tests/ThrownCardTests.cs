@@ -40,7 +40,8 @@ public class ThrownCardTests
     /// <see cref="Scene"/> with the critic walking a unit a tick straight down the stage, to a box office far below
     /// the door, and the magician a unit below the door's edge and four units to the right. The card is thrown on
     /// the second tick, when the critic stands straight to the left of the magician, and flies straight left behind
-    /// its back.
+    /// its back: the critic is as fast as the card, which could never meet it ahead, so the card is thrown at where
+    /// it stands.
     /// </summary>
     private Tuning ACriticWalksPast => Scene.WithCritic(critic => critic with { Speed = 60f }) with
     {
