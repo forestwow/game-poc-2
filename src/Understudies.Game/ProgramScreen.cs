@@ -16,9 +16,11 @@ internal sealed partial class UnderstudiesGame
     // bottom edge: the box office is clear of them, and whoever stands in front of it, or anywhere on that strip
     // of the floor, the magician too, is behind them. Under them the countdown, and at the stage's bottom edge
     // what the magician holds.
-    private static readonly Vector2 PanelSize = new(13f, 6.5f);
-    private const float PanelGap = 1.5f;
-    private const float PanelLift = 11.9f;
+    // A panel is as wide as three leave room for and as tall as the floor below the box office lets it be: a name,
+    // two lines of flavour and three of what the card does (plan T25, decision 29).
+    private static readonly Vector2 PanelSize = new(14.6f, 7.3f);
+    private const float PanelGap = 1f;
+    private const float PanelLift = 12.4f;
 
     // The band along a panel's top says whose the card is, and the highlighted panel stands this much higher
     // than the others, in a frame this thick.
@@ -28,6 +30,17 @@ internal sealed partial class UnderstudiesGame
 
     private const float NameHeight = 1.2f;
     private const float SmallWordsHeight = 0.8f;
+
+    // The flavour is the smaller face, under the name; what the card does is the larger, under that, and starts
+    // at one height on every panel. A line of either is no wider than the panel less this at each side.
+    private const float FlavourHeight = 0.6f;
+    private const float FlavourPitch = 0.7f;
+    private const float SentencePitch = 0.9f;
+    private const float PanelMargin = 0.5f;
+
+    // What is held is one line at the stage's bottom edge, or two, this far apart: the second stands clear of
+    // the line of keys under the countdown.
+    private const float HoldsPitch = 0.85f;
     private const float CountdownHeight = 1f;
     private static readonly Vector2 CountdownBar = new(20f, 0.4f);
 
@@ -166,7 +179,7 @@ internal sealed partial class UnderstudiesGame
         {
             float time = _simulation.Phase == Phase.Encore ? Tuning.EncoreTime : Tuning.ProgramTime;
             FillBar(
-                new Vector2((Tuning.StageSize.X - CountdownBar.X) / 2f, PanelsBottom + 2f),
+                new Vector2((Tuning.StageSize.X - CountdownBar.X) / 2f, PanelsBottom + 1.8f),
                 CountdownBar,
                 _simulation.OfferTicksLeft / MathF.Max(1f, time * Simulation.TicksPerSecond),
                 Words);
@@ -194,9 +207,16 @@ internal sealed partial class UnderstudiesGame
             0.5f,
             ApplauseHeart);
 
-        var held = Enum.GetValues<Card>().Where(card => Held(card) > 0).Select(card => $"{Describe(card).Name} x{Held(card)}");
-        string holds = string.Join(", ", held) is { Length: > 0 } cards ? $"You hold: {cards}" : "You hold no card yet.";
-        Write(SmallWordsHeight, holds, new Vector2(middle, Tuning.StageSize.Y - 0.8f), 0.5f, Words);
+        // Nine kinds of card do not go in one line: as many lines as it takes, the last where the one line was.
+        string[] held = [.. Enum.GetValues<Card>().Where(card => Held(card) > 0).Select(card => $"{Describe(card).Name} x{Held(card)}")];
+        List<string> holds = held.Length == 0
+            ? ["You hold no card yet."]
+            : Wrapped(SmallWordsHeight, ["You hold:", .. held[..^1].Select(card => $"{card},"), held[^1]], Tuning.StageSize.X - 2f);
+        for (int line = 0; line < holds.Count; line++)
+        {
+            float up = (holds.Count - 1 - line) * HoldsPitch;
+            Write(SmallWordsHeight, holds[line], new Vector2(middle, Tuning.StageSize.Y - 0.5f - up), 0.5f, Words);
+        }
 
         if (!ProgramIsShown)
         {
@@ -207,31 +227,39 @@ internal sealed partial class UnderstudiesGame
         {
             Card card = _offered[place];
             bool chorus = card == Card.ChorusDamage;
-            (string name, string first, string second) = Describe(card);
+            (string name, string sentence, string flavour) = Describe(card);
             Vector2 topLeft = PanelTopLeft(place);
             Vector2 centre = topLeft + new Vector2(PanelSize.X / 2f, 0f);
             Color ink = Ink * Seen(place);
 
-            // The band: the card's key at its left end, and whose the card is.
+            // The band: the card's key at its left end, whose the card is, and at its right end how many of it
+            // are held.
             Write(SmallWordsHeight, $"{place + 1}", topLeft + new Vector2(0.4f, PanelBand / 2f), 0f, ink);
+            if (Held(card) > 0)
+            {
+                Write(SmallWordsHeight, $"x{Held(card)}", topLeft + new Vector2(PanelSize.X - 0.4f, PanelBand / 2f), 1f, ink);
+            }
+
             Write(
                 SmallWordsHeight,
                 chorus ? "For every understudy" : "For the magician",
                 centre + new Vector2(0f, PanelBand / 2f),
                 0.5f,
                 ink);
-            Write(NameHeight, name, centre + new Vector2(0f, 2.4f), 0.5f, ink);
-            Write(SmallWordsHeight, first, centre + new Vector2(0f, 3.7f), 0.5f, ink);
-            Write(SmallWordsHeight, second, centre + new Vector2(0f, 4.7f), 0.5f, ink);
-
-            if (Held(card) > 0)
+            // The name, no wider than the panel; under it the flavour in the smaller face, and under that what
+            // the card does, which is what is read first: the larger face and the darker ink.
+            float room = PanelSize.X - (2f * PanelMargin);
+            Write(NameHeight * MathF.Min(1f, room / Wide(NameHeight, name)), name, centre + new Vector2(0f, 2.15f), 0.5f, ink);
+            List<string> flavours = Wrapped(FlavourHeight, flavour.Split(' '), room);
+            for (int line = 0; line < flavours.Count; line++)
             {
-                Write(
-                    SmallWordsHeight,
-                    chorus ? $"the chorus has {Held(card)}" : $"you have {Held(card)}",
-                    centre + new Vector2(0f, PanelSize.Y - 0.7f),
-                    0.5f,
-                    FaintInk * Seen(place));
+                Write(FlavourHeight, flavours[line], centre + new Vector2(0f, 3.2f + (line * FlavourPitch)), 0.5f, FaintInk * Seen(place));
+            }
+
+            List<string> sentences = Wrapped(SmallWordsHeight, sentence.Split(' '), room);
+            for (int line = 0; line < sentences.Count; line++)
+            {
+                Write(SmallWordsHeight, sentences[line], centre + new Vector2(0f, 4.9f + (line * SentencePitch)), 0.5f, ink);
             }
         }
 
@@ -255,9 +283,32 @@ internal sealed partial class UnderstudiesGame
             choice
                 ? $"Left and right choose, Enter or Space takes. Or press {(_offered.Count == 2 ? "1 or 2" : "1 to 3")}. Gamepad: the stick and A."
                 : "Enter, Space, 1 or a gamepad's A takes it.",
-            new Vector2(middle, PanelsBottom + 3.3f),
+            new Vector2(middle, PanelsBottom + 2.8f),
             0.5f,
             Words);
+    }
+
+    /// <summary>
+    /// The <paramref name="pieces"/> as lines of words a space apart, each line as many of them as are no wider
+    /// than <paramref name="width"/> at that height: a piece is never broken, and one wider than a line has a
+    /// line to itself.
+    /// </summary>
+    private List<string> Wrapped(float height, IEnumerable<string> pieces, float width)
+    {
+        List<string> lines = [];
+        foreach (string piece in pieces)
+        {
+            if (lines.Count > 0 && Wide(height, $"{lines[^1]} {piece}") <= width)
+            {
+                lines[^1] = $"{lines[^1]} {piece}";
+            }
+            else
+            {
+                lines.Add(piece);
+            }
+        }
+
+        return lines;
     }
 
     /// <summary>How many of a card were taken in this performance: the magician's own, or the chorus's.</summary>
@@ -268,28 +319,66 @@ internal sealed partial class UnderstudiesGame
         Card.Range => _simulation.MagicianCards.Range,
         Card.VanishCooldown => _simulation.MagicianCards.VanishCooldown,
         Card.OneMoreCard => _simulation.MagicianCards.OneMoreCard,
+        Card.Pierce => _simulation.MagicianCards.Pierce,
+        Card.Ricochet => _simulation.MagicianCards.Ricochet,
+        Card.Burst => _simulation.MagicianCards.Burst,
         _ => _simulation.ChorusCards,
     };
 
-    /// <summary>A card's name and, in two lines, what one of it changes, in the numbers of now.</summary>
-    private (string Name, string First, string Second) Describe(Card card)
+    /// <summary>
+    /// A card as the player reads it (plan decision 29; the texts are the card catalogue's): its stage name, the
+    /// sentence that says what one more of it does, in the numbers of now, and its line of flavour, which says
+    /// nothing of the rule.
+    /// </summary>
+    private (string Name, string Sentence, string Flavour) Describe(Card card)
     {
         // A point and never a comma, whatever the machine's language. A share is a per cent with a decimal where
         // it has one: an eighth is 12.5% and not 12%.
         static string Say(FormattableString words) => words.ToString(CultureInfo.InvariantCulture);
 
         // A card's share is of the rate and not of the wait: a quarter makes the Vanish come back a quarter
-        // faster, which is a fifth sooner.
+        // faster, which is a fifth sooner. And two of the cards do not add the same again: the pierce's loss is
+        // the tuning's over the cards held and the burst's share the tuning's times them, so each says the number
+        // it would be with this one taken, and the sentence is true of the card that is offered.
+        int withThis = Held(card) + 1;
         return card switch
         {
-            Card.Damage => ("Sharper cards", "your cards hurt", Say($"{Tuning.CardDamage:0.##} more")),
-            Card.AttackSpeed =>
-                ("Quicker hands", "you throw", Say($"{Tuning.CardAttackSpeed * 100f:0.#}% more often")),
-            Card.Range => ("Longer arm", "your throw reaches", Say($"{Tuning.CardRange:0.##} further")),
-            Card.VanishCooldown =>
-                ("Quicker Vanish", "your Vanish comes back", Say($"{Tuning.CardVanishCooldown * 100f:0.#}% faster")),
-            Card.OneMoreCard => ("One more card", "each throw sends one more,", "at the next nearest"),
-            _ => ("Sharper chorus", "every understudy's cards", Say($"hurt {Tuning.CardChorusDamage:0.##} more")),
+            Card.Damage => (
+                "Card Sharp",
+                Say($"Thrown cards hurt for {Tuning.CardDamage:0.##} more. Each copy again."),
+                "Honed on the edge of a bad review."),
+            Card.AttackSpeed => (
+                "Sleight of Hand",
+                Say($"Throws come {Tuning.CardAttackSpeed * 100f:0.#}% more often. Each copy again."),
+                "The hand is quicker than the critic."),
+            Card.Range => (
+                "Long Arm",
+                Say($"Cards reach {Tuning.CardRange:0.##} further. Each copy again."),
+                "Reach the back row. They paid less; they deserve a card too."),
+            Card.VanishCooldown => (
+                "Quick Smoke",
+                Say($"The Vanish comes back {Tuning.CardVanishCooldown * 100f:0.#}% faster. Each copy again."),
+                "The smoke clears. You do not."),
+            Card.OneMoreCard => (
+                "One More for the Lady",
+                "Each throw sends one more card, at the next nearest critic.",
+                "Pick a card. No, you. Yes, you too."),
+            Card.Pierce => (
+                "The Pierce",
+                Say($"A card goes on through the critic it strikes, losing {Tuning.CardPierceLoss / withThis:0.###} each time."),
+                "Through the critic, through the review, through the paper it is printed on."),
+            Card.Ricochet => (
+                "The Ricochet",
+                Say($"A card that strikes turns to the next critic within {Tuning.CardRicochetReach:0.##}. Two copies: twice."),
+                "No review goes unanswered."),
+            Card.Burst => (
+                "The Burst",
+                Say($"Where a card strikes, a ring of {Tuning.CardBurstRadius:0.##} hurts for {Tuning.CardBurstShare * withThis * 100f:0.#}% of the card."),
+                "Applause, but sharp."),
+            _ => (
+                "Louder Chorus",
+                Say($"Every understudy's cards hurt for {Tuning.CardChorusDamage:0.##} more. Each copy again."),
+                "Nine of you, and all of you have opinions."),
         };
     }
 }

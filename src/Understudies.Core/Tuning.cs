@@ -115,6 +115,22 @@ namespace Understudies.Core;
 /// <param name="CardChorusDamage">
 /// The hit points one chorus card adds to what a card thrown by an understudy takes off a critic.
 /// </param>
+/// <param name="CardPierceLoss">
+/// The hit points a strike takes off what a card of a thrower with one pierce card hurts for; with more of them
+/// it is this over their number. A card with nothing left is spent.
+/// </param>
+/// <param name="CardRicochetReach">
+/// How far from the critic a card struck, middle to middle, another may stand for the card of a thrower with a
+/// ricochet card to turn to it; a card that turns flies that far at least.
+/// </param>
+/// <param name="CardBurstRadius">
+/// How far from the critic a card struck, middle to middle, another may stand to be hurt by the burst of a
+/// thrower with a burst card.
+/// </param>
+/// <param name="CardBurstShare">
+/// The share of what a card hurts for that its burst takes off each of those critics, for one burst card: two
+/// make it twice the share.
+/// </param>
 public sealed record Tuning(
     float ActLength,
     int ActsInPerformance,
@@ -161,7 +177,11 @@ public sealed record Tuning(
     float CardAttackSpeed,
     float CardRange,
     float CardVanishCooldown,
-    float CardChorusDamage)
+    float CardChorusDamage,
+    float CardPierceLoss,
+    float CardRicochetReach,
+    float CardBurstRadius,
+    float CardBurstShare)
 {
     // ponytail: the serializer reads the types by reflection; a trimmed or AOT build needs a source-generated context.
     private static readonly JsonSerializerOptions Options = new()
