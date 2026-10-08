@@ -1,3 +1,4 @@
+using System.Globalization;
 using FontStashSharp;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
@@ -43,6 +44,12 @@ internal sealed class UnderstudiesGame : Microsoft.Xna.Framework.Game
     private const float CaptionHeight = 1f;
     private const float CaptionLift = MagicianHeight + 1.2f;
     private const float CaptionTimeInTheAct = 3f;
+
+    // The program's cards are lines of words across the front of the floor, where the least stands in their way:
+    // the first this far above the stage's bottom edge, and each this far below the one before it.
+    // ponytail: plain lines, and the keys 1 to 3 alone pick. T18 draws the cards and takes a gamepad's pick.
+    private const float ProgramLift = 7f;
+    private const float ProgramLineGap = 2f;
 
     // An understudy is half there, and the line of its route on the floor is fainter still. The line is laid from
     // every sixth place of the route to the next: a tenth of a second, under a unit at the magician's speed.
@@ -227,6 +234,16 @@ internal sealed class UnderstudiesGame : Microsoft.Xna.Framework.Game
             _vanishAsked = true;
         }
 
+        // 1, 2 and 3 take the program's card in that place, from the left. The simulation takes a pick in the
+        // program only, and of a place its offer has.
+        for (int place = 0; place < 3; place++)
+        {
+            if (Pressed(Keys.D1 + place))
+            {
+                _simulation.Pick(place);
+            }
+        }
+
         // Enter or the gamepad's Start goes on to the next act. The simulation takes it between two acts only.
         if (Pressed(Keys.Enter) || (pad.IsButtonDown(Buttons.Start) && _padBefore.IsButtonUp(Buttons.Start)))
         {
@@ -242,7 +259,7 @@ internal sealed class UnderstudiesGame : Microsoft.Xna.Framework.Game
         if (!_juice.Holds((float)frameSeconds))
         {
             // Between two acts the stage stands until the player goes on, and a performance that is over stands as
-            // it ended until R: there Step changes nothing.
+            // it ended until R: there Step changes nothing. In the program it counts the program's time.
             Vector2 move = ReadMove(keys, pad);
             int ticks = _clock.Advance(frameSeconds);
             for (int i = 0; i < ticks; i++)
@@ -312,8 +329,11 @@ internal sealed class UnderstudiesGame : Microsoft.Xna.Framework.Game
         const int second = Simulation.TicksPerSecond;
         for (int i = 0; i < _captureTicks; i++)
         {
-            // Nobody is here to press a key between two acts. Going on before the tick, and not after it, leaves a
-            // capture that ends on an act's last tick between the two acts.
+            // Nobody is here to press a key between two acts: a program's leftmost card is taken at once, so a
+            // program takes none of a capture's ticks. Picking and going on before the tick, and not after it,
+            // leaves a capture that ends on an act's last tick in that act's program, or between the two acts
+            // when the act earned none.
+            _simulation.Pick(0);
             _simulation.GoOn();
             int length = (int)MathF.Round(Tuning.ActLength * second);
             Tick((_simulation.Act, length - _simulation.ActTicksLeft) switch
@@ -642,8 +662,12 @@ internal sealed class UnderstudiesGame : Microsoft.Xna.Framework.Game
 
         // A second that has begun still shows: the time reads 0:00 only when the act is over.
         int seconds = (_simulation.ActTicksLeft + Simulation.TicksPerSecond - 1) / Simulation.TicksPerSecond;
+        int programSeconds = (_simulation.ProgramTicksLeft + Simulation.TicksPerSecond - 1) / Simulation.TicksPerSecond;
         string? said = _simulation.Phase switch
         {
+            Phase.Program => _simulation.Offer.Count == 1
+                ? $"Act {_simulation.Act} is over. Press 1 to take the card ({programSeconds} s)"
+                : $"Act {_simulation.Act} is over. Press 1 to {_simulation.Offer.Count} to take a card ({programSeconds} s)",
             Phase.BetweenActs => $"Act {_simulation.Act} is over. Press Enter or Start to go on.",
             Phase.Ovation => "A standing ovation! R starts a new performance.",
             Phase.Closed => "The box office fell. R starts a new performance.",
@@ -668,6 +692,18 @@ internal sealed class UnderstudiesGame : Microsoft.Xna.Framework.Game
             Write(WordsHeight, said, new Vector2(Tuning.StageSize.X / 2f, line), 0.5f, Magician);
         }
 
+        // The program's offer, the leftmost card first: its place, which is its key, its name and what it changes.
+        for (int place = 0; place < _simulation.Offer.Count; place++)
+        {
+            Card card = _simulation.Offer[place];
+            Write(
+                WordsHeight,
+                $"{place + 1}   {Describe(card)}",
+                new Vector2(Tuning.StageSize.X / 2f, Tuning.StageSize.Y - ProgramLift + (place * ProgramLineGap)),
+                0.5f,
+                card == Card.ChorusDamage ? ApplauseHeart : Words);
+        }
+
         // The first understudy is told once what it is, as the act it first appears in begins (vision 13): the
         // words are in its colour and over its head, wherever it is drawn, so they are its label and nobody
         // else's. How long they stay is read off the act's time left: it is no rule and no state.
@@ -687,6 +723,23 @@ internal sealed class UnderstudiesGame : Microsoft.Xna.Framework.Game
 
         Write(NumberHeight, $"{MathF.Ceiling(_simulation.BoxOfficeHitPoints)}", besideTheBar, 0f, Words);
         _spriteBatch.End();
+    }
+
+    /// <summary>A card's name and what one of it changes, in the numbers of now.</summary>
+    private string Describe(Card card)
+    {
+        FormattableString words = card switch
+        {
+            Card.Damage => $"Sharper cards: your cards hurt {Tuning.CardDamage:0.##} more",
+            Card.AttackSpeed => $"Quicker hands: you throw {Tuning.CardAttackSpeed * 100f:0}% more often",
+            Card.Range => $"Longer arm: your throw reaches {Tuning.CardRange:0.##} further",
+            Card.VanishCooldown => $"Quicker Vanish: it comes back {Tuning.CardVanishCooldown * 100f:0}% sooner",
+            Card.OneMoreCard => $"One more card: each throw sends another, at the next nearest",
+            _ => $"Chorus: every understudy's cards hurt {Tuning.CardChorusDamage:0.##} more",
+        };
+
+        // A point and never a comma, whatever the machine's language.
+        return words.ToString(CultureInfo.InvariantCulture);
     }
 
     /// <summary>A bar that is <paramref name="share"/> full, from its left end.</summary>
