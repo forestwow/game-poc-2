@@ -337,6 +337,9 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
     /// <summary>Walks a fixed script, draws the frame it ends on and saves it as a PNG.</summary>
     private void Capture(string path)
     {
+        // The script was written on the numbers of before plan T20, and what follows says what it does on those
+        // (the README names that copy of tuning.json). On the committed numbers it loses: the magician falls a
+        // third of a second after its Vanish and the show closes in the second act. The README has those ticks.
         // The first act: two seconds right and down, out of every critic's range, and still there while critics
         // gather at the box office: more of them than the magician's cards can fell in time. Then two seconds back
         // to the mark, which is at the edge of the crowd by now, and three seconds still: the crowd turns on the

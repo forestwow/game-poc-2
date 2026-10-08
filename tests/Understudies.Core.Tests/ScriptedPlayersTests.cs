@@ -9,8 +9,8 @@ public class ScriptedPlayersTests
     private Tuning Tuning { get; } = CommittedTuning.Parse();
 
     /// <summary>
-    /// The committed numbers with fuller acts, in which a player is crowded and vanishes and the box office is
-    /// struck: on the committed ones the doors player of seed 1 never has to vanish, and nothing is struck.
+    /// The committed numbers on another budget, with a first act three times as full: the tests that play it
+    /// assert what they play it for, a player that is crowded and vanishes and a box office that is struck.
     /// </summary>
     private Tuning Crowded => Tuning with { FirstActBudget = 45, BudgetGrowthPerAct = 40 };
 
@@ -18,8 +18,8 @@ public class ScriptedPlayersTests
     /// Plan decision 9's question, whether <c>float</c> gives one result on two machines: two scripted
     /// performances, each pinned at the end of its third act and at its end, here (macOS ARM) and in CI (Linux
     /// x64). The earlier pin says how early a disagreement starts. The first is the doors player on the committed
-    /// numbers; the second, the orbit player on fuller acts, has what the first has not: the Vanish and its
-    /// cloud, stunned critics, blows on the box office and a crowd that pushes. A change to tuning.json, to a
+    /// numbers; the second, the orbit player with a fuller first act, is asserted to have the Vanish and its
+    /// cloud, stunned critics and blows on the box office in it. A change to tuning.json, to a
     /// rule or to a player changes them: pin them again from the failure's message, and say so in the pull
     /// request. If the two machines ever disagree, that is a finding for the owner and not a test to make pass.
     /// </summary>
@@ -30,14 +30,14 @@ public class ScriptedPlayersTests
 
         Assert.Multiple(() =>
         {
-            Assert.That(performance.Acts[2].StateHash, Is.EqualTo(15947794192376037625UL), "the end of act three");
-            Assert.That(performance.Acts[^1].StateHash, Is.EqualTo(8144588068359638438UL), "the end of the performance");
+            Assert.That(performance.Acts[2].StateHash, Is.EqualTo(18142735063768858210UL), "the end of act three");
+            Assert.That(performance.Acts[^1].StateHash, Is.EqualTo(7893684529718277452UL), "the end of the performance");
         });
     }
 
     /// <inheritdoc cref="Play_TheDoorsPlayerOnSeedOne_EndsInThePinnedStateHashOnEveryMachine"/>
     [Test]
-    public void Play_TheOrbitPlayerOnSeedOneInFullerActs_EndsInThePinnedStateHashOnEveryMachine()
+    public void Play_TheOrbitPlayerOnSeedOneWithAFullerFirstAct_EndsInThePinnedStateHashOnEveryMachine()
     {
         int vanishes = 0;
         int blows = 0;
@@ -58,8 +58,8 @@ public class ScriptedPlayersTests
             Assert.That(vanishes, Is.GreaterThan(0), "Vanishes");
             Assert.That(blows, Is.GreaterThan(0), "blows on the box office");
             Assert.That(stunned, Is.GreaterThan(0), "stunned critics");
-            Assert.That(performance.Acts[2].StateHash, Is.EqualTo(14376876089627623268UL), "the end of act three");
-            Assert.That(performance.Acts[^1].StateHash, Is.EqualTo(9298766178608383193UL), "the end of the performance");
+            Assert.That(performance.Acts[2].StateHash, Is.EqualTo(2215326142459059304UL), "the end of act three");
+            Assert.That(performance.Acts[^1].StateHash, Is.EqualTo(10650504390807452429UL), "the end of the performance");
         });
     }
 
@@ -294,23 +294,56 @@ public class ScriptedPlayersTests
     }
 
     /// <summary>
-    /// The instrument, read out and not asserted (asserting it is plan T20): the orbit player on each of its
-    /// circles and the doors player over the seeds 1 to 20 on the committed numbers, and decision 22's two counts
-    /// at the foot.
+    /// Plan decision 22, the guard the committed numbers are tuned to (plan T20): over the seeds 1 to 20 the
+    /// orbit player loses the box office by the end of act six in at least 16, and the doors player finishes act
+    /// ten in at least 16. Hiding is whichever of the orbit's circles does best, so a seed counts for the orbit
+    /// only when every circle lost on it. A change to tuning.json, to a rule or to a player that breaks this has
+    /// made hiding pay or the doors lose: <see cref="PrintTheGuardsTable"/> says where.
+    /// </summary>
+    [Test]
+    public void TheGuard_OnTheCommittedTuning_TheOrbitLosesByActSixAndTheDoorsPlayerFinishesActTen()
+    {
+        const int Seeds = 20;
+        const int AtLeast = 16;
+        int orbits = ScriptedPlayers.OrbitRadii.Count;
+        var performances = new Performance[(orbits + 1) * Seeds];
+        Parallel.For(0, performances.Length, i => performances[i] = ScriptedPlayers.Play(
+            Tuning,
+            (ulong)(i % Seeds) + 1,
+            i / Seeds < orbits ? ScriptedPlayers.Orbit(ScriptedPlayers.OrbitRadii[i / Seeds]) : ScriptedPlayers.Doors));
+        Performance Of(int player, int seed) => performances[(player * Seeds) + seed - 1];
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(
+                Enumerable.Range(1, Seeds).Count(seed => Enumerable.Range(0, orbits).All(orbit => LostByActSix(Of(orbit, seed)))),
+                Is.GreaterThanOrEqualTo(AtLeast),
+                "seeds on which the orbit player lost the box office by the end of act six on every circle");
+            Assert.That(
+                Enumerable.Range(1, Seeds).Count(seed => Of(orbits, seed).Ended == Phase.Ovation),
+                Is.GreaterThanOrEqualTo(AtLeast),
+                "seeds on which the doors player finished act ten");
+        });
+    }
+
+    /// <summary>
+    /// The instrument, read out: the orbit player on each of its circles and the doors player over the seeds 1
+    /// to 20 on the committed numbers, act by act, and decision 22's two counts at the foot.
     /// </summary>
     [Test]
     [Explicit("Prints how the orbit player and the doors player end over 20 seeds on the committed tuning, and the guard's two counts (a few seconds)")]
     public void PrintTheGuardsTable() => PrintTheTable(Tuning);
 
     /// <summary>
-    /// The same table with more enemies and nothing else changed: where the players stand when the acts are
-    /// fuller, for whoever tunes to the guard.
+    /// The same table on another budget and nothing else changed, for whoever tunes to the guard: the budget of
+    /// before plan T20, and the three that T19 looked at.
     /// </summary>
+    [TestCase(25, 8)]
     [TestCase(45, 40)]
     [TestCase(60, 60)]
     [TestCase(40, 80)]
     [Explicit("Prints the guard's table on the committed tuning with another budget: the first act's, and what every act has more than the one before")]
-    public void PrintTheTableOnAFullerBudget(int firstActBudget, int budgetGrowthPerAct) =>
+    public void PrintTheTableOnAnotherBudget(int firstActBudget, int budgetGrowthPerAct) =>
         PrintTheTable(Tuning with { FirstActBudget = firstActBudget, BudgetGrowthPerAct = budgetGrowthPerAct });
 
     private static void PrintTheTable(Tuning tuning)
@@ -330,7 +363,6 @@ public class ScriptedPlayersTests
             performances[i] = ScriptedPlayers.Play(tuning, (ulong)(i % Seeds) + 1, players[i / Seeds].Player));
         clock.Stop();
         Performance Of(int player, int seed) => performances[(player * Seeds) + seed - 1];
-        bool LostByActSix(Performance played) => played.Ended == Phase.Closed && played.Act <= 6;
 
         TextWriter table = TestContext.Out;
         table.WriteLine(
@@ -385,6 +417,8 @@ public class ScriptedPlayersTests
             $"  The doors player finished act ten in {Enumerable.Range(1, Seeds).Count(seed => Of(orbits, seed).Ended == Phase.Ovation)} of {Seeds}.");
         table.WriteLine($"{performances.Length} performances in {Number(clock.Elapsed.TotalSeconds)} s.");
     }
+
+    private static bool LostByActSix(Performance played) => played.Ended == Phase.Closed && played.Act <= 6;
 
     private static string Number(double value, string format = "0.0") => value.ToString(format, CultureInfo.InvariantCulture);
 }

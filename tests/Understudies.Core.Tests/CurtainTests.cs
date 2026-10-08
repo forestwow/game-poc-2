@@ -96,8 +96,9 @@ public class CurtainTests
         // seconds are up a Vanish that goes nowhere leaves its cloud. So the second act's curtain rises on critics
         // that walk in from the door, critics that strike the box office, cards in the air, a cloud that thins, a
         // critic that is due, and an understudy. Through the curtain the magician is asked to walk and to vanish.
-        // Applause has no time, so there is none, and no program before the curtain.
-        Tuning tuning = CommittedTuning.Parse() with
+        // Applause has no time, so there is none, and no program before the curtain. The critic walks at 4, whatever
+        // the committed one does: at that pace the first of them are at the box office when the act ends.
+        Tuning tuning = CommittedTuning.Parse().WithCritic(critic => critic with { Speed = 4f }) with
         {
             CurtainTime = 1f,
             ApplauseTime = 0f,
