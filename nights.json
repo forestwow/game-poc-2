@@ -1,5 +1,5 @@
 [
-  { "night": 1, "actsInPerformance": 5, "budgetScale": 0.6, "kindsAllowed": ["critic"], "waveBurstShare": 0 },
-  { "night": 2, "actsInPerformance": 7, "budgetScale": 0.7, "kindsAllowed": ["critic", "stagehand"], "waveBurstShare": 0 },
-  { "night": 10 }
+  { "night": 1, "name": "A quiet Tuesday", "actsInPerformance": 5, "budgetScale": 0.6, "kindsAllowed": ["critic"], "waveBurstShare": 0 },
+  { "night": 2, "name": "The crew arrives", "actsInPerformance": 7, "budgetScale": 0.7, "kindsAllowed": ["critic", "stagehand"], "waveBurstShare": 0 },
+  { "night": 10, "name": "Opening night" }
 ]
