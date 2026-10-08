@@ -19,6 +19,7 @@ public sealed class Simulation(Tuning tuning, ulong seed, IReadOnlyList<IReadOnl
     private readonly List<ThrownCard> _thrownCards = [];
     private readonly List<Cloud> _clouds = [];
     private readonly List<Understudy> _understudies = [];
+    private readonly List<Applause> _applause = [];
 
     // The recording of the act that is played: where the magician stood after each of its ticks so far, and each
     // Vanish of it. It stops when the magician falls: its last place is where the magician fell.
@@ -125,6 +126,33 @@ public sealed class Simulation(Tuning tuning, ulong seed, IReadOnlyList<IReadOnl
     /// </summary>
     public IReadOnlyList<Understudy> Understudies => _understudies;
 
+    /// <summary>The applause on the floor, in the order it was dropped.</summary>
+    public IReadOnlyList<Applause> ApplauseOnTheFloor => _applause;
+
+    /// <summary>
+    /// How many pieces of applause the magician has picked up in the act that is played, or in the one just over:
+    /// every act starts with none, and nothing is kept from one act to the next.
+    /// </summary>
+    public int ActApplause { get; private set; }
+
+    /// <summary>
+    /// The act's applause as a share of the enemies let onto the stage in this act so far, of every kind (plan
+    /// decision 21): nothing while none has entered. A piece from an enemy that an earlier act left on the stage
+    /// counts like any other, so the share may be more than 1.
+    /// </summary>
+    public float ActApplauseShare => ActEntriesMade == 0 ? 0f : (float)ActApplause / ActEntriesMade;
+
+    /// <summary>
+    /// Which of the tuning's two thresholds <see cref="ActApplauseShare"/> has reached; a share exactly on a
+    /// threshold has reached it. When the act is over, all its enemies have entered and this is what the act
+    /// earned, until <see cref="GoOn"/>.
+    /// </summary>
+    public ApplauseBand ActApplauseBand =>
+        ActApplause == 0 ? ApplauseBand.None
+        : ActApplauseShare >= Tuning.ApplauseSecondThreshold ? ApplauseBand.Second
+        : ActApplauseShare >= Tuning.ApplauseFirstThreshold ? ApplauseBand.First
+        : ApplauseBand.UnderTheFirst;
+
     /// <summary>What happened in the last tick, in the order it happened. The next tick starts the list afresh.</summary>
     public IReadOnlyList<TickEvent> Events => _events;
 
@@ -175,7 +203,10 @@ public sealed class Simulation(Tuning tuning, ulong seed, IReadOnlyList<IReadOnl
         // The clouds thin before the magician can leave a new one, so a cloud has its whole time on the tick it is
         // left. And the magician moves before the critics walk, so the cloud of a Vanish stuns on the tick of it, and
         // a critic turns on the magician, and touches it, where this tick has put it.
+        // The applause fades as the clouds thin, before any can be dropped: a piece has its whole time on the tick
+        // it is dropped.
         ThinTheClouds();
+        _applause.RemoveAll(piece => --piece.TicksLeft <= 0);
         if (MagicianHasFallen)
         {
             // It lies where it fell, whatever is asked of it: there is nothing behind it for the view to draw.
@@ -184,6 +215,7 @@ public sealed class Simulation(Tuning tuning, ulong seed, IReadOnlyList<IReadOnl
         else
         {
             MoveTheMagician(input);
+            PickUpApplause();
         }
 
         // The understudies take their places right after the magician has moved, for the magician's own reasons:
@@ -262,6 +294,11 @@ public sealed class Simulation(Tuning tuning, ulong seed, IReadOnlyList<IReadOnl
         {
             card.PreviousPosition = card.Position;
         }
+
+        // Applause is not banked (vision 7.1): what the last act picked up is forgotten, and what it left lying
+        // is gone.
+        _applause.Clear();
+        ActApplause = 0;
 
         Act++;
         ActTicksLeft = Ticks(Tuning.ActLength);
@@ -351,6 +388,15 @@ public sealed class Simulation(Tuning tuning, ulong seed, IReadOnlyList<IReadOnl
             hasher.AddInt(cloud.TicksLeft);
         }
 
+        hasher.AddInt(_applause.Count);
+        foreach (Applause piece in _applause)
+        {
+            AddPoint(piece.Position);
+            hasher.AddInt(piece.TicksLeft);
+        }
+
+        hasher.AddInt(ActApplause);
+
         // Every recording whole, an understudy's and that of the act that is played, which is the next
         // understudy: where everybody stands now does not say where each will stand a tick from now.
         // ponytail: the hash walks every place of every act on every call, 45,000 of them by the tenth act. It is
@@ -436,6 +482,25 @@ public sealed class Simulation(Tuning tuning, ulong seed, IReadOnlyList<IReadOnl
         _route.Add(MagicianPosition);
     }
 
+    /// <summary>
+    /// The magician picks up every piece its circle reaches, from where this tick has put it. Nobody else does: an
+    /// understudy walks over applause and leaves it.
+    /// </summary>
+    private void PickUpApplause()
+    {
+        float reach = Tuning.MagicianRadius + Tuning.ApplausePickUpReach;
+        for (int i = 0; i < _applause.Count; i++)
+        {
+            Vector2 apart = _applause[i].Position - MagicianPosition;
+            if ((apart.X * apart.X) + (apart.Y * apart.Y) <= reach * reach)
+            {
+                _events.Add(new TickEvent(TickEventKind.ApplausePickedUp, _applause[i].Position));
+                _applause.RemoveAt(i--);
+                ActApplause++;
+            }
+        }
+    }
+
     private void PlaceTheUnderstudies()
     {
         // The act's own count and not the length of its recording, which stops when the magician falls: the
@@ -511,6 +576,15 @@ public sealed class Simulation(Tuning tuning, ulong seed, IReadOnlyList<IReadOnl
                 }
 
                 _events.Add(new TickEvent(fell ? TickEventKind.Kill : TickEventKind.Hit, touched.Position));
+
+                // The audience cheers the star and never the cardboard: applause is left where a critic falls to
+                // a card the magician itself threw, whoever hurt the critic before. A piece with no time is no
+                // piece.
+                if (fell && card.ThrownByMagician && Ticks(Tuning.ApplauseTime) is > 0 and int ticks)
+                {
+                    _applause.Add(new Applause(touched.Position, ticks));
+                    _events.Add(new TickEvent(TickEventKind.ApplauseDropped, touched.Position));
+                }
             }
 
             if (touched is not null || card.RangeLeft <= 0f)
