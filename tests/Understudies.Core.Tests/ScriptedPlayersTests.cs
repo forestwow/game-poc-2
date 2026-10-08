@@ -492,7 +492,7 @@ public class ScriptedPlayersTests
     /// The guard's table in short, for whoever weighs one tuning against another: every variant on the seeds 1
     /// to 20, which numbers are searched on, and on no others unless they are asked for: the environment variable
     /// <c>UNDERSTUDIES_SEED_SETS</c> names the first seed of every set to play, <c>1,101</c> for the second set
-    /// as well and <c>201</c> for the third alone. The second is read once, on a candidate, and the third only
+    /// as well and <c>301</c> for the third alone. The second is read once, on a candidate, and the third only
     /// for the last check of a tuning (plan T37): a set that every probe is read on is spent. A variant is the
     /// committed tuning.json with some of its keys given other values. They are read from the file the
     /// environment variable <c>UNDERSTUDIES_VARIANTS</c> names, a variant a line, a name and a JSON object of
