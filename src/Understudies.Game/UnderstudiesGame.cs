@@ -23,7 +23,14 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
 
     // The sprites are pixel art drawn to one measure: the magician's 64 pixels are its three units.
     private const float SpritePixelsPerUnit = 64f / MagicianHeight;
+
+    // A walk goes through its frames at WalkFramesPerSecond for a figure that goes WalkReferenceSpeed units a
+    // second, and faster or slower as the figure does: a stagehand's feet run and a critic's plod. Never slower
+    // than WalkSlowest or faster than WalkFastest, where a walk stands or blurs.
     private const float WalkFramesPerSecond = 12f;
+    private const float WalkReferenceSpeed = 4f;
+    private const float WalkSlowest = 4f;
+    private const float WalkFastest = 20f;
     private const float ShadowOpacity = 0.3f;
     private const float FootlightGap = 4f;
 
@@ -576,7 +583,8 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
             opacity: _simulation.MagicianIsInvulnerable ? InvulnerableOpacity : 1f,
             tint: _simulation.MagicianIsInvulnerable ? CloudPuff : null,
             toward: _magicianToward,
-            walking: magicianStep != Vector2.Zero);
+            walking: magicianStep != Vector2.Zero,
+            speed: Tuning.MagicianSpeed);
         foreach (Understudy understudy in _simulation.Understudies)
         {
             // The magician's own figure through a treatment, and never a figure of its own: washed with the
@@ -592,6 +600,7 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
                     tint: UnderstudyTints[(understudy.Act - 1) % UnderstudyTints.Length],
                     toward: step,
                     walking: step != Vector2.Zero,
+                    speed: Tuning.MagicianSpeed,
                     beat: understudy.Act * 4);
             }
         }
@@ -611,6 +620,7 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
                 white: _juice.CriticWhite(critic.Id),
                 toward: step != Vector2.Zero ? step : Tuning.BoxOfficePosition - critic.Position,
                 walking: step != Vector2.Zero,
+                speed: Tuning.EnemyKinds[critic.Kind].Speed,
                 beat: critic.Id);
         }
 
@@ -948,6 +958,9 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
     /// and the magician's own, in the moment nothing hurts it, the smoke's.</param>
     /// <param name="toward">Where the figure faces: toward the viewer when this is nothing.</param>
     /// <param name="walking">Its walk goes through its frames, while an act is played.</param>
+    /// <param name="speed">How fast it walks when it does, in units a second: its kind's number and not what it
+    /// made of it in the last tick, so that its walk does not skip when it is pushed. The faster, the quicker
+    /// its frames.</param>
     /// <param name="beat">Which frame of the walk it is on when the clock is at nothing: two figures with
     /// different beats are out of step.</param>
     private void DrawFigure(
@@ -960,6 +973,7 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
         Color? tint = null,
         Vector2 toward = default,
         bool walking = false,
+        float speed = WalkReferenceSpeed,
         int beat = 0)
     {
         // Sideways when it goes more across than up or down. The side view faces right and is mirrored for left.
@@ -968,8 +982,9 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
         Sheet[] views = _sheets[(int)figure];
         Sheet sheet = views[fallen ? 0 : Math.Min((int)facing, views.Length - 1)];
         bool mirrored = sideways && toward.X < 0f && !fallen && views.Length > 1;
+        float rate = Math.Clamp(WalkFramesPerSecond * speed / WalkReferenceSpeed, WalkSlowest, WalkFastest);
         int frame = walking && !fallen && _simulation.Phase == Phase.Act
-            ? (int)(((_walkClock * WalkFramesPerSecond) + beat) % (sheet.Columns * sheet.Columns))
+            ? (int)(((_walkClock * rate) + beat) % (sheet.Columns * sheet.Columns))
             : 0;
         var source = new Rectangle(
             sheet.First.X + (frame % sheet.Columns * sheet.First.Width),
