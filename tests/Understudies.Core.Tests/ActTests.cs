@@ -234,8 +234,16 @@ public class ActTests
         // Going on moves nothing but the magician, which was on its mark and whole already.
         Assert.That(Stage(twoActs), Is.EqualTo(left));
 
-        // Nor does it touch a countdown: the next critic, the next throw, each critic's next blow and the end of
-        // its stun all come on the tick they would have come on.
+        // Nor does it touch a countdown: the next critic, each critic's next blow and the end of its stun all come
+        // on the tick they would have come on. The second act has what one long act has not, an understudy that
+        // throws and vanishes where the first act's magician did. So from here nobody has a range and a Vanish
+        // leaves no cloud, in either show: what is in the air and on the floor already goes on as it was. (That the
+        // magician's throw comes when it would have come is in UnderstudyTests, where a card says who threw it.)
+        foreach (Simulation simulation in new[] { twoActs, oneAct })
+        {
+            simulation.Tuning = simulation.Tuning with { ThrowRange = 0f, VanishCloudTime = 0f };
+        }
+
         for (int i = 0; i < twentySeconds; i++)
         {
             twoActs.Step(default);

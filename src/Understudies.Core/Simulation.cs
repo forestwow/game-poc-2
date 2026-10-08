@@ -14,6 +14,12 @@ public sealed class Simulation(Tuning tuning, ulong seed)
     private readonly List<Critic> _critics = [];
     private readonly List<ThrownCard> _thrownCards = [];
     private readonly List<Cloud> _clouds = [];
+    private readonly List<Understudy> _understudies = [];
+
+    // The recording of the act that is played: where the magician stood after each of its ticks so far, and each
+    // Vanish of it. The route's length is the number of ticks played of the act.
+    private List<Vector2> _route = [];
+    private List<(int Tick, Vector2 Place)> _vanishes = [];
     private readonly List<TickEvent> _events = [];
     private int _ticksPlayed;
     private int _criticsEntered;
@@ -78,6 +84,11 @@ public sealed class Simulation(Tuning tuning, ulong seed)
     /// <summary>The clouds on the floor, in the order they were left.</summary>
     public IReadOnlyList<Cloud> Clouds => _clouds;
 
+    /// <summary>
+    /// One for every act that was played before this one, in the order of their acts: the first act has none.
+    /// </summary>
+    public IReadOnlyList<Understudy> Understudies => _understudies;
+
     /// <summary>What happened in the last tick, in the order it happened. The next tick starts the list afresh.</summary>
     public IReadOnlyList<TickEvent> Events => _events;
 
@@ -114,12 +125,33 @@ public sealed class Simulation(Tuning tuning, ulong seed)
         ThinTheClouds();
         MoveTheMagician(input);
 
+        // The understudies take their places right after the magician has moved, for the magician's own reasons:
+        // the cloud of an understudy's Vanish stuns on the tick of it, and an understudy throws from where this
+        // tick has put it.
+        PlaceTheUnderstudies();
+
         // The cards fly before the critics walk: a card meets the critics where the last tick left them. And they fly
         // before the magician throws, so a card thrown this tick does not fly this tick: it is first seen where it
         // was thrown from, and takes its first step on the next tick.
         FlyTheCards();
         WalkTheCritics();
-        ThrowACard();
+
+        // The magician throws first, then each understudy in the order of their acts: the cards fly in the order
+        // they were thrown, so of the cards that reach one critic on one tick the magician's own lands first, and
+        // a fall it could have had is its own. Once a blow of this tick has closed the show nobody throws.
+        if (!ShowClosed)
+        {
+            _ticksToNextThrow = ThrowACard(MagicianPosition, _ticksToNextThrow, byTheMagician: true);
+        }
+
+        foreach (Understudy understudy in _understudies)
+        {
+            if (understudy.IsOnStage && !ShowClosed)
+            {
+                understudy.TicksToNextThrow =
+                    ThrowACard(understudy.Position, understudy.TicksToNextThrow, byTheMagician: false);
+            }
+        }
 
         // The first critic enters on the first tick.
         if (--_ticksToNextCritic <= 0)
@@ -147,6 +179,19 @@ public sealed class Simulation(Tuning tuning, ulong seed)
             return;
         }
 
+        // The act just over is an understudy from now on, and the next act's recording starts empty. Every
+        // understudy stands at the start of its route, with its throw ready: for the view there is nothing between
+        // that place and where the last act left it.
+        _understudies.Add(new Understudy(Act, _route, _vanishes));
+        _route = [];
+        _vanishes = [];
+        foreach (Understudy understudy in _understudies)
+        {
+            Place(understudy, tick: 0);
+            understudy.PreviousPosition = understudy.Position;
+            understudy.TicksToNextThrow = 0;
+        }
+
         Act++;
         ActTicksLeft = Ticks(Tuning.ActLength);
 
@@ -172,6 +217,22 @@ public sealed class Simulation(Tuning tuning, ulong seed)
         {
             hasher.AddFloat(point.X);
             hasher.AddFloat(point.Y);
+        }
+
+        void AddRecording(IReadOnlyList<Vector2> route, IReadOnlyList<(int Tick, Vector2 Place)> vanishes)
+        {
+            hasher.AddInt(route.Count);
+            foreach (Vector2 place in route)
+            {
+                AddPoint(place);
+            }
+
+            hasher.AddInt(vanishes.Count);
+            foreach ((int tick, Vector2 place) in vanishes)
+            {
+                hasher.AddInt(tick);
+                AddPoint(place);
+            }
         }
 
         hasher.AddInt(_ticksPlayed);
@@ -204,6 +265,7 @@ public sealed class Simulation(Tuning tuning, ulong seed)
             AddPoint(card.Position);
             AddPoint(card.Direction);
             hasher.AddFloat(card.RangeLeft);
+            hasher.AddInt(card.ThrownByMagician ? 1 : 0);
         }
 
         hasher.AddInt(_clouds.Count);
@@ -213,6 +275,23 @@ public sealed class Simulation(Tuning tuning, ulong seed)
             hasher.AddInt(cloud.TicksLeft);
         }
 
+        // Every recording whole, an understudy's and that of the act that is played, which is the next
+        // understudy: where everybody stands now does not say where each will stand a tick from now. The length
+        // of the last is the count of ticks into the act.
+        // ponytail: the hash walks every place of every act on every call, 45,000 of them by the tenth act. It is
+        // for the tests and the scripted players, not for the game's frame; a hash kept per finished recording
+        // replaces the walk when something asks for the hash on every tick.
+        hasher.AddInt(_understudies.Count);
+        foreach (Understudy understudy in _understudies)
+        {
+            hasher.AddInt(understudy.Act);
+            AddPoint(understudy.Position);
+            hasher.AddInt(understudy.TicksToNextThrow);
+            hasher.AddInt(understudy.IsOnStage ? 1 : 0);
+            AddRecording(understudy.Route, understudy.Vanishes);
+        }
+
+        AddRecording(_route, _vanishes);
         hasher.AddInt(_ticksToNextThrow);
         hasher.AddInt(_ticksToNextCritic);
         hasher.AddInt(_criticsEntered);
@@ -262,6 +341,7 @@ public sealed class Simulation(Tuning tuning, ulong seed)
             _ticksInvulnerable = Ticks(Tuning.VanishInvulnerableTime);
             _events.Add(new TickEvent(TickEventKind.Vanish, from));
             LeaveACloud(from);
+            _vanishes.Add((_route.Count, from));
         }
 
         // The floor's edge stops the magician, a walk and a blink alike: the whole circle stays on the floor, which
@@ -272,6 +352,52 @@ public sealed class Simulation(Tuning tuning, ulong seed)
 
         // The view draws the magician between the two: after a blink there is nothing between them to draw.
         MagicianPreviousPosition = vanishes ? MagicianPosition : from;
+
+        // The act is recorded as places and not as inputs (plan decision 6): nothing that happens to be on the
+        // stage in a later act can take an understudy off its route.
+        _route.Add(MagicianPosition);
+    }
+
+    private void PlaceTheUnderstudies()
+    {
+        // The magician's place for this tick has just been recorded, so the recording's length less one is the
+        // tick of the act that is played, the first being 0.
+        // ponytail: the act's tick is read off the recording, which today grows on every tick of the act. When a
+        // recording stops early (the magician's fall, T13) this count stops with it and every understudy would
+        // freeze where it stands; the act then needs a counter of its own.
+        int tick = _route.Count - 1;
+        foreach (Understudy understudy in _understudies)
+        {
+            Place(understudy, tick);
+
+            // Its Vanish is the cloud, left where the magician's was. The blink is in the route already: the view
+            // has nothing to draw between its two ends. No Vanish is reported: that event is the magician's own.
+            // ponytail: every Vanish of every understudy is looked at on every tick. A Vanish every three seconds
+            // of a 75-second act is 25 an understudy; an index of the next one in each replaces the scan when
+            // that is too many.
+            foreach ((int vanishTick, Vector2 place) in understudy.Vanishes)
+            {
+                if (vanishTick == tick)
+                {
+                    LeaveACloud(place);
+                    understudy.PreviousPosition = understudy.Position;
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    /// Puts an understudy where its route says for a tick of the act, the first being 0. A route with no place for
+    /// that tick leaves it where it is, and off the stage.
+    /// </summary>
+    private static void Place(Understudy understudy, int tick)
+    {
+        understudy.IsOnStage = tick < understudy.Route.Count;
+        if (understudy.IsOnStage)
+        {
+            understudy.PreviousPosition = understudy.Position;
+            understudy.Position = understudy.Route[tick];
+        }
     }
 
     /// <summary>
@@ -474,17 +600,22 @@ public sealed class Simulation(Tuning tuning, ulong seed)
         return false;
     }
 
-    private void ThrowACard()
+    /// <summary>
+    /// The throw of whoever stands at <paramref name="from"/>, the magician or an understudy: one rule and one set
+    /// of numbers for both. It is given the thrower's countdown to its next throw and gives back what that is
+    /// after this tick.
+    /// </summary>
+    private int ThrowACard(Vector2 from, int ticksToNextThrow, bool byTheMagician)
     {
         // The throw is ready a cooldown after the last one, and stays ready while there is nobody to throw at.
-        if (_ticksToNextThrow > 0)
+        if (ticksToNextThrow > 0)
         {
-            _ticksToNextThrow--;
+            ticksToNextThrow--;
         }
 
-        if (_ticksToNextThrow > 0)
+        if (ticksToNextThrow > 0)
         {
-            return;
+            return ticksToNextThrow;
         }
 
         // At the nearest critic whose centre is in range; of two as near, at the one that entered first.
@@ -496,7 +627,7 @@ public sealed class Simulation(Tuning tuning, ulong seed)
         float nearest = float.PositiveInfinity;
         foreach (Critic critic in _critics)
         {
-            Vector2 toCritic = Direction(critic.Position - MagicianPosition, out float distance);
+            Vector2 toCritic = Direction(critic.Position - from, out float distance);
             if (distance <= Tuning.ThrowRange && distance < nearest)
             {
                 aim = toCritic;
@@ -504,12 +635,14 @@ public sealed class Simulation(Tuning tuning, ulong seed)
             }
         }
 
-        if (aim is { } direction)
+        if (aim is not { } direction)
         {
-            _thrownCards.Add(new ThrownCard(MagicianPosition, direction, Tuning.ThrowRange));
-            _ticksToNextThrow = Ticks(Tuning.ThrowCooldown);
-            _events.Add(new TickEvent(TickEventKind.Throw, MagicianPosition));
+            return 0;
         }
+
+        _thrownCards.Add(new ThrownCard(from, direction, Tuning.ThrowRange, byTheMagician));
+        _events.Add(new TickEvent(TickEventKind.Throw, from));
+        return Ticks(Tuning.ThrowCooldown);
     }
 
     /// <summary>The file gives seconds and the rules count whole ticks: the nearest number of them.</summary>

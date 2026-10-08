@@ -34,6 +34,13 @@ internal sealed class UnderstudiesGame : Microsoft.Xna.Framework.Game
     private const float WordsHeight = 1.2f;
     private const float NumberHeight = 0.8f;
 
+    // An understudy is half there, and the line of its route on the floor is fainter still. The line is laid from
+    // every sixth place of the route to the next: a tenth of a second, under a unit at the magician's speed.
+    private const float UnderstudyOpacity = 0.5f;
+    private const float RouteOpacity = 0.22f;
+    private const float RouteWidth = 0.12f;
+    private const int RouteStride = 6;
+
     // ponytail: a system font, the first of these files that this machine has: one for macOS, one for Windows and
     // two for Linux. A font file is shipped with the game when a build leaves the owner's machine.
     private static readonly string[] FontFiles =
@@ -59,6 +66,24 @@ internal sealed class UnderstudiesGame : Microsoft.Xna.Framework.Game
     private static readonly Color ThrownCardFace = new(250, 246, 236);
     private static readonly Color ScrapOfPaper = new(244, 238, 222);
     private static readonly Color Words = new(236, 228, 210);
+
+    // An understudy's card is a card, a little duller than the magician's own.
+    private static readonly Color UnderstudysCardFace = new(190, 184, 172);
+
+    // What an understudy is tinted by, the first for the first act's: nine dusty colours told apart at a glance,
+    // none of them the magician's yellow or a critic's blue, and neighbours far apart.
+    private static readonly Color[] UnderstudyTints =
+    [
+        new(120, 200, 170),
+        new(214, 132, 120),
+        new(176, 148, 214),
+        new(160, 196, 110),
+        new(220, 150, 190),
+        new(110, 190, 206),
+        new(206, 166, 110),
+        new(150, 160, 150),
+        new(196, 120, 150),
+    ];
 
     private readonly SimulationClock _clock = new();
     private readonly string? _capturePath;
@@ -237,27 +262,35 @@ internal sealed class UnderstudiesGame : Microsoft.Xna.Framework.Game
     /// <summary>Walks a fixed script, draws the frame it ends on and saves it as a PNG.</summary>
     private void Capture(string path)
     {
-        // Two seconds right and down, out of every critic's range, and still there while critics gather at the box
-        // office: more of them than the magician's cards can fell in time. Then two seconds back to the mark, which
-        // is at the edge of the crowd by now, and three seconds still: the crowd turns on the magician and its hit
-        // points go. On the first tick after thirty-one seconds a Vanish to the left: the cloud lies on the crowd,
-        // and the frames of the next second show it, the stunned in it and the Vanish's bar part full. There the
-        // magician stands for the rest of the act, out of the crowd's reach and with the crowd in its own: it
-        // throws until few are left. In every later act it stands on its mark and fells each critic that comes, so
-        // the performance is played to its ovation.
+        // The first act: two seconds right and down, out of every critic's range, and still there while critics
+        // gather at the box office: more of them than the magician's cards can fell in time. Then two seconds back
+        // to the mark, which is at the edge of the crowd by now, and three seconds still: the crowd turns on the
+        // magician and its hit points go. On the first tick after thirty-one seconds a Vanish to the left: the
+        // cloud lies on the crowd, and the frames of the next second show it, the stunned in it and the Vanish's
+        // bar part full. There the magician stands for the rest of the act, out of the crowd's reach and with the
+        // crowd in its own: it throws until few are left.
+        // The three acts go three ways, so that their understudies do not stand in one pile. The second act: out
+        // to the lit door, to a place below the critics' way that has the door in range and is out of their reach,
+        // and every critic that enters falls there. The third: up, across behind the box office and down its far
+        // side. In every later act the magician stands on its mark, and the performance is played to its ovation.
         const int second = Simulation.TicksPerSecond;
         for (int i = 0; i < _captureTicks; i++)
         {
             // Nobody is here to press a key between two acts. Going on before the tick, and not after it, leaves a
             // capture that ends on an act's last tick between the two acts.
             _simulation.GoOn();
-            Tick(i switch
+            int length = (int)MathF.Round(Tuning.ActLength * second);
+            Tick((_simulation.Act, length - _simulation.ActTicksLeft) switch
             {
-                < 2 * second => new MagicianInput(new Vector2(1f, 1f)),
-                < 26 * second => default,
-                < 28 * second => new MagicianInput(new Vector2(-1f, -1f)),
-                < 31 * second => default,
-                31 * second => new MagicianInput(new Vector2(-1f, 0f), Vanish: true),
+                (1, < 2 * second) => new MagicianInput(new Vector2(1f, 1f)),
+                (1, < 26 * second) => default,
+                (1, < 28 * second) => new MagicianInput(new Vector2(-1f, -1f)),
+                (1, < 31 * second) => default,
+                (1, 31 * second) => new MagicianInput(new Vector2(-1f, 0f), Vanish: true),
+                (2, < 140) => new MagicianInput(new Vector2(-1f, 0.3f)),
+                (3, < 40) => new MagicianInput(new Vector2(0f, -1f)),
+                (3, < 100) => new MagicianInput(new Vector2(1f, 0f)),
+                (3, < 134) => new MagicianInput(new Vector2(0f, 1f)),
                 _ => default,
             });
 
@@ -307,6 +340,26 @@ internal sealed class UnderstudiesGame : Microsoft.Xna.Framework.Game
             Fill(topLeft, bottomRight - topLeft, i == 0 ? OpenDoor : ShutDoor);
         }
 
+        foreach (Understudy understudy in _simulation.Understudies)
+        {
+            // The whole route of each understudy, a faint line on the floor in its act's colour. A stretch it
+            // stood through has no length and is not drawn.
+            Color color = UnderstudyTints[(understudy.Act - 1) % UnderstudyTints.Length] * RouteOpacity;
+            for (int i = RouteStride; i < understudy.Route.Count; i += RouteStride)
+            {
+                Vector2 from = understudy.Route[i - RouteStride];
+                Vector2 along = understudy.Route[i] - from;
+                if (along != Vector2.Zero)
+                {
+                    FillTurned(
+                        from + (along / 2f),
+                        new Vector2(along.Length(), RouteWidth),
+                        MathF.Atan2(along.Y, along.X),
+                        color);
+                }
+            }
+        }
+
         foreach (Cloud cloud in _simulation.Clouds)
         {
             // A pale patch the size of the cloud's circle, the fainter the less of its time it has left.
@@ -337,6 +390,20 @@ internal sealed class UnderstudiesGame : Microsoft.Xna.Framework.Game
         Vector2 magicianFeet = Vector2.Lerp(_simulation.MagicianPreviousPosition, _simulation.MagicianPosition, alpha);
         DrawFigure(
             Figure.Magician, magicianFeet, white: _juice.MagicianWhite, fallen: _simulation.MagicianHasFallen);
+        foreach (Understudy understudy in _simulation.Understudies)
+        {
+            // The magician's own figure through a treatment, and never a figure of its own: tinted by the act it
+            // came from and half there. The magician is the one bright figure on the stage.
+            if (understudy.IsOnStage)
+            {
+                DrawFigure(
+                    Figure.Magician,
+                    Vector2.Lerp(understudy.PreviousPosition, understudy.Position, alpha),
+                    opacity: UnderstudyOpacity,
+                    tint: UnderstudyTints[(understudy.Act - 1) % UnderstudyTints.Length]);
+            }
+        }
+
         foreach (Critic critic in _simulation.Critics)
         {
             Vector2 feet = Vector2.Lerp(critic.PreviousPosition, critic.Position, alpha);
@@ -347,7 +414,8 @@ internal sealed class UnderstudiesGame : Microsoft.Xna.Framework.Game
         {
             // The card's position is the point of the floor it is over.
             Vector2 below = Vector2.Lerp(card.PreviousPosition, card.Position, alpha);
-            DrawUpright(below, ThrownCardWidth, ThrownCardHeight, ThrownCardFace, lift: ThrownCardLift);
+            Color face = card.ThrownByMagician ? ThrownCardFace : UnderstudysCardFace;
+            DrawUpright(below, ThrownCardWidth, ThrownCardHeight, face, lift: ThrownCardLift);
 
             // A card thrown on this tick has not flown yet and has no way to trail along.
             Vector2 flown = card.Position - card.PreviousPosition;
@@ -357,17 +425,15 @@ internal sealed class UnderstudiesGame : Microsoft.Xna.Framework.Game
             }
 
             // The trail: a streak from the middle of the card back along its flight, so that a card that is in the
-            // air for an eighth of a second is seen.
-            // ponytail: the streak never reaches back past the magician, who throws every card there is. When an
-            // understudy throws too, a card has to say where it was thrown from.
+            // air for an eighth of a second is seen. It never reaches back past where the card was thrown from.
             Vector2 middle = below - new Vector2(0f, ThrownCardLift + (ThrownCardHeight / 2f));
             Vector2 back = -Vector2.Normalize(flown)
-                * MathF.Min(Juice.TrailLength, Vector2.Distance(below, magicianFeet));
+                * MathF.Min(Juice.TrailLength, Vector2.Distance(below, card.ThrownFrom));
             FillTurned(
                 middle + (back / 2f),
                 new Vector2(back.Length(), Juice.TrailWidth),
                 MathF.Atan2(back.Y, back.X),
-                ThrownCardFace * Juice.TrailOpacity,
+                face * Juice.TrailOpacity,
                 Depth(below));
         }
 
@@ -478,16 +544,24 @@ internal sealed class UnderstudiesGame : Microsoft.Xna.Framework.Game
     /// <summary>
     /// The one call that draws a figure. Whatever is asked of a figure's look is asked of this call, and nothing
     /// outside it knows that a figure is rectangles: no flash, no body and no fade paints over a figure with a
-    /// shape of its own. When figures become sprites (T07c) the four things asked here must go on working:
+    /// shape of its own. When figures become sprites (T07c) the five things asked here must go on working:
     /// <paramref name="pale"/> is a tint; <paramref name="white"/> is a white copy of the sprite drawn over it,
     /// that thick, since a tint can only darken; <paramref name="fallen"/> is the sprite laid on its side, or a
-    /// sprite of its own; and <paramref name="opacity"/> is all that is drawn of the figure, that much see-through.
+    /// sprite of its own; <paramref name="opacity"/> is all that is drawn of the figure, that much see-through; and
+    /// <paramref name="tint"/> is the colour an understudy's sprite is multiplied by.
     /// </summary>
     /// <param name="pale">A stunned critic: it has gone pale all over.</param>
     /// <param name="white">The flash of a figure that was hurt a moment ago: how far to white, from 0 to 1.</param>
     /// <param name="fallen">Lying flat where <paramref name="feet"/> is, and not standing on it.</param>
+    /// <param name="tint">An understudy: the magician's figure in the colour of the act it came from.</param>
     private void DrawFigure(
-        Figure figure, Vector2 feet, bool pale = false, float white = 0f, bool fallen = false, float opacity = 1f)
+        Figure figure,
+        Vector2 feet,
+        bool pale = false,
+        float white = 0f,
+        bool fallen = false,
+        float opacity = 1f,
+        Color? tint = null)
     {
         // A fallen figure is as long on the floor as it stood tall, with its middle where its feet were.
         float tall = figure switch
@@ -518,7 +592,7 @@ internal sealed class UnderstudiesGame : Microsoft.Xna.Framework.Game
         switch (figure)
         {
             case Figure.Magician:
-                Part(Tuning.MagicianRadius * 2f, MagicianHeight, Magician);
+                Part(Tuning.MagicianRadius * 2f, MagicianHeight, tint ?? Magician);
                 break;
 
             // A body with a paler head on it, so that the critics of a crowd can be told apart.
