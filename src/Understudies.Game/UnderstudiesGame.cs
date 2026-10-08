@@ -1139,13 +1139,6 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
         return new Sheet(image, white, first, columns, block);
     }
 
-    /// <summary>
-    /// What stands on a floor position is drawn upward from there, or from <paramref name="lift"/> above it. What
-    /// stands lower on the screen is in front.
-    /// </summary>
-    private void DrawUpright(Vector2 feet, float width, float height, Color color, float lift = 0f) =>
-        Fill(new Vector2(feet.X - (width / 2f), feet.Y - lift - height), new Vector2(width, height), color, Depth(feet));
-
     /// <summary>Where in a sorted batch what stands on <paramref name="feet"/> is drawn: the lower, the later.</summary>
     private float Depth(Vector2 feet) => Math.Clamp(feet.Y / Tuning.StageSize.Y, 0f, 1f);
 
