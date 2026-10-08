@@ -45,13 +45,6 @@ internal sealed partial class UnderstudiesGame
     private const float PosterNewApart = 0.6f;
     private const float PosterFigureDrop = 0.25f;
 
-    // Three new kinds on one page (plan T57): smaller figures, the names at the smaller height and nearer. Only
-    // night 10 has three, and only until night 3 takes the scalper: that night's ticket deletes these three and
-    // the branch that reads them.
-    private const float PosterSmallMeasure = 1f;
-    private const float PosterSmallName = 1.1f;
-    private const float PosterSmallApart = 0.35f;
-
     // What the game calls a kind and says of it, by the kind's place in enemyKinds, as FigureOf knows the kinds:
     // the one place the game says in words what an enemy does. No number is in a sentence.
     // ponytail: the sentences are true of the kinds as the committed tuning.json has them, and nothing holds
@@ -64,7 +57,7 @@ internal sealed partial class UnderstudiesGame
         ("The stagehand", "Stagehands", "Small and quick. It runs for the box office and never turns on you."),
         ("The rival's understudy", "Rival's understudies", "Slow and wide, tougher with every act, and it strikes hard. It never turns on you."),
         ("The headliner", "Headliners", "It hardly notices an understudy's card: this one is yours to fell."),
-        ("The scalper", "Scalpers", "It runs for your applause and eats what you leave lying."),
+        ("The scalper", "Scalpers", "It runs for your applause and eats what you leave lying. Its own fall earns you none."),
     ];
 
     private bool _onThePoster;
@@ -272,6 +265,13 @@ internal sealed partial class UnderstudiesGame
             kinds.Select(kind =>
                 $"{(kind < KindsInWords.Length ? KindsInWords[kind].Plural : tuning.EnemyKinds[kind].Name)}, from act {Math.Max(1, tuning.EnemyKinds[kind].FromAct)}"));
 
+        // The night's note (plan T58): one sentence of the night's own in nights.json, as its name is. Night 3's
+        // names the quiet floor. A night without one has no row.
+        if (_nights[place].Note is { } note)
+        {
+            Row("NOTE", Broken(note));
+        }
+
         // The night's house rules, each its name and its one sentence (plan T56; the document's §4), where the
         // document has them: after who comes and before what opens the next night. A night without one has no row.
         // ponytail: no icon, since no rule has one, and a long night's page has room for one rule under four
@@ -291,15 +291,11 @@ internal sealed partial class UnderstudiesGame
 
         // The new thing of the night: the kinds the night before it in the file did not have. Tonight's alone on
         // the first night. A kind that is new has its picture, which is drawn after the words.
-        // ponytail: two new kinds fit under one another as the design has them, and three in the smaller lay-out
-        // below (plan T57: night 10 has three until night 3 takes the scalper), each with a sentence of three
-        // lines at the most. A night with four is the night to lay this column out again.
+        // ponytail: two new kinds fit under one another as the design has them, each with a sentence of three
+        // lines at the most, and no committed night has more (plan T58: night 3 took the scalper from night 10's
+        // three). A night with three is the night to lay this column out again.
         int[] theNightBefore = place == 0 ? [] : KindsOf(Night.Compose(_plain, _nights, _nights[place - 1].Number));
         int[] newKinds = [.. kinds.Except(theNightBefore)];
-        bool three = newKinds.Length > 2;
-        float measure = three ? PosterSmallMeasure : MenuUnderstudyMeasure;
-        float nameTall = three ? PosterSmallName : PosterNewName;
-        float apart = three ? PosterSmallApart : PosterNewApart;
         var figures = new List<(int Kind, Vector2 Feet)>();
         float columnLeft = left + PosterNewFrom;
         float top = PosterRowsTop;
@@ -312,17 +308,17 @@ internal sealed partial class UnderstudiesGame
         // One size for every new name on the page: the larger when all of them fit in it.
         (string Name, string Plural, string Does) InWords(int kind) =>
             kind < KindsInWords.Length ? KindsInWords[kind] : (tuning.EnemyKinds[kind].Name, "", "");
-        float newHeight = three ? PosterNewHeights[^1] : PosterNewHeights.FirstOrDefault(
+        float newHeight = PosterNewHeights.FirstOrDefault(
             tall => newKinds.All(kind => Wide(Face.Heading, tall, InWords(kind).Name) <= right - columnLeft), PosterNewHeights[^1]);
         foreach (int kind in newKinds)
         {
-            Write(Face.Heading, newHeight, InWords(kind).Name, new Vector2(columnLeft, top + (nameTall / 2f)), 0f, ink, onPaper: true);
+            Write(Face.Heading, newHeight, InWords(kind).Name, new Vector2(columnLeft, top + (PosterNewName / 2f)), 0f, ink, onPaper: true);
 
             // The figure's head is level with the sentence's first line, and the next name is under the taller
             // of the two.
-            float tall = _sheets[(int)FigureOf(kind)][0].First.Height * PixelAt(measure);
-            figures.Add((kind, new Vector2(columnLeft + (PosterFigureWide / 2f), top + nameTall + PosterFigureDrop + tall)));
-            float words = top + nameTall + PosterFigureDrop + (PosterRowPitch / 2f);
+            float tall = _sheets[(int)FigureOf(kind)][0].First.Height * PixelAt(MenuUnderstudyMeasure);
+            figures.Add((kind, new Vector2(columnLeft + (PosterFigureWide / 2f), top + PosterNewName + PosterFigureDrop + tall)));
+            float words = top + PosterNewName + PosterFigureDrop + (PosterRowPitch / 2f);
             string from = $"From act {Math.Max(1, tuning.EnemyKinds[kind].FromAct)}.";
             foreach (string wrapped in Wrapped(
                 Face.Sentence, PosterWordsHeight, $"{InWords(kind).Does} {from}".Trim().Split(' '), right - columnLeft - PosterFigureWide))
@@ -331,7 +327,7 @@ internal sealed partial class UnderstudiesGame
                 words += PosterRowPitch;
             }
 
-            top = MathF.Max(top + nameTall + PosterFigureDrop + tall, words - (PosterRowPitch / 2f)) + apart;
+            top = MathF.Max(top + PosterNewName + PosterFigureDrop + tall, words - (PosterRowPitch / 2f)) + PosterNewApart;
         }
 
         _spriteBatch.End();
@@ -339,7 +335,7 @@ internal sealed partial class UnderstudiesGame
         _spriteBatch.Begin(samplerState: SamplerState.PointClamp, transformMatrix: _worldToScreen);
         foreach ((int kind, Vector2 feet) in figures)
         {
-            DrawFigure(FigureOf(kind), feet, tint: WashOf(kind), measure: measure);
+            DrawFigure(FigureOf(kind), feet, tint: WashOf(kind), measure: MenuUnderstudyMeasure);
         }
 
         _spriteBatch.End();
