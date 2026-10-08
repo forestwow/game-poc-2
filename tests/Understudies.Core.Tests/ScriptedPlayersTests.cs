@@ -507,6 +507,65 @@ public class ScriptedPlayersTests
     }
 
     /// <summary>
+    /// Plan T52, night 1 as the ladder's document asks it (its principles 2 and 6, its N4): five acts, critics
+    /// alone, no crowds, six tenths of the budget. Whoever moves wins it, the doors player and the kiter on every
+    /// seed, and hiding still loses: the orbit's box office falls within the five acts, on every one of its
+    /// circles, on at least 10 seeds of 20. It falls on 20 of both sets, in act four on the circles of 3 and 5 and
+    /// mostly in act five on the box office itself. The scale is the document's, and nothing was searched: on
+    /// the seeds 1 to 20 both halves hold from 0.5 to 1.0, at 0.4 the orbit on the box office itself keeps it,
+    /// and at 0.3 every circle does. A change that breaks this has made night 1 lose a player that moves, or
+    /// let one that hides through: a finding for the owner, not a floor to loosen.
+    /// </summary>
+    [TestCase(1)]
+    [TestCase(101)]
+    public void NightOne_OnTheCommittedNights_WhoeverMovesWinsEverySeedAndTheOrbitStillLoses(int firstSeed)
+    {
+        Performance[] performances = TheNight(1, firstSeed);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(Of(performances, Doors).Count(Finished), Is.EqualTo(Seeds), "seeds on which the doors player finished act five");
+            Assert.That(Of(performances, Kiter).Count(Finished), Is.EqualTo(Seeds), "seeds on which the kiter finished act five");
+            Assert.That(
+                SeedsTheOrbitLostBy(performances, act: 5),
+                Is.GreaterThanOrEqualTo(10),
+                "seeds on which the orbit player lost the box office within the five acts on every circle");
+        });
+    }
+
+    /// <summary>
+    /// Plan T52, what night 2 was found to bear (seven acts, the stagehand from act four, no crowds, seven tenths
+    /// of the budget; the document's scale, not searched). Whoever moves wins it: the doors player and the kiter
+    /// each finish act seven on at least 18 seeds of 20 (both finish 20 on both sets). Hiding loses sooner than
+    /// on night 1: the orbit's box office falls by the end of act five on every circle on at least 16 (it falls
+    /// in act four on every seed of both sets). And the document's lesson of the night, "a lane left alone
+    /// leaks", is in the counts: the kiter, which leaves the doors alone, is struck from act four on and ends
+    /// with 377 and 376 of the box office, where the doors player ends with all 400; asserted as no less.
+    /// </summary>
+    [TestCase(1)]
+    [TestCase(101)]
+    public void NightTwo_OnTheCommittedNights_WhoeverMovesWinsTheOrbitLosesByActFiveAndTheDoorsLeakLeast(int firstSeed)
+    {
+        Performance[] performances = TheNight(2, firstSeed);
+        List<Performance> doors = Of(performances, Doors);
+        List<Performance> kiter = Of(performances, Kiter);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(doors.Count(Finished), Is.GreaterThanOrEqualTo(18), "seeds on which the doors player finished act seven");
+            Assert.That(kiter.Count(Finished), Is.GreaterThanOrEqualTo(18), "seeds on which the kiter finished act seven");
+            Assert.That(
+                SeedsTheOrbitLostBy(performances, act: 5),
+                Is.GreaterThanOrEqualTo(16),
+                "seeds on which the orbit player lost the box office by the end of act five on every circle");
+            Assert.That(
+                doors.Average(played => played.BoxOffice),
+                Is.GreaterThanOrEqualTo(kiter.Average(played => played.BoxOffice)),
+                "the box office at the end: the doors player's against the kiter's");
+        });
+    }
+
+    /// <summary>
     /// The instrument, read out: the orbit player on each of its circles, the doors player and the kiter over
     /// the seeds 1 to 20 on the committed numbers, act by act, and the guard's counts at the foot.
     /// </summary>
@@ -532,12 +591,20 @@ public class ScriptedPlayersTests
     /// plan T41 weighs a limit on copies by: by act the encores, the most cards of one throw, the cards held of
     /// each kind, its own kills and its understudies', and the encores that had fewer than three cards to offer
     /// or were earned and did not open. With the environment variable <c>UNDERSTUDIES_GUARD_ONLY</c> set the four
-    /// players outside the guard are not played, which is some three times as quick.
+    /// players outside the guard are not played, which is some three times as quick. With the environment
+    /// variable <c>UNDERSTUDIES_NIGHT</c> it is a night that is played (plan T52): the committed tuning under that
+    /// night's committed overlay of nights.json, and a variant's keys that are a night's own
+    /// (<see cref="NightKeys"/>: <c>{ "budgetScale": 0.5 }</c> is the scale to try) are that night's and the
+    /// rest the tuning's. Nothing here counts on ten acts; the line headed "the guard" counts a loss by act six
+    /// on a night of any length, which on one of five acts is any loss: read a player's own line for the act.
     /// </summary>
     [Test]
-    [Explicit("Prints the guard in short for every variant of the tuning in the file UNDERSTUDIES_VARIANTS names, on the seeds 1 to 20 and on the sets UNDERSTUDIES_SEED_SETS names (a few seconds a variant and set)")]
+    [Explicit("Prints the guard in short for every variant of the tuning in the file UNDERSTUDIES_VARIANTS names, or of the night UNDERSTUDIES_NIGHT names, on the seeds 1 to 20 and on the sets UNDERSTUDIES_SEED_SETS names (a few seconds a variant and set)")]
     public void PrintTheVariants()
     {
+        int? night = Environment.GetEnvironmentVariable("UNDERSTUDIES_NIGHT") is { } number
+            ? int.Parse(number, CultureInfo.InvariantCulture)
+            : null;
         string? file = Environment.GetEnvironmentVariable("UNDERSTUDIES_VARIANTS");
         IEnumerable<string> lines = file is null ? ["committed | {}"] : File.ReadLines(file);
         TextWriter table = TestContext.Out;
@@ -548,15 +615,30 @@ public class ScriptedPlayersTests
         {
             string[] parts = line.Split('|', 2);
             var json = JsonNode.Parse(CommittedTuning.Json)!.AsObject();
+            JsonObject? overlay = night is null
+                ? null
+                : JsonNode.Parse(CommittedNights.Json)!.AsArray().Single(entry => (int)entry!["night"]! == night)!.DeepClone().AsObject();
             foreach ((string key, JsonNode? value) in JsonNode.Parse(parts[1])!.AsObject())
             {
                 // Tuning.Parse refuses a key it does not know, so a misspelt one is not played in silence.
-                json[key] = value?.DeepClone();
+                (overlay is not null && NightKeys.Contains(key) ? overlay : json)[key] = value?.DeepClone();
             }
 
-            PrintAVariant(table, $"{parts[0].Trim()} {parts[1].Trim()}", Tuning.Parse(json.ToJsonString()));
+            Tuning tuning = Tuning.Parse(json.ToJsonString());
+            PrintAVariant(
+                table,
+                $"{(night is null ? "" : $"night {night}: ")}{parts[0].Trim()} {parts[1].Trim()}",
+                overlay is null ? tuning : Night.Compose(tuning, Night.Parse($"[{overlay.ToJsonString()}]"), night!.Value));
         }
     }
+
+    /// <summary>
+    /// The keys of a variant that are a night's own when <see cref="PrintTheVariants"/> plays a night.
+    /// ponytail: the names of <see cref="Night"/>'s keys, written out. A key added to a night and not here is
+    /// refused as a key of the tuning, unless the tuning has one of that name, and then the night's committed
+    /// value is played over the variant's in silence: add it here with the key.
+    /// </summary>
+    private static readonly string[] NightKeys = ["actsInPerformance", "budgetScale", "kindsAllowed", "waveBurstShare"];
 
     /// <summary>
     /// What the one order the players take cards by decides (plan T37): the doors player and the kiter on the
@@ -822,6 +904,28 @@ public class ScriptedPlayersTests
         101 => Played[1].Value,
         _ => throw new ArgumentOutOfRangeException(nameof(firstSeed), firstSeed, "the guard is read from the seeds 1 and 101"),
     };
+
+    /// <summary>
+    /// The guard's players on the committed nights 1 and 2 (plan T52), each over the seeds from 1 and from 101,
+    /// played once for every test that reads them.
+    /// </summary>
+    private static readonly Lazy<Performance[]>[] NightsPlayed =
+    [
+        .. from night in new[] { 1, 2 }
+           from firstSeed in new[] { 1, 101 }
+           select new Lazy<Performance[]>(() => PlayTheGuard(CommittedNights.Tuning(night), firstSeed)),
+    ];
+
+    private static Performance[] TheNight(int night, int firstSeed) =>
+        NightsPlayed[((night - 1) * 2) + (firstSeed == 1 ? 0 : 1)].Value;
+
+    /// <summary>
+    /// On how many seeds hiding lost by the end of <paramref name="act"/>: the box office fell by then on every
+    /// one of the orbit's circles, as the guard counts it.
+    /// </summary>
+    private static int SeedsTheOrbitLostBy(Performance[] performances, int act) =>
+        Enumerable.Range(0, Seeds).Count(seed => Orbits.All(orbit =>
+            performances[(orbit * Seeds) + seed] is { Ended: Phase.Closed } played && played.Act <= act));
 
     /// <summary>The performances of the player at <paramref name="player"/> among those of one set of seeds.</summary>
     private static List<Performance> Of(Performance[] performances, int player) =>
