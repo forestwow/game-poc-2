@@ -400,50 +400,34 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
         }
     }
 
-    /// <summary>Walks a fixed script, draws the frame it ends on and saves it as a PNG.</summary>
+    /// <summary>Plays the doors player for the capture's ticks, draws the frame it ends on and saves it as a PNG.</summary>
     private void Capture(string path)
     {
-        // The script was written on the numbers of before plan T20, and what follows says what it did on those.
-        // On the committed numbers it loses in the first act: the magician falls two seconds before its Vanish
-        // is due, and the show closes with a third of the act to go. The README has those ticks.
-        // The first act: two seconds right and down, out of every critic's range, and still there while critics
-        // gather at the box office: more of them than the magician's cards can fell in time. Then two seconds back
-        // to the mark, which is at the edge of the crowd by now, and three seconds still: the crowd turns on the
-        // magician and its hit points go. On the first tick after thirty-one seconds a Vanish to the left: the
-        // cloud lies on the crowd, and the frames of the next second show it, the stunned in it and the Vanish's
-        // bar part full. There the magician stands for the rest of the act, out of the crowd's reach and with the
-        // crowd in its own: it throws until few are left.
-        // The three acts go three ways, so that their understudies do not stand in one pile. The second act: out
-        // to the first door, the only one open, to a place below the critics' way that has the door in range and
-        // is out of their reach, and every critic that enters falls there. The third: up, across behind the box
-        // office and down its far side. In every later act the magician stands on its mark. (That is what the script
-        // says; on the committed numbers the show closes in the first act, as said above.)
-        // Every act opens with its curtain, whose ticks are counted here with the rest: the simulation takes no
-        // input in them, and the script's own count, of an act's ticks, starts when the curtain is over.
+        // Nobody is here to press a key, so the capture is played by the doors player of the guard (plan decision
+        // 22; `ScriptedPlayers.cs`, the tests' own file, compiled into the game as well): it goes out to the
+        // newest door, picks up its applause and takes its cards by the players' one order. The capture's seed is one
+        // the guard plays, and on the committed numbers that performance reaches the ovation. The guard lets four
+        // seeds of twenty lose: if a retuning makes this one lose, CaptureSeed gets one that wins.
+        // Every act opens with its curtain, whose ticks are counted here with the rest.
         const int second = Simulation.TicksPerSecond;
+        Phase before = _simulation.Phase;
         for (int i = 0; i < _captureTicks; i++)
         {
-            // Nobody is here to press a key: the leftmost card of an encore or of a program is taken at once, so
-            // neither takes any of a capture's ticks. Picking and going on before the tick, and not after it,
-            // leaves a capture that ends on an act's last tick in that act's program, and one that ends on the
-            // tick an encore opens in that encore: that is how a capture shows the two screens. The pick is the
-            // simulation's own and not the view's, so no capture shows a card just taken.
-            _simulation.Pick(0);
+            // A card is taken and the next act gone on to before the tick, and not after it, so neither takes any
+            // of a capture's ticks, and a capture that ends on the tick an encore or a program opens shows that
+            // screen. The pick is the simulation's own and not the view's, so no capture shows a card just taken.
+            _simulation.Pick(Core.Tests.ScriptedPlayers.Choose(_simulation.Offer));
             GoOn();
-            int length = (int)MathF.Round(Tuning.ActLength * second);
-            Tick((_simulation.Act, length - _simulation.ActTicksLeft) switch
+
+            // Read again after the pick, so that an encore that opens on the tick after another is told as well.
+            before = _simulation.Phase;
+            Tick(Core.Tests.ScriptedPlayers.Doors(_simulation));
+
+            // Where a screen is, for whoever wants a frame of it: the console is told the tick each opens on.
+            if (_simulation.Phase != before && _simulation.Phase is Phase.Encore or Phase.Program or Phase.Ovation or Phase.Closed)
             {
-                (1, < 2 * second) => new MagicianInput(new Vector2(1f, 1f)),
-                (1, < 26 * second) => default,
-                (1, < 28 * second) => new MagicianInput(new Vector2(-1f, -1f)),
-                (1, < 31 * second) => default,
-                (1, 31 * second) => new MagicianInput(new Vector2(-1f, 0f), Vanish: true),
-                (2, < 140) => new MagicianInput(new Vector2(-1f, 0.3f)),
-                (3, < 40) => new MagicianInput(new Vector2(0f, -1f)),
-                (3, < 100) => new MagicianInput(new Vector2(1f, 0f)),
-                (3, < 134) => new MagicianInput(new Vector2(0f, 1f)),
-                _ => default,
-            });
+                Console.WriteLine($"Capture: {_simulation.Phase} in act {_simulation.Act} on tick {i + 1}");
+            }
 
             // Each tick is a sixtieth of a second to the juice, as in a game that runs a tick a frame: the frame
             // shows the scraps and the flashes that would be on the screen at that moment. Nothing holds a capture
