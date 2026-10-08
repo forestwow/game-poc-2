@@ -11,7 +11,7 @@ namespace Understudies.Game;
 /// trail behind a thrown card needs no state, the drawing makes it of the card's last step: only its numbers are
 /// here, with the rest.
 /// </summary>
-/// <param name="random">Where the scraps fly and how the stage shakes: a capture gives one that repeats.</param>
+/// <param name="random">Where the scraps fly: a capture gives one that repeats.</param>
 internal sealed class Juice(Random random)
 {
     // Every number of the juice is here, to be turned by hand: none is a rule, so none is in tuning.json. Times are
@@ -52,6 +52,14 @@ internal sealed class Juice(Random random)
     private const float KillBurstTime = 0.5f;
 
     /// <summary>
+    /// The splash is black ink and grey newsprint, and the boards are dark: under it, for the first
+    /// <see cref="KillFlashShare"/> of its time, a pale disc this wide and this thick at first, going out.
+    /// </summary>
+    public const float KillFlashRadius = 1.1f;
+    public const float KillFlashOpacity = 0.75f;
+    public const float KillFlashShare = 0.5f;
+
+    /// <summary>
     /// An understudy's flick is the past's and not the present's: this much of the magician's in size and in
     /// brightness, and in the dull face of an understudy's card.
     /// </summary>
@@ -69,6 +77,10 @@ internal sealed class Juice(Random random)
     private const float HurtTrauma = 0.55f;
     private const float TraumaFade = 3f;
     private const float ShakeReach = 0.2f;
+
+    // The shaken stage is moved to a new place this many times a second of the juice's own time, however many
+    // frames are drawn in it: the shake of a fast screen is the shake of a slow one, and a capture's the game's.
+    private const float ShakesPerSecond = 60f;
 
     // The moment of a Vanish holds the world still for this long: three frames of sixty a second, whatever their
     // jitter. Three frames' worth to the hair (0.05) would hold three frames or four as the frames fell.
@@ -102,8 +114,18 @@ internal sealed class Juice(Random random)
     private float _trauma;
     private float _hitStopLeft;
 
-    /// <summary>How far the whole stage is moved from its place in this frame.</summary>
-    public Vector2 Shake { get; private set; }
+    /// <summary>
+    /// How far the whole stage is moved from its place now: told by the juice's time alone, the same place for
+    /// every frame drawn within one of the <see cref="ShakesPerSecond"/>.
+    /// </summary>
+    public Vector2 Shake
+    {
+        get
+        {
+            uint beat = (uint)(_now * ShakesPerSecond);
+            return new Vector2(Sway(2 * beat), Sway((2 * beat) + 1)) * (ShakeReach * _trauma * _trauma);
+        }
+    }
 
     /// <summary>How far to white the magician is drawn, from 0 to 1: more than 0 when it was hurt a moment ago.</summary>
     public float MagicianWhite => White(_magicianFlashedAt);
@@ -215,7 +237,6 @@ internal sealed class Juice(Random random)
         _scraps.RemoveAll(scrap => _now - scrap.BurstAt >= ScrapTime);
         _effects.RemoveAll(effect => _now - effect.At >= Lasts(effect.Kind));
         _trauma = MathF.Max(0f, _trauma - (TraumaFade * seconds));
-        Shake = new Vector2(Sway(), Sway()) * (ShakeReach * _trauma * _trauma);
     }
 
     /// <summary>
@@ -264,8 +285,19 @@ internal sealed class Juice(Random random)
         }
     }
 
-    /// <summary>From -1 to 1.</summary>
-    private float Sway() => (random.NextSingle() * 2f) - 1f;
+    /// <summary>
+    /// From -1 to 1, evenly, and always the same for the same <paramref name="beat"/>: its bits stirred (the
+    /// finisher of MurmurHash3) and the top twenty-four of them taken, which a float holds whole.
+    /// </summary>
+    private static float Sway(uint beat)
+    {
+        beat ^= beat >> 16;
+        beat *= 0x85EBCA6B;
+        beat ^= beat >> 13;
+        beat *= 0xC2B2AE35;
+        beat ^= beat >> 16;
+        return ((beat >> 8) / 8388608f) - 1f;
+    }
 
     /// <summary>What a card is seen to do.</summary>
     public enum Effect
