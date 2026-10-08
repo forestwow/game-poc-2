@@ -15,7 +15,7 @@ public sealed class Simulation(Tuning tuning, ulong seed, IReadOnlyList<IReadOnl
     public const int TicksPerSecond = 60;
 
     private readonly Rng _doorPlaces = Rng.ForStream(seed, RngStream.DoorPlaces);
-    private readonly Rng _program = Rng.ForStream(seed, RngStream.Program);
+    private readonly Rng _encore = Rng.ForStream(seed, RngStream.Encore);
     private readonly List<Critic> _critics = [];
     private readonly List<ThrownCard> _thrownCards = [];
     private readonly List<Cloud> _clouds = [];
@@ -28,8 +28,8 @@ public sealed class Simulation(Tuning tuning, ulong seed, IReadOnlyList<IReadOnl
     private List<Vector2> _route = [];
     private List<(int Tick, Vector2 Place)> _vanishes = [];
 
-    // The self cards the act that is played began with: its recording's, and its understudy's. A card taken when
-    // the act is over is the magician's at once and the next act's recording's.
+    // The self cards the act that is played began with: its recording's, and its understudy's. A card taken in an
+    // encore of the act is the magician's at once and the next act's recording's.
     private SelfCards _recordingCards;
 
     // Whom one throw is at, the nearest first. It is read within the throw that fills it: what it holds after
@@ -78,16 +78,17 @@ public sealed class Simulation(Tuning tuning, ulong seed, IReadOnlyList<IReadOnl
 
     /// <summary>
     /// Where the performance stands. A closed show is closed whatever its act's timer says; every act begins with
-    /// its curtain; an act whose time has run out is over, whether the magician stands or has fallen; while it has
-    /// cards on offer the program is up; and after the last act of the performance comes the ovation. Only in an
-    /// act does <see cref="Step"/> change anything but the curtain's own time and the program's.
+    /// its curtain; an act with cards on offer stands for an encore; an act whose time has run out is over, whether
+    /// the magician stands or has fallen; while that one has a card on offer the program is up; and after the last
+    /// act of the performance comes the ovation. Only in an act does <see cref="Step"/> change anything but the
+    /// curtain's own time and an offer's.
     /// </summary>
     // ponytail: the phase is read off the other state and not kept, so a reload of the tuning with another number of
     // acts can move it without a tick (an ovation back to between two acts). Keep it as state if that ever matters.
     public Phase Phase =>
         ShowClosed ? Phase.Closed
         : _curtainTicksLeft > 0 ? Phase.Curtain
-        : ActTicksLeft > 0 ? Phase.Act
+        : ActTicksLeft > 0 ? (_offer.Count > 0 ? Phase.Encore : Phase.Act)
         : _offer.Count > 0 ? Phase.Program
         : Act < Tuning.ActsInPerformance ? Phase.BetweenActs
         : Phase.Ovation;
@@ -147,41 +148,39 @@ public sealed class Simulation(Tuning tuning, ulong seed, IReadOnlyList<IReadOnl
     public int ActApplause { get; private set; }
 
     /// <summary>
-    /// The act's applause as a share of the enemies let onto the stage in this act so far, of every kind (plan
-    /// decision 21): nothing while none has entered. A piece from an enemy that an earlier act left on the stage
-    /// counts like any other, so the share may be more than 1.
+    /// The pieces picked up in this act that no encore has been paid with yet: what the next encore is paid from
+    /// (plan decision 26). Like <see cref="ActApplause"/> it is the act's own, and gone when the next begins.
     /// </summary>
-    public float ActApplauseShare => ActEntriesMade == 0 ? 0f : (float)ActApplause / ActEntriesMade;
+    public int EncoreApplause { get; private set; }
+
+    /// <summary>How many encores were taken in this performance, in all its acts.</summary>
+    public int EncoresTaken { get; private set; }
 
     /// <summary>
-    /// Which of the tuning's two thresholds <see cref="ActApplauseShare"/> has reached; a share exactly on a
-    /// threshold has reached it. It is <see cref="ApplauseBand.None"/> only when no piece was picked up: a piece
-    /// from an enemy an earlier act left, in an act nobody has entered, is a share of nothing and the lowest
-    /// band all the same. When the act is over this is what the act earned, until <see cref="GoOn"/>: against
-    /// all its enemies when the plan is a drawn one, which has no entry past the act's end.
+    /// How many encores were taken in the act that is played, or in the one just over: an act with one has its
+    /// program, and an act with none has no program.
     /// </summary>
-    public ApplauseBand ActApplauseBand =>
-        ActApplause == 0 ? ApplauseBand.None
-        : ActApplauseShare >= Tuning.ApplauseSecondThreshold ? ApplauseBand.Second
-        : ActApplauseShare >= Tuning.ApplauseFirstThreshold ? ApplauseBand.First
-        : ApplauseBand.UnderTheFirst;
+    public int ActEncores { get; private set; }
 
     /// <summary>
-    /// The cards the program offers, from the leftmost: what the applause of the act just over paid for (plan
-    /// decisions 15 and 21). No piece picked up, no card and no program; a share under the first threshold, one
-    /// self card and no choice; the first threshold, a choice of two self cards; the second, a choice of three
-    /// cards, of which one may be the chorus card. No card is offered twice in one program. It is empty in every
-    /// phase but <see cref="Phase.Program"/>, and after the last act nothing is offered.
+    /// The pieces the next encore costs, on the tuning of now: every encore taken makes the next cost more.
+    /// </summary>
+    public int EncoreCost => Tuning.EncoreFirstCost + (Tuning.EncoreCostGrowth * EncoresTaken);
+
+    /// <summary>
+    /// The cards on offer, from the leftmost. In an encore, three different self cards; in the program, which
+    /// comes after an act in which an encore was taken, when the act has another after it and has not closed the
+    /// show, the chorus card alone. It is empty in every other phase.
     /// </summary>
     public IReadOnlyList<Card> Offer => _offer;
 
     /// <summary>
-    /// What the program has left of its time, in ticks: all of <see cref="Tuning.ProgramTime"/> when the act is
-    /// over, and the tick that would leave none takes the leftmost card. A program of no time is still up when
-    /// the act is over, and waits for one tick: the first <see cref="Step"/> takes the leftmost card. Nothing
-    /// outside the program.
+    /// What the offer has left of its time, in ticks: all of <see cref="Tuning.EncoreTime"/> when an encore
+    /// opens and of <see cref="Tuning.ProgramTime"/> when the act is over, and the tick that would leave none
+    /// takes the leftmost card. An offer of no time is still up, and waits for one tick: the first
+    /// <see cref="Step"/> takes the leftmost card. Nothing while nothing is offered.
     /// </summary>
-    public int ProgramTicksLeft { get; private set; }
+    public int OfferTicksLeft { get; private set; }
 
     /// <summary>
     /// The self cards the magician has taken in this performance: it throws and vanishes by the tuning's numbers
@@ -196,16 +195,26 @@ public sealed class Simulation(Tuning tuning, ulong seed, IReadOnlyList<IReadOnl
     public int ChorusCards { get; private set; }
 
     /// <summary>
-    /// In the program, takes the card at <paramref name="place"/> of <see cref="Offer"/>, the leftmost being 0:
-    /// the program is over and the stage is between two acts, until <see cref="GoOn"/>. Outside the program, and
-    /// for a place the offer does not have, this does nothing.
+    /// Takes the card at <paramref name="place"/> of <see cref="Offer"/>, the leftmost being 0. In an encore the
+    /// card is the magician's at once, its cost is taken from <see cref="EncoreApplause"/> (what is over stays
+    /// toward the next) and the act goes on. In the program the stage is between two acts, until
+    /// <see cref="GoOn"/>. While nothing is offered, and for a place the offer does not have, this does nothing.
     /// </summary>
     public void Pick(int place)
     {
-        // Outside the program the offer is empty, and has no place.
+        // While nothing is offered the offer has no place.
         if (place < 0 || place >= _offer.Count)
         {
             return;
+        }
+
+        // The cost before the count of encores, which is what makes the next cost more. Never under nothing: a
+        // reload of the tuning may have raised the cost while the encore was read.
+        if (Phase == Phase.Encore)
+        {
+            EncoreApplause = Math.Max(0, EncoreApplause - EncoreCost);
+            EncoresTaken++;
+            ActEncores++;
         }
 
         if (_offer[place] == Card.ChorusDamage)
@@ -218,7 +227,7 @@ public sealed class Simulation(Tuning tuning, ulong seed, IReadOnlyList<IReadOnl
         }
 
         _offer.Clear();
-        ProgramTicksLeft = 0;
+        OfferTicksLeft = 0;
     }
 
     /// <summary>What happened in the last tick, in the order it happened. The next tick starts the list afresh.</summary>
@@ -251,9 +260,10 @@ public sealed class Simulation(Tuning tuning, ulong seed, IReadOnlyList<IReadOnl
 
     /// <summary>
     /// Plays one tick of an act. While the curtain is up the tick only counts the curtain's time: nothing moves,
-    /// strikes or is released, the act's own time stands and the input is not taken, nor kept for later. In the
-    /// program the tick only counts the program's time, and the one that ends it takes the leftmost card. Between
-    /// two acts and when the performance is over the world stands: the tick reports nothing and changes nothing.
+    /// strikes or is released, the act's own time stands and the input is not taken, nor kept for later. In an
+    /// encore and in the program the tick only counts the offer's time, and the one that ends it takes the leftmost
+    /// card: the act's own time stands in an encore as under the curtain. Between two acts and when the performance
+    /// is over the world stands: the tick reports nothing and changes nothing.
     /// </summary>
     public void Step(MagicianInput input)
     {
@@ -264,9 +274,9 @@ public sealed class Simulation(Tuning tuning, ulong seed, IReadOnlyList<IReadOnl
             return;
         }
 
-        if (Phase == Phase.Program)
+        if (Phase is Phase.Encore or Phase.Program)
         {
-            if (--ProgramTicksLeft <= 0)
+            if (--OfferTicksLeft <= 0)
             {
                 Pick(0);
             }
@@ -335,18 +345,33 @@ public sealed class Simulation(Tuning tuning, ulong seed, IReadOnlyList<IReadOnl
         // whatever is on the stage. A blow of that very tick may still have closed the show.
         ActTicksLeft--;
 
-        // An act that is over and has another after it is paid in cards for its applause. Not one that closed the
-        // show on its last tick, nor the last act of the performance.
+        // An act that is over and has another after it has its program when an encore was taken in it: the chorus
+        // card, alone. Not one that closed the show on its last tick, nor the last act of the performance. An act
+        // with no encore has none: the chorus grows by the magician's applause and never without it.
         if (Phase == Phase.BetweenActs)
         {
-            OfferCards();
+            if (ActEncores > 0)
+            {
+                _offer.Add(Card.ChorusDamage);
+                OfferTicksLeft = Ticks(Tuning.ProgramTime);
+            }
+        }
+
+        // An act that goes on stands for an encore when its applause has reached the cost of one: asked when the
+        // tick is over, so the tick of the piece is played in full, and after every tick, so what one encore left
+        // over opens the next a tick of the act later. A magician that a blow of this tick felled has none.
+        else if (Phase == Phase.Act && !MagicianHasFallen && EncoreApplause >= EncoreCost)
+        {
+            OfferAnEncore();
         }
     }
 
     /// <summary>
     /// Between two acts, begins the next one, with its curtain: the magician is whole and on its mark, facing the
     /// audience, with the Vanish ready. Everything else on the stage is as the last act left it, the critics too
-    /// (plan decision 17). In any other phase this does nothing: a program waits for its <see cref="Pick"/>.
+    /// (plan decision 17). In any other phase this does nothing: a program waits for its <see cref="Pick"/>, and
+    /// an act with no encore has no program to wait for.
+    /// The encores of the act just over stay taken, and make those of the next cost more.
     /// </summary>
     public void GoOn()
     {
@@ -358,7 +383,7 @@ public sealed class Simulation(Tuning tuning, ulong seed, IReadOnlyList<IReadOnl
         // The act just over is an understudy from now on, and the next act's recording starts empty. Every
         // understudy stands at the start of its route, with its throw ready: for the view there is nothing between
         // that place and where the last act left it.
-        // It keeps the cards its act was played with (plan decision 20), and not the one taken since.
+        // It keeps the cards its act began with (plan decision 20), and not those of the act's encores.
         _understudies.Add(new Understudy(Act, _route, _vanishes, _recordingCards));
         _recordingCards = MagicianCards;
         _route = [];
@@ -387,6 +412,8 @@ public sealed class Simulation(Tuning tuning, ulong seed, IReadOnlyList<IReadOnl
         // is gone.
         _applause.Clear();
         ActApplause = 0;
+        EncoreApplause = 0;
+        ActEncores = 0;
 
         Act++;
         ActTicksLeft = Ticks(Tuning.ActLength);
@@ -493,7 +520,14 @@ public sealed class Simulation(Tuning tuning, ulong seed, IReadOnlyList<IReadOnl
             hasher.AddInt(piece.TicksLeft);
         }
 
+        // No test tells EncoresTaken, ActEncores, the encore stream's state or the offer's cards apart from the rest
+        // of the hash: as the rule stands EncoresTaken is the number of the magician's self cards, the stream and
+        // the offer follow from the seed and that number, and ActEncores differs only where the recording's cards
+        // do. Whatever breaks one of those (plan T24 breaks the first) adds the test that isolates it.
         hasher.AddInt(ActApplause);
+        hasher.AddInt(EncoreApplause);
+        hasher.AddInt(EncoresTaken);
+        hasher.AddInt(ActEncores);
 
         // Every recording whole, an understudy's and that of the act that is played, which is the next
         // understudy: where everybody stands now does not say where each will stand a tick from now.
@@ -515,7 +549,7 @@ public sealed class Simulation(Tuning tuning, ulong seed, IReadOnlyList<IReadOnl
         AddCards(_recordingCards);
         hasher.AddInt(_ticksToNextThrow);
 
-        // The cards taken, and a program that is up: what it offers and how long it still waits.
+        // The cards taken, and an offer that is up: what it has and how long it still waits.
         AddCards(MagicianCards);
         hasher.AddInt(ChorusCards);
         hasher.AddInt(_offer.Count);
@@ -524,14 +558,14 @@ public sealed class Simulation(Tuning tuning, ulong seed, IReadOnlyList<IReadOnl
             hasher.AddInt((int)card);
         }
 
-        hasher.AddInt(ProgramTicksLeft);
+        hasher.AddInt(OfferTicksLeft);
 
         // How far through the act's entries the show is. The plan itself is not in the hash: it follows from the
         // seed and the tuning, which two shows that are compared share.
         hasher.AddInt(ActEntriesMade);
         hasher.AddInt(_criticsEntered);
         hasher.AddULong(_doorPlaces.State);
-        hasher.AddULong(_program.State);
+        hasher.AddULong(_encore.State);
         return hasher.Value;
     }
 
@@ -543,40 +577,19 @@ public sealed class Simulation(Tuning tuning, ulong seed, IReadOnlyList<IReadOnl
         Ticks(Tuning.VanishCooldown / (1f + (MagicianCards.VanishCooldown * Tuning.CardVanishCooldown)));
 
     /// <summary>
-    /// Makes the offer of the act just over, by its band. Each place takes a self card that is still in the pile,
-    /// any as likely as another; in an offer of the second band a place is first given its chance of being the
-    /// chorus card, while the offer has none.
+    /// Opens an encore: three self cards, each any of those still in the pile, as likely as another.
     /// </summary>
-    private void OfferCards()
+    private void OfferAnEncore()
     {
-        ApplauseBand band = ActApplauseBand;
-        int places = band switch
-        {
-            ApplauseBand.None => 0,
-            ApplauseBand.UnderTheFirst => 1,
-            ApplauseBand.First => 2,
-            _ => 3,
-        };
         List<Card> pile = [Card.Damage, Card.AttackSpeed, Card.Range, Card.VanishCooldown, Card.OneMoreCard];
-        for (int place = 0; place < places; place++)
+        for (int place = 0; place < 3; place++)
         {
-            if (band == ApplauseBand.Second
-                && !_offer.Contains(Card.ChorusDamage)
-                && _program.NextFloat() < Tuning.CardChorusChance)
-            {
-                _offer.Add(Card.ChorusDamage);
-                continue;
-            }
-
-            int drawn = _program.NextInt(pile.Count);
+            int drawn = _encore.NextInt(pile.Count);
             _offer.Add(pile[drawn]);
             pile.RemoveAt(drawn);
         }
 
-        if (places > 0)
-        {
-            ProgramTicksLeft = Ticks(Tuning.ProgramTime);
-        }
+        OfferTicksLeft = Ticks(Tuning.EncoreTime);
     }
 
     private void ThinTheClouds() => _clouds.RemoveAll(cloud => --cloud.TicksLeft <= 0);
@@ -653,6 +666,7 @@ public sealed class Simulation(Tuning tuning, ulong seed, IReadOnlyList<IReadOnl
                 _events.Add(new TickEvent(TickEventKind.ApplausePickedUp, _applause[i].Position));
                 _applause.RemoveAt(i--);
                 ActApplause++;
+                EncoreApplause++;
             }
         }
     }

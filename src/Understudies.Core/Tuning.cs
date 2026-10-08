@@ -74,13 +74,18 @@ namespace Understudies.Core;
 /// <param name="ApplausePickUpReach">
 /// The magician picks up a piece whose centre is no further from its own than its radius and this.
 /// </param>
-/// <param name="ApplauseFirstThreshold">
-/// The share of an act's enemies, from 0 to 1, that its applause has to reach for the first band.
+/// <param name="EncoreFirstCost">
+/// The pieces of applause the first encore of a performance costs. The pieces are an act's own: what an act has
+/// not spent is lost when it is over.
 /// </param>
-/// <param name="ApplauseSecondThreshold">The same for the second band.</param>
+/// <param name="EncoreCostGrowth">How many pieces more every encore costs than the one taken before it.</param>
+/// <param name="EncoreTime">
+/// Seconds an encore waits for a pick before it takes its leftmost card, counted as
+/// <paramref name="ProgramTime"/> is.
+/// </param>
 /// <param name="ProgramTime">
-/// Seconds the program waits for a pick before it takes its leftmost card. With no time the program is still up
-/// when the act is over, and the first tick takes the card.
+/// Seconds the program waits for a pick before it takes its card. With no time the program is still up when the
+/// act is over, and the first tick takes the card.
 /// </param>
 /// <param name="CardDamage">The hit points one damage card adds to what a thrown card takes off a critic.</param>
 /// <param name="CardAttackSpeed">
@@ -94,10 +99,6 @@ namespace Understudies.Core;
 /// </param>
 /// <param name="CardChorusDamage">
 /// The hit points one chorus card adds to what a card thrown by an understudy takes off a critic.
-/// </param>
-/// <param name="CardChorusChance">
-/// The chance, from 0 to 1, that a place of an offer of the second band is the chorus card and not a self card,
-/// while the offer has none yet.
 /// </param>
 public sealed record Tuning(
     float ActLength,
@@ -134,15 +135,15 @@ public sealed record Tuning(
     float CriticBlowCooldown,
     float ApplauseTime,
     float ApplausePickUpReach,
-    float ApplauseFirstThreshold,
-    float ApplauseSecondThreshold,
+    int EncoreFirstCost,
+    int EncoreCostGrowth,
+    float EncoreTime,
     float ProgramTime,
     float CardDamage,
     float CardAttackSpeed,
     float CardRange,
     float CardVanishCooldown,
-    float CardChorusDamage,
-    float CardChorusChance)
+    float CardChorusDamage)
 {
     // ponytail: the serializer reads the types by reflection; a trimmed or AOT build needs a source-generated context.
     private static readonly JsonSerializerOptions Options = new()

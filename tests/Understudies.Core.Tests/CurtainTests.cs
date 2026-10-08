@@ -272,6 +272,10 @@ public class CurtainTests
                     _ => new Vector2(0f, -1f),
                 };
                 var input = new MagicianInput(move, Vanish: tick % 300 == 150);
+
+                // An act that stands for an encore takes its leftmost card at once: the same card in both shows.
+                withCurtains.Pick(0);
+                without.Pick(0);
                 withCurtains.Step(input);
                 without.Step(input);
 
@@ -284,7 +288,7 @@ public class CurtainTests
                 }
             }
 
-            // An act that earned a card takes the leftmost of its program: the same card in both shows.
+            // An act that had an encore takes its program's card: in both shows.
             withCurtains.Pick(0);
             without.Pick(0);
             withCurtains.GoOn();

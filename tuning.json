@@ -50,7 +50,7 @@
     }
   ],
   "firstActBudget": 15,
-  "budgetGrowthPerAct": 80,
+  "budgetGrowthPerAct": 200,
   "actQuietEnd": 5,
   "criticTurnRadius": 4,
   "criticStrikeDamage": 1,
@@ -58,13 +58,13 @@
   "criticBlowCooldown": 1,
   "applauseTime": 4,
   "applausePickUpReach": 0.8,
-  "applauseFirstThreshold": 0.15,
-  "applauseSecondThreshold": 0.35,
+  "encoreFirstCost": 3,
+  "encoreCostGrowth": 1,
+  "encoreTime": 6,
   "programTime": 12,
   "cardDamage": 0.5,
   "cardAttackSpeed": 0.2,
   "cardRange": 1.5,
   "cardVanishCooldown": 0.25,
-  "cardChorusDamage": 0.5,
-  "cardChorusChance": 0.2
+  "cardChorusDamage": 0.5
 }

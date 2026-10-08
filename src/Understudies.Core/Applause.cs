@@ -25,19 +25,3 @@ public sealed class Applause
     /// </summary>
     public int TicksLeft { get; internal set; }
 }
-
-/// <summary>What an act's applause comes to: which of the tuning's two thresholds its share has reached.</summary>
-public enum ApplauseBand
-{
-    /// <summary>No piece was picked up.</summary>
-    None,
-
-    /// <summary>Some was, and its share is under the first threshold.</summary>
-    UnderTheFirst,
-
-    /// <summary>The share has reached the first threshold and not the second.</summary>
-    First,
-
-    /// <summary>The share has reached the second threshold.</summary>
-    Second,
-}

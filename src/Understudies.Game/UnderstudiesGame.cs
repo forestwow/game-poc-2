@@ -72,13 +72,11 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
     private const float ApplauseLift = ApplauseSize * 0.7f;
     private const float ApplauseFaintest = 0.25f;
 
-    // The act's applause is a bar in the middle of the back wall, ApplauseBarGap above its foot. Its second notch
-    // is this far along it: the bar is full a little past the share that earns the most.
+    // The way to the next encore is a bar in the middle of the back wall, ApplauseBarGap above its foot: full when
+    // the act's applause pays for one.
     private static readonly Vector2 ApplauseBar = new(14f, 0.45f);
-    private const float ApplauseBarSecondNotchAt = 0.7f;
     private const float ApplauseBarGap = 0.2f;
-    private const float ApplauseNotchWidth = 0.12f;
-    private const float ApplauseNotchPast = 0.18f;
+    private const float ApplauseCountHeight = 0.7f;
 
     // ponytail: a system font, the first of these files that this machine has: one for macOS, one for Windows and
     // two for Linux. A font file is shipped with the game when a build leaves the owner's machine.
@@ -268,6 +266,7 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
             _juice = new Juice(Random.Shared);
             _offered = [];
             _takenLeft = 0f;
+            _guardLeft = 0f;
         }
 
         // M mutes the sound, and M again brings it back.
@@ -280,8 +279,9 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
         bool PadPressed(Buttons button) => pad.IsButtonDown(button) && _padBefore.IsButtonUp(button);
 
         // A press does one thing, by the phase this frame began in: the Enter that takes a card finds the stage
-        // between two acts when it is done, and must not go on as well.
-        if (_simulation.Phase == Phase.Program)
+        // between two acts when it is done, and must not go on as well, and the Space that takes an encore's card
+        // finds the act going on, and must not be a Vanish as well.
+        if (IsOffered)
         {
             ChooseInTheProgram(keys, pad);
         }
@@ -312,7 +312,8 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
         if (!_juice.Holds((float)frameSeconds))
         {
             // Between two acts the stage stands until the player goes on, and a performance that is over stands as
-            // it ended until R: there Step changes nothing. In the program it counts the program's time.
+            // it ended until R: there Step changes nothing. In an encore and in the program it counts the offer's
+            // time.
             Vector2 move = ReadMove(keys, pad);
             int ticks = _clock.Advance(frameSeconds);
             for (int i = 0; i < ticks; i++)
@@ -328,6 +329,7 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
         }
 
         _takenLeft = MathF.Max(0f, _takenLeft - (float)frameSeconds);
+        _guardLeft = MathF.Max(0f, _guardLeft - (float)frameSeconds);
         base.Update(gameTime);
     }
 
@@ -369,19 +371,21 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
     /// </summary>
     private void Tick(MagicianInput input)
     {
-        bool inTheProgram = _simulation.Phase == Phase.Program;
+        bool wasOffered = IsOffered;
         _simulation.Step(input);
         _juice.Feed(_simulation);
         _sound.Feed(_simulation);
-        if (_simulation.Phase == Phase.Program && !inTheProgram)
+        if (IsOffered && !wasOffered)
         {
-            // A program opens: the view keeps its offer, which the simulation empties with the pick.
+            // An encore or a program opens: the view keeps its offer, which the simulation empties with the pick.
+            // A tick only counts an offer's time, so one never opens out of another.
             _offered = [.. _simulation.Offer];
             _highlighted = 0;
+            _guardLeft = _simulation.Phase == Phase.Encore ? EncoreGuardTime : 0f;
         }
-        else if (inTheProgram && _simulation.Phase != Phase.Program)
+        else if (wasOffered && !IsOffered)
         {
-            // The program's time ran out in this tick, and the simulation took the leftmost card.
+            // The offer's time ran out in this tick, and the simulation took the leftmost card.
             Acknowledge(0);
         }
     }
@@ -402,17 +406,17 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
         // The three acts go three ways, so that their understudies do not stand in one pile. The second act: out
         // to the first door, the only one open, to a place below the critics' way that has the door in range and
         // is out of their reach, and every critic that enters falls there. The third: up, across behind the box
-        // office and down its far side. In every later act the magician stands on its mark, and the performance
-        // is played to its ovation.
+        // office and down its far side. In every later act the magician stands on its mark. (That is what the script
+        // says; on the committed numbers the show closes in the second act, as said above.)
         // Every act opens with its curtain, whose ticks are counted here with the rest: the simulation takes no
         // input in them, and the script's own count, of an act's ticks, starts when the curtain is over.
         const int second = Simulation.TicksPerSecond;
         for (int i = 0; i < _captureTicks; i++)
         {
-            // Nobody is here to press a key between two acts: a program's leftmost card is taken at once, so a
-            // program takes none of a capture's ticks. Picking and going on before the tick, and not after it,
-            // leaves a capture that ends on an act's last tick in that act's program, or between the two acts
-            // when the act earned none: that is how a capture shows the program's screen. The pick is the
+            // Nobody is here to press a key: the leftmost card of an encore or of a program is taken at once, so
+            // neither takes any of a capture's ticks. Picking and going on before the tick, and not after it,
+            // leaves a capture that ends on an act's last tick in that act's program, and one that ends on the
+            // tick an encore opens in that encore: that is how a capture shows the two screens. The pick is the
             // simulation's own and not the view's, so no capture shows a card just taken.
             _simulation.Pick(0);
             GoOn();
@@ -543,9 +547,10 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
         // office stands a hair behind its foot line, so whoever stands exactly on that line is in front.
         const float hair = 0.001f;
         DrawFigure(Figure.BoxOffice, boxOfficeFeet - new Vector2(0f, hair), white: _juice.BoxOfficeWhite);
-        // The footlights, along the stage's front edge and in front of all that stands on it. A program writes its
-        // last line there, so they are out while one is read.
-        for (float x = FootlightGap / 2f; x < Tuning.StageSize.X && _simulation.Phase != Phase.Program; x += FootlightGap)
+        // The footlights, along the stage's front edge and in front of all that stands on it. An offer writes its
+        // last line there, and so does the stage between two acts, so they are out while that line is read.
+        bool lit = !IsOffered && _simulation.Phase != Phase.BetweenActs;
+        for (float x = FootlightGap / 2f; x < Tuning.StageSize.X && lit; x += FootlightGap)
         {
             DrawFigure(Figure.Footlight, new Vector2(x, Tuning.StageSize.Y));
         }
@@ -724,21 +729,12 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
                 VanishBar);
         }
 
-        // The act's applause: its share of the act's critics so far, with a notch at each threshold. A share past
-        // a notch has earned what the notch stands for.
-        float fullBar = MathF.Max(0.01f, Tuning.ApplauseSecondThreshold / ApplauseBarSecondNotchAt);
-        var applauseTopLeft = new Vector2(
-            (Tuning.StageSize.X - ApplauseBar.X) / 2f,
-            MathF.Max(Tuning.StageFloorTop, WordsHeight + 0.4f + ApplauseBar.Y + (2f * ApplauseBarGap))
-                - ApplauseBarGap - ApplauseBar.Y);
-        FillBar(applauseTopLeft, ApplauseBar, _simulation.ActApplauseShare / fullBar, ApplauseGlow);
-        foreach (float threshold in new[] { Tuning.ApplauseFirstThreshold, Tuning.ApplauseSecondThreshold })
-        {
-            Fill(
-                applauseTopLeft + new Vector2((ApplauseBar.X * threshold / fullBar) - (ApplauseNotchWidth / 2f), -ApplauseNotchPast),
-                new Vector2(ApplauseNotchWidth, ApplauseBar.Y + (2f * ApplauseNotchPast)),
-                Words);
-        }
+        // The way to the next encore: the act's applause that no encore was paid with, over what the next costs.
+        FillBar(
+            ApplauseBarTopLeft,
+            ApplauseBar,
+            (float)_simulation.EncoreApplause / Math.Max(1, _simulation.EncoreCost),
+            ApplauseGlow);
 
         // The program's cards lie over everything but the words.
         if (ProgramIsShown)
@@ -823,10 +819,11 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
         int seconds = (_simulation.ActTicksLeft + Simulation.TicksPerSecond - 1) / Simulation.TicksPerSecond;
         string? said = _simulation.Phase switch
         {
-            Phase.Program => _offered.Count == 1
-                ? $"Act {_simulation.Act} is over. The program has a card for you."
-                : $"Act {_simulation.Act} is over. Take a card from the program.",
+            Phase.Encore => "Encore! Take a card, and the act goes on.",
+            Phase.Program => $"Act {_simulation.Act} is over. The program has a card for the chorus.",
             Phase.BetweenActs when ProgramIsShown => $"{Describe(_offered[_taken]).Name} it is.",
+            Phase.BetweenActs when _simulation.ActEncores == 0 =>
+                $"Act {_simulation.Act} is over. No encore, no card for the chorus. Enter or Start goes on.",
             Phase.BetweenActs => $"Act {_simulation.Act} is over. Press Enter or Start to go on.",
             Phase.Ovation => "A standing ovation! R starts a new performance.",
             Phase.Closed => "The box office fell. R starts a new performance.",
@@ -838,7 +835,7 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
         // Beside the act's number, how many of its critics are still to enter: from the curtain on.
         int toCome = _simulation.ActEntries.Count - _simulation.ActEntriesMade;
         string act = $"Act {_simulation.Act} of {Tuning.ActsInPerformance}";
-        if (_simulation.Phase is Phase.Act or Phase.Curtain)
+        if (_simulation.Phase is Phase.Act or Phase.Encore or Phase.Curtain)
         {
             act += $": {toCome} to come";
         }
@@ -851,7 +848,14 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
             Write(WordsHeight, said, new Vector2(Tuning.StageSize.X / 2f, line), 0.5f, Magician);
         }
 
-        if (_simulation.Phase is Phase.Program or Phase.BetweenActs)
+        // Beside the bar's end, what it counts: the pieces toward the next encore, over its cost.
+        Write(
+            ApplauseCountHeight,
+            $"{_simulation.EncoreApplause}/{_simulation.EncoreCost}",
+            ApplauseBarTopLeft + new Vector2(ApplauseBar.X + 0.3f, ApplauseBar.Y / 2f),
+            0f,
+            Words);
+        if (_simulation.Phase is Phase.Encore or Phase.Program or Phase.BetweenActs)
         {
             DrawProgramWords();
         }
@@ -900,6 +904,11 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
     }
 
     /// <summary>A bar that is <paramref name="share"/> full, from its left end.</summary>
+    private Vector2 ApplauseBarTopLeft => new(
+        (Tuning.StageSize.X - ApplauseBar.X) / 2f,
+        MathF.Max(Tuning.StageFloorTop, WordsHeight + 0.4f + ApplauseBar.Y + (2f * ApplauseBarGap))
+            - ApplauseBarGap - ApplauseBar.Y);
+
     private void FillBar(Vector2 topLeft, Vector2 size, float share, Color color)
     {
         Fill(topLeft, size, HitPointsLost);

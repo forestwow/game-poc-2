@@ -10,6 +10,13 @@ public class CardTests
     /// <summary>Twelve seconds: the program of <see cref="Scene"/>.</summary>
     private const int ProgramTicks = 12 * Simulation.TicksPerSecond;
 
+    /// <summary>Six seconds: an encore of <see cref="Scene"/>.</summary>
+    private const int EncoreTicks = 6 * Simulation.TicksPerSecond;
+
+    /// <summary>The tick of an act of <see cref="Scene"/>, the first being 0, on which the piece of a critic
+    /// that entered by the first door on the first tick is picked up by a magician that stands there.</summary>
+    private const int PieceTick = 3;
+
     /// <summary>In the stage's top edge: the first door, where a critic enters, stands and falls.</summary>
     private static readonly Vector2 Door = new(20f, 0f);
 
@@ -43,10 +50,9 @@ public class CardTests
     /// the magician. The magician stands on <see cref="AtTheDoor"/>, walks a quarter of a unit a tick, throws every
     /// six ticks at what is within nine units, and its card flies a unit a tick: a critic that enters by the first
     /// door on the first tick falls on the third, and on the fourth its piece is picked up, if the magician still
-    /// stands there. That one piece for the act's one critic is the second band. A Vanish is ready again half a
-    /// second later and leaves no cloud. A card gives a round number, and no place of an offer is the chorus card.
-    /// The stage has no back wall and the curtain no length: these tests count their ticks from the first tick of
-    /// an act.
+    /// stands there. An encore costs one piece, the first and every other. A Vanish is ready again half a second
+    /// later and leaves no cloud. A card gives a round number. The stage has no back wall and the curtain no
+    /// length: these tests count their ticks from the first tick of an act.
     /// </summary>
     private Tuning Scene { get; } = CommittedTuning.Parse().WithCritic(
         critic => critic with { Speed = 0f, Radius = 0.5f, HitPoints = 1f }) with
@@ -70,109 +76,80 @@ public class CardTests
         ThrownCardDamage = 1f,
         ApplauseTime = 4f,
         ApplausePickUpReach = 0.4f,
-        ApplauseFirstThreshold = 0.15f,
-        ApplauseSecondThreshold = 0.35f,
+        EncoreFirstCost = 1,
+        EncoreCostGrowth = 0,
+        EncoreTime = 6f,
         ProgramTime = 12f,
         CardDamage = 1f,
         CardAttackSpeed = 0.2f,
         CardRange = 1.5f,
         CardVanishCooldown = 0.25f,
         CardChorusDamage = 1f,
-        CardChorusChance = 0f,
     };
 
-    // The magician picks up the piece of the critic at its own door and of no other, so the act's share is one
-    // over its critics: of one critic the whole, of four a quarter, of ten a tenth. A magician that throws at
-    // nobody picks up nothing.
-    [TestCase(1, 0f, ApplauseBand.None, 0, TestName = "Step_AnActThatPickedUpNothing_HasNoProgram")]
-    [TestCase(10, 9f, ApplauseBand.UnderTheFirst, 1, TestName = "Step_AnActUnderTheFirstThreshold_IsOfferedOneCard")]
-    [TestCase(4, 9f, ApplauseBand.First, 2, TestName = "Step_AnActOfTheFirstBand_IsOfferedTwoCards")]
-    [TestCase(1, 9f, ApplauseBand.Second, 3, TestName = "Step_AnActOfTheSecondBand_IsOfferedThreeCards")]
-    public void Step_TheActIsOver_TheProgramOffersWhatItsBandPaysFor(int critics, float range, ApplauseBand band, int cards)
-    {
-        Simulation simulation = AfterAFirstActOf(critics, Scene with { ThrowRange = range });
+    /// <summary><see cref="Scene"/> with an encore nobody can pay for.</summary>
+    private Tuning NoEncore => Scene with { EncoreFirstCost = 1000 };
 
-        Assert.That(simulation.ActApplauseBand, Is.EqualTo(band));
-        Assert.That(simulation.Offer, Has.Count.EqualTo(cards));
-        if (cards == 0)
-        {
-            // No applause, no program: the stage is between two acts at once, as it was before there were cards.
-            Assert.That(simulation.Phase, Is.EqualTo(Phase.BetweenActs));
-            Assert.That(simulation.ProgramTicksLeft, Is.Zero);
-        }
-        else
-        {
-            Assert.That(simulation.Phase, Is.EqualTo(Phase.Program));
-            Assert.That(simulation.ProgramTicksLeft, Is.EqualTo(ProgramTicks));
-        }
+    // The encore (plan decision 26).
+
+    [Test]
+    public void Step_TheApplauseReachesTheCost_TheActStandsForAnEncoreOfThreeSelfCards()
+    {
+        // Two pieces an encore: critics by the magician's door on the first tick and ten ticks later.
+        var simulation = new Simulation(Scene with { EncoreFirstCost = 2 }, seed: 1, [[AtOnce, AtOnce with { Tick = 10 }]]);
+        Assert.That(simulation.EncoreCost, Is.EqualTo(2));
+
+        Run(simulation, PieceTick + 1);
+        Assert.That(simulation.EncoreApplause, Is.EqualTo(1));
+        Assert.That(simulation.Phase, Is.EqualTo(Phase.Act));
+        Assert.That(simulation.Offer, Is.Empty);
+
+        Run(simulation, ticks: 9);
+        Assert.That(simulation.Phase, Is.EqualTo(Phase.Act));
+        simulation.Step(default);
+
+        // On the tick of the piece, which is played in full and reports what happened in it.
+        Assert.That(simulation.Events.Select(happened => happened.Kind), Does.Contain(TickEventKind.ApplausePickedUp));
+        Assert.That(simulation.EncoreApplause, Is.EqualTo(2));
+        Assert.That(simulation.Phase, Is.EqualTo(Phase.Encore));
+        Assert.That(simulation.OfferTicksLeft, Is.EqualTo(EncoreTicks));
+        Assert.That(simulation.Offer, Has.Count.EqualTo(3));
+        Assert.That(simulation.Offer, Is.Unique);
+        Assert.That(simulation.Offer, Has.None.EqualTo(Card.ChorusDamage));
+        Assert.That(simulation.ActTicksLeft, Is.EqualTo(ActTicks - (PieceTick + 11)));
     }
 
     [Test]
-    public void Offer_WhileAnActIsPlayed_IsEmpty()
-    {
-        var simulation = new Simulation(Scene, seed: 1, [[AtOnce]]);
-
-        Run(simulation, ActTicks - 1);
-
-        // The second band is earned already; the offer is made when the act is over.
-        Assert.That(simulation.ActApplauseBand, Is.EqualTo(ApplauseBand.Second));
-        Assert.That(simulation.Phase, Is.EqualTo(Phase.Act));
-        Assert.That(simulation.Offer, Is.Empty);
-    }
-
-    // The chance of the chorus card is as high as it can be, and still no place under the second band is one.
-    [TestCase(10, 1)]
-    [TestCase(4, 2)]
-    public void Offer_UnderTheSecondBand_IsOfDifferentSelfCardsOnly(int critics, int cards)
+    public void Offer_OfAnEncore_IsOfThreeDifferentSelfCards_AndEverySelfCardIsOfferedBySomeSeed()
     {
         var offered = new HashSet<Card>();
         for (ulong seed = 1; seed <= 100; seed++)
         {
-            Simulation simulation = AfterAFirstActOf(critics, Scene with { CardChorusChance = 1f }, seed);
+            Simulation simulation = InAnEncore(Scene, seed);
 
-            Assert.That(simulation.Offer, Has.Count.EqualTo(cards));
+            Assert.That(simulation.Offer, Has.Count.EqualTo(3));
             Assert.That(simulation.Offer, Is.Unique);
             Assert.That(simulation.Offer, Has.None.EqualTo(Card.ChorusDamage));
             offered.UnionWith(simulation.Offer);
         }
 
-        // Over a hundred shows every self card has been offered.
         Assert.That(offered, Has.Count.EqualTo(5));
     }
 
-    // With no chance there is never a chorus card, and with every chance exactly one, in the leftmost place: a
-    // place after it has none. With half a chance some offers have one and some none.
-    [TestCase(0f, 0, 0)]
-    [TestCase(1f, 100, 100)]
-    [TestCase(0.5f, 60, 99)]
-    public void Offer_OfTheSecondBand_IsOfThreeDifferentCards_AtMostOneOfThemTheChorusCard(
-        float chance, int atLeast, int atMost)
-    {
-        int withAChorusCard = 0;
-        for (ulong seed = 1; seed <= 100; seed++)
-        {
-            Simulation simulation = AfterAFirstActOf(1, Scene with { CardChorusChance = chance }, seed);
-
-            Assert.That(simulation.Offer, Has.Count.EqualTo(3));
-            Assert.That(simulation.Offer, Is.Unique);
-            withAChorusCard += simulation.Offer.Count(card => card == Card.ChorusDamage);
-        }
-
-        // Each of three places with half a chance: seven offers in eight have one.
-        Assert.That(withAChorusCard, Is.InRange(atLeast, atMost));
-    }
-
     [Test]
-    public void Offer_TheSameSeedAndTheSamePlay_GiveTheSameOffers()
+    public void Offer_TheSameSeedAndTheSamePlay_GiveTheSameEncores()
     {
-        // Two programs each: what the second offers follows from the seed as what the first does.
+        // Two encores each, in two acts: what the second offers follows from the seed as what the first does.
         List<Card> Offers(ulong seed)
         {
-            Simulation simulation = AfterAFirstActOf(1, Scene, seed);
+            var simulation = new Simulation(Scene, seed, [[AtOnce], [AtOnce]]);
+            PlayTheAct(simulation);
             List<Card> offers = [.. simulation.Offer];
             simulation.Pick(0);
+            PlayTheAct(simulation);
+            simulation.Pick(0);
             simulation.GoOn();
-            Run(simulation, ActTicks);
+            PlayTheAct(simulation);
             offers.AddRange(simulation.Offer);
             return offers;
         }
@@ -186,12 +163,338 @@ public class CardTests
     }
 
     [Test]
+    public void Step_InAnEncore_OnlyItsTimeRuns_AndTheActsOwnStands()
+    {
+        // A throw every two ticks, and a second critic by the other door: the card thrown at it is in the air,
+        // not yet flown, when the first one's piece is picked up and the encore opens.
+        Tuning tuning = Scene with { ThrowCooldown = 2f / Simulation.TicksPerSecond };
+        var simulation = new Simulation(tuning, seed: 1, [[AtOnce, AtOnce with { Door = 1 }]]);
+        PlayTheAct(simulation);
+        Assert.That(simulation.Phase, Is.EqualTo(Phase.Encore));
+        List<Vector2> critics = [.. simulation.Critics.Select(critic => critic.Position)];
+        List<Vector2> cards = [.. simulation.ThrownCards.Select(card => card.Position)];
+        Assert.That(critics, Is.Not.Empty);
+        Assert.That(cards, Is.Not.Empty);
+        int actTicksLeft = simulation.ActTicksLeft;
+
+        simulation.Step(Right with { Vanish = true });
+
+        Assert.That(simulation.Phase, Is.EqualTo(Phase.Encore));
+        Assert.That(simulation.OfferTicksLeft, Is.EqualTo(EncoreTicks - 1));
+        Assert.That(simulation.ActTicksLeft, Is.EqualTo(actTicksLeft));
+        Assert.That(simulation.Events, Is.Empty);
+        Assert.That(simulation.MagicianPosition, Is.EqualTo(AtTheDoor));
+        Assert.That(simulation.Critics.Select(critic => critic.Position), Is.EqualTo(critics));
+        Assert.That(simulation.ThrownCards.Select(card => card.Position), Is.EqualTo(cards));
+        Assert.That(simulation.Offer, Has.Count.EqualTo(3));
+
+        // And a press of the encore is not kept for the act.
+        simulation.Pick(0);
+        simulation.Step(default);
+        Assert.That(simulation.Events.Select(happened => happened.Kind), Has.None.EqualTo(TickEventKind.Vanish));
+    }
+
+    [Test]
+    public void Pick_InAnEncore_GivesTheMagicianTheCardAtOnce_TakesTheCost_AndTheActGoesOn()
+    {
+        Simulation simulation = InAnEncore(Scene, SeedWhoseEncores([Card.Range]));
+        int place = simulation.Offer.ToList().IndexOf(Card.Range);
+        int actTicksLeft = simulation.ActTicksLeft;
+
+        simulation.Pick(place);
+
+        Assert.That(simulation.MagicianCards, Is.EqualTo(new SelfCards(Range: 1)));
+        Assert.That(simulation.ChorusCards, Is.Zero);
+        Assert.That(simulation.EncoreApplause, Is.Zero);
+        Assert.That(simulation.EncoresTaken, Is.EqualTo(1));
+        Assert.That(simulation.Offer, Is.Empty);
+        Assert.That(simulation.OfferTicksLeft, Is.Zero);
+        Assert.That(simulation.Phase, Is.EqualTo(Phase.Act));
+        Assert.That(simulation.ActTicksLeft, Is.EqualTo(actTicksLeft));
+
+        // What the act has picked up is still its own count.
+        Assert.That(simulation.ActApplause, Is.EqualTo(1));
+
+        simulation.Step(default);
+        Assert.That(simulation.Phase, Is.EqualTo(Phase.Act));
+        Assert.That(simulation.ActTicksLeft, Is.EqualTo(actTicksLeft - 1));
+    }
+
+    [Test]
+    public void Pick_TheVanishCooldownCardInAnEncore_TheVanishComesBackSoonerInThatVeryAct()
+    {
+        // Thirty ticks from Vanish to Vanish, and twenty-four with the card: taken on the fourth tick of an act
+        // of a hundred and twenty.
+        ulong seed = SeedWhoseEncores([Card.VanishCooldown]);
+        var simulation = new Simulation(Scene, seed, [[AtOnce]]);
+        var vanish = new MagicianInput(Vector2.Zero, Vanish: true);
+        PlayTheAct(simulation);
+        Take(simulation, Card.VanishCooldown);
+
+        List<int> vanishes = [.. Of(PlayTheAct(simulation, _ => vanish), TickEventKind.Vanish).Select(v => v.Tick)];
+
+        Assert.That(vanishes.Take(3), Is.EqualTo(new[] { PieceTick + 1, PieceTick + 25, PieceTick + 49 }));
+    }
+
+    [TestCase(-1)]
+    [TestCase(3)]
+    public void Pick_APlaceTheEncoreDoesNotHave_IsRefused(int place)
+    {
+        Simulation simulation = InAnEncore(Scene);
+
+        simulation.Pick(place);
+
+        Assert.That(simulation.Phase, Is.EqualTo(Phase.Encore));
+        Assert.That(simulation.Offer, Has.Count.EqualTo(3));
+        Assert.That(simulation.MagicianCards, Is.EqualTo(default(SelfCards)));
+        Assert.That(simulation.EncoresTaken, Is.Zero);
+    }
+
+    [Test]
+    public void GoOn_InAnEncore_IsRefused()
+    {
+        Simulation simulation = InAnEncore(Scene);
+
+        simulation.GoOn();
+
+        Assert.That(simulation.Phase, Is.EqualTo(Phase.Encore));
+        Assert.That(simulation.Act, Is.EqualTo(1));
+    }
+
+    [Test]
+    public void Step_TheEncoresTimeRunsOut_TheLeftmostCardIsTaken()
+    {
+        Simulation waited = InAnEncore(Scene);
+        Simulation picked = InAnEncore(Scene);
+        Simulation pickedAnother = InAnEncore(Scene);
+        picked.Pick(0);
+        pickedAnother.Pick(1);
+
+        // On the last tick of the six seconds the choice is still open.
+        Run(waited, EncoreTicks - 1);
+        Assert.That(waited.Phase, Is.EqualTo(Phase.Encore));
+        Assert.That(waited.OfferTicksLeft, Is.EqualTo(1));
+        Assert.That(waited.MagicianCards, Is.EqualTo(default(SelfCards)));
+
+        waited.Step(default);
+
+        Assert.That(waited.Phase, Is.EqualTo(Phase.Act));
+        Assert.That(waited.MagicianCards, Is.EqualTo(picked.MagicianCards));
+        Assert.That(waited.MagicianCards, Is.Not.EqualTo(pickedAnother.MagicianCards));
+
+        // And nothing else came of the wait: the act goes on as one whose leftmost card was picked at once.
+        Assert.That(waited.ComputeStateHash(), Is.EqualTo(picked.ComputeStateHash()));
+    }
+
+    [Test]
+    public void Pick_EveryEncoreTaken_MakesTheNextCostMore()
+    {
+        // One piece the first and one more each: six critics by the magician's door, ten ticks apart.
+        var simulation = new Simulation(
+            Scene with { EncoreCostGrowth = 1 },
+            seed: 1,
+            [[.. Enumerable.Range(0, 6).Select(i => AtOnce with { Tick = 10 * i })]]);
+        var opened = new List<(int Pieces, int Cost)>();
+
+        while (simulation.Phase is Phase.Act or Phase.Encore)
+        {
+            if (simulation.Phase == Phase.Encore)
+            {
+                opened.Add((simulation.ActApplause, simulation.EncoreCost));
+                simulation.Pick(0);
+                Assert.That(simulation.EncoreApplause, Is.Zero);
+            }
+
+            simulation.Step(default);
+        }
+
+        // After the first piece, the third and the sixth.
+        Assert.That(opened, Is.EqualTo(new[] { (1, 1), (3, 2), (6, 3) }));
+        Assert.That(simulation.EncoresTaken, Is.EqualTo(3));
+        Assert.That(simulation.EncoreCost, Is.EqualTo(4));
+    }
+
+    [Test]
+    public void Pick_WhatIsOverTheCost_StaysTowardTheNext_WhichOpensATickOfTheActLater()
+    {
+        // Three pieces while an encore costs more than anybody has, and then a tuning in which it costs one.
+        var simulation = new Simulation(
+            NoEncore, seed: 1, [[AtOnce, AtOnce with { Tick = 10 }, AtOnce with { Tick = 20 }]]);
+        Run(simulation, PieceTick + 21);
+        Assert.That(simulation.EncoreApplause, Is.EqualTo(3));
+        Assert.That(simulation.Phase, Is.EqualTo(Phase.Act));
+        simulation.Tuning = Scene;
+        simulation.Step(default);
+        Assert.That(simulation.Phase, Is.EqualTo(Phase.Encore));
+        int actTicksLeft = simulation.ActTicksLeft;
+
+        simulation.Pick(0);
+
+        // The act goes on for one tick, and stands again.
+        Assert.That(simulation.EncoreApplause, Is.EqualTo(2));
+        Assert.That(simulation.Phase, Is.EqualTo(Phase.Act));
+        simulation.Step(default);
+        Assert.That(simulation.Phase, Is.EqualTo(Phase.Encore));
+        Assert.That(simulation.ActTicksLeft, Is.EqualTo(actTicksLeft - 1));
+        Assert.That(simulation.OfferTicksLeft, Is.EqualTo(EncoreTicks));
+
+        simulation.Pick(0);
+        simulation.Step(default);
+        simulation.Pick(0);
+        simulation.Step(default);
+
+        // Three pieces, three encores, and nothing left to open a fourth.
+        Assert.That(simulation.EncoresTaken, Is.EqualTo(3));
+        Assert.That(simulation.EncoreApplause, Is.Zero);
+        Assert.That(simulation.Phase, Is.EqualTo(Phase.Act));
+        Assert.That(simulation.ActTicksLeft, Is.EqualTo(actTicksLeft - 3));
+    }
+
+    // A critic that enters four ticks before the act is over leaves its piece to the act's last tick, and one
+    // that enters a tick sooner to the tick before it.
+    [TestCase(ActTicks - 1 - PieceTick, Phase.BetweenActs)]
+    [TestCase(ActTicks - 2 - PieceTick, Phase.Encore)]
+    public void Step_ThePieceIsPickedUp_OnlyAnActThatHasTimeLeftStandsForAnEncore(int entersOn, Phase phase)
+    {
+        var simulation = new Simulation(Scene, seed: 1, [[AtOnce with { Tick = entersOn }], []]);
+
+        PlayTheAct(simulation);
+
+        Assert.That(simulation.EncoreApplause, Is.EqualTo(1));
+        Assert.That(simulation.Phase, Is.EqualTo(phase));
+        if (phase == Phase.BetweenActs)
+        {
+            // The act is over, with no encore and so no program, and what it had toward an encore is lost.
+            Assert.That(simulation.Offer, Is.Empty);
+            Assert.That(simulation.EncoresTaken, Is.Zero);
+            simulation.GoOn();
+            Assert.That(simulation.EncoreApplause, Is.Zero);
+            Run(simulation, ticks: 2);
+            Assert.That(simulation.Phase, Is.EqualTo(Phase.Act));
+        }
+        else
+        {
+            Assert.That(simulation.ActTicksLeft, Is.EqualTo(1));
+        }
+    }
+
+    [Test]
+    public void GoOn_WhatTheActHadTowardAnEncoreIsLost_AndTheEncoresTakenStay()
+    {
+        // One piece the first encore and two the second: each act has one critic.
+        var simulation = new Simulation(Scene with { EncoreCostGrowth = 1 }, seed: 1, [[AtOnce], [AtOnce], [AtOnce]]);
+        PlayTheAct(simulation);
+        simulation.Pick(0);
+        PlayTheAct(simulation);
+        simulation.Pick(0);
+        simulation.GoOn();
+        Assert.That((simulation.EncoresTaken, simulation.EncoreCost), Is.EqualTo((1, 2)));
+
+        // The second act's one piece is half an encore, and the third's is the first half again.
+        PlayTheAct(simulation);
+        Assert.That(simulation.Phase, Is.EqualTo(Phase.BetweenActs));
+        Assert.That(simulation.EncoreApplause, Is.EqualTo(1));
+        simulation.GoOn();
+        Assert.That(simulation.EncoreApplause, Is.Zero);
+        PlayTheAct(simulation);
+
+        Assert.That(simulation.Phase, Is.EqualTo(Phase.BetweenActs));
+        Assert.That(simulation.EncoreApplause, Is.EqualTo(1));
+        Assert.That(simulation.EncoresTaken, Is.EqualTo(1));
+    }
+
+    [Test]
+    public void Step_TheMagicianHasFallen_NoEncoreOpens_WhateverItHadPickedUp()
+    {
+        // One piece, while an encore costs more. Then a critic that no card reaches enters by the magician's
+        // door, touching it, and its one blow fells the magician. Now an encore costs the one piece.
+        var simulation = new Simulation(NoEncore, seed: 1, [[AtOnce, AtOnce with { Tick = 10 }]]);
+        Run(simulation, ticks: 10);
+        simulation.Tuning = NoEncore with { ThrowRange = 0f, CriticTurnRadius = 4f, CriticTouchDamage = 100f };
+        Run(simulation, ticks: 5);
+        Assert.That(simulation.MagicianHasFallen);
+        Assert.That(simulation.EncoreApplause, Is.EqualTo(1));
+
+        simulation.Tuning = simulation.Tuning with { EncoreFirstCost = 1 };
+        simulation.Step(default);
+
+        Assert.That(simulation.Phase, Is.EqualTo(Phase.Act));
+        Assert.That(simulation.Offer, Is.Empty);
+    }
+
+    // The program (plan decision 26): the chorus card after an act in which an encore was taken.
+
+    [Test]
+    public void Step_AnActWithAnEncoreIsOver_TheProgramOffersTheChorusCardAlone()
+    {
+        Simulation simulation = AfterAFirstActWithAnEncore();
+
+        Assert.That(simulation.Phase, Is.EqualTo(Phase.Program));
+        Assert.That(simulation.Offer, Is.EqualTo(new[] { Card.ChorusDamage }));
+        Assert.That(simulation.OfferTicksLeft, Is.EqualTo(ProgramTicks));
+    }
+
+    // An act that picked up its piece and could not pay for an encore with it, and one that picked up nothing.
+    [TestCase(9f, 1)]
+    [TestCase(0f, 0)]
+    public void Step_AnActWithNoEncoreIsOver_ThereIsNoProgram_WhateverItsApplause(float range, int pieces)
+    {
+        var simulation = new Simulation(NoEncore with { ThrowRange = range }, seed: 1, [[AtOnce], [AtOnce]]);
+
+        Run(simulation, ActTicks);
+
+        Assert.That(simulation.ActApplause, Is.EqualTo(pieces));
+        Assert.That(simulation.Phase, Is.EqualTo(Phase.BetweenActs));
+        Assert.That(simulation.Offer, Is.Empty);
+        Assert.That(simulation.OfferTicksLeft, Is.Zero);
+    }
+
+    [Test]
+    public void Step_AnEncoreOfAnEarlierAct_PaysForNoProgramAfterALaterOne()
+    {
+        // The first act has its encore and its program. The second has no critic, and so no applause.
+        var simulation = new Simulation(Scene, seed: 1, [[AtOnce], [], [AtOnce]]);
+        PlayTheAct(simulation);
+        simulation.Pick(0);
+        PlayTheAct(simulation);
+        Assert.That(simulation.Phase, Is.EqualTo(Phase.Program));
+        simulation.Pick(0);
+        simulation.GoOn();
+
+        PlayTheAct(simulation);
+
+        Assert.That(simulation.EncoresTaken, Is.EqualTo(1));
+        Assert.That(simulation.Phase, Is.EqualTo(Phase.BetweenActs));
+        Assert.That(simulation.ChorusCards, Is.EqualTo(1));
+
+        // And the third, with an encore of its own, has its program again.
+        simulation.GoOn();
+        PlayTheAct(simulation);
+        simulation.Pick(0);
+        PlayTheAct(simulation);
+        Assert.That(simulation.Phase, Is.EqualTo(Phase.Program));
+    }
+
+    [Test]
+    public void Offer_WhileAnActIsPlayed_IsEmpty()
+    {
+        var simulation = new Simulation(NoEncore, seed: 1, [[AtOnce]]);
+
+        Run(simulation, ActTicks - 1);
+
+        Assert.That(simulation.Phase, Is.EqualTo(Phase.Act));
+        Assert.That(simulation.Offer, Is.Empty);
+    }
+
+    [Test]
     public void Step_InTheProgram_OnlyTheCountdownRuns()
     {
         // A second critic enters by the other door three ticks before the act is over: it is on the stage, and
         // the card thrown at it in the air, when the program comes.
         var simulation = new Simulation(Scene, seed: 1, [[AtOnce, new PlannedEntry(ActTicks - 3, Door: 1, Kind: 0)], []]);
-        Run(simulation, ActTicks);
+        PlayTheAct(simulation);
+        simulation.Pick(0);
+        PlayTheAct(simulation);
         List<Vector2> critics = [.. simulation.Critics.Select(critic => critic.Position)];
         List<Vector2> cards = [.. simulation.ThrownCards.Select(card => card.Position)];
         Assert.That(critics, Is.Not.Empty);
@@ -200,18 +503,18 @@ public class CardTests
         simulation.Step(Right with { Vanish = true });
 
         Assert.That(simulation.Phase, Is.EqualTo(Phase.Program));
-        Assert.That(simulation.ProgramTicksLeft, Is.EqualTo(ProgramTicks - 1));
+        Assert.That(simulation.OfferTicksLeft, Is.EqualTo(ProgramTicks - 1));
         Assert.That(simulation.Events, Is.Empty);
         Assert.That(simulation.MagicianPosition, Is.EqualTo(AtTheDoor));
         Assert.That(simulation.Critics.Select(critic => critic.Position), Is.EqualTo(critics));
         Assert.That(simulation.ThrownCards.Select(card => card.Position), Is.EqualTo(cards));
-        Assert.That(simulation.Offer, Has.Count.EqualTo(3));
+        Assert.That(simulation.Offer, Has.Count.EqualTo(1));
     }
 
     [Test]
     public void GoOn_InTheProgram_IsRefused()
     {
-        Simulation simulation = AfterAFirstActOf(1, Scene);
+        Simulation simulation = AfterAFirstActWithAnEncore();
 
         simulation.GoOn();
 
@@ -220,21 +523,20 @@ public class CardTests
     }
 
     [Test]
-    public void Pick_InTheProgram_TakesTheCard_AndTheStageIsBetweenTwoActs()
+    public void Pick_InTheProgram_TakesTheChorusCard_AndTheStageIsBetweenTwoActs()
     {
-        Simulation simulation = AfterAFirstActOf(1, Scene);
-        Assert.That(simulation.MagicianCards, Is.EqualTo(default(SelfCards)));
+        Simulation simulation = AfterAFirstActWithAnEncore();
 
-        simulation.Pick(2);
+        SelfCards cards = simulation.MagicianCards;
 
-        // A card of some kind, once.
-        Assert.That(simulation.MagicianCards, Is.Not.EqualTo(default(SelfCards)));
+        simulation.Pick(0);
+
+        Assert.That(simulation.ChorusCards, Is.EqualTo(1));
+        Assert.That(simulation.MagicianCards, Is.EqualTo(cards));
+        Assert.That(simulation.EncoresTaken, Is.EqualTo(1));
         Assert.That(simulation.Phase, Is.EqualTo(Phase.BetweenActs));
         Assert.That(simulation.Offer, Is.Empty);
-        Assert.That(simulation.ProgramTicksLeft, Is.Zero);
-
-        // What the act earned is still there to be read, until going on.
-        Assert.That(simulation.ActApplauseBand, Is.EqualTo(ApplauseBand.Second));
+        Assert.That(simulation.OfferTicksLeft, Is.Zero);
 
         simulation.GoOn();
         Assert.That(simulation.Phase, Is.EqualTo(Phase.Act));
@@ -242,80 +544,78 @@ public class CardTests
     }
 
     [TestCase(-1)]
-    [TestCase(2)]
-    public void Pick_APlaceTheOfferDoesNotHave_IsRefused(int place)
+    [TestCase(1)]
+    public void Pick_APlaceTheProgramDoesNotHave_IsRefused(int place)
     {
-        // An offer of two: its places are 0 and 1.
-        Simulation simulation = AfterAFirstActOf(4, Scene);
+        Simulation simulation = AfterAFirstActWithAnEncore();
 
         simulation.Pick(place);
 
         Assert.That(simulation.Phase, Is.EqualTo(Phase.Program));
-        Assert.That(simulation.Offer, Has.Count.EqualTo(2));
-        Assert.That(simulation.MagicianCards, Is.EqualTo(default(SelfCards)));
+        Assert.That(simulation.Offer, Has.Count.EqualTo(1));
+        Assert.That(simulation.ChorusCards, Is.Zero);
     }
 
     [Test]
-    public void Pick_OutsideTheProgram_IsRefused()
+    public void Pick_WhileNothingIsOffered_IsRefused()
     {
         var simulation = new Simulation(Scene, seed: 1, [[AtOnce]]);
 
         // In an act.
         simulation.Pick(0);
         Assert.That(simulation.MagicianCards, Is.EqualTo(default(SelfCards)));
+        Assert.That(simulation.EncoresTaken, Is.Zero);
 
-        // Between two acts, when a card has been taken: a program gives one card.
-        Run(simulation, ActTicks);
+        // Between two acts, when the card has been taken: a program gives one card.
+        PlayTheAct(simulation);
         simulation.Pick(0);
-        SelfCards taken = simulation.MagicianCards;
+        PlayTheAct(simulation);
         simulation.Pick(0);
-        simulation.Pick(1);
-        Assert.That(simulation.MagicianCards, Is.EqualTo(taken));
-        Assert.That(simulation.ChorusCards, Is.Zero);
+        SelfCards cards = simulation.MagicianCards;
+        simulation.Pick(0);
+        Assert.That(simulation.ChorusCards, Is.EqualTo(1));
+        Assert.That(simulation.MagicianCards, Is.EqualTo(cards));
+        Assert.That(simulation.EncoresTaken, Is.EqualTo(1));
     }
 
     [Test]
-    public void Step_TheProgramsTimeRunsOut_TheLeftmostCardIsTaken()
+    public void Step_TheProgramsTimeRunsOut_TheCardIsTaken()
     {
-        Simulation waited = AfterAFirstActOf(1, Scene);
-        Simulation picked = AfterAFirstActOf(1, Scene);
-        Simulation pickedAnother = AfterAFirstActOf(1, Scene);
+        Simulation waited = AfterAFirstActWithAnEncore();
+        Simulation picked = AfterAFirstActWithAnEncore();
         picked.Pick(0);
-        pickedAnother.Pick(1);
 
-        // On the last tick of the twelve seconds the choice is still open.
+        // On the last tick of the twelve seconds the card is still on offer.
         Run(waited, ProgramTicks - 1);
         Assert.That(waited.Phase, Is.EqualTo(Phase.Program));
-        Assert.That(waited.ProgramTicksLeft, Is.EqualTo(1));
-        Assert.That(waited.MagicianCards, Is.EqualTo(default(SelfCards)));
+        Assert.That(waited.OfferTicksLeft, Is.EqualTo(1));
+        Assert.That(waited.ChorusCards, Is.Zero);
 
         waited.Step(default);
 
         Assert.That(waited.Phase, Is.EqualTo(Phase.BetweenActs));
         Assert.That(waited.Offer, Is.Empty);
-        Assert.That(waited.MagicianCards, Is.EqualTo(picked.MagicianCards));
-        Assert.That(waited.MagicianCards, Is.Not.EqualTo(pickedAnother.MagicianCards));
+        Assert.That(waited.ChorusCards, Is.EqualTo(1));
 
-        // And nothing else came of the wait: the show goes on as one whose leftmost card was picked at once.
+        // And nothing else came of the wait: the show goes on as one whose card was picked at once.
         Assert.That(waited.ComputeStateHash(), Is.EqualTo(picked.ComputeStateHash()));
     }
 
     [Test]
     public void Step_TheLastActIsOver_NothingIsOffered()
     {
-        Simulation simulation = AfterAFirstActOf(1, Scene with { ActsInPerformance = 1 });
+        Simulation simulation = AfterAFirstActWithAnEncore(Scene with { ActsInPerformance = 1 });
 
-        Assert.That(simulation.ActApplauseBand, Is.EqualTo(ApplauseBand.Second));
         Assert.That(simulation.Phase, Is.EqualTo(Phase.Ovation));
         Assert.That(simulation.Offer, Is.Empty);
     }
 
     [Test]
-    public void Step_TheBoxOfficeFallsOnTheLastTickOfAnActThatPickedUpApplause_NothingIsOffered()
+    public void Step_TheBoxOfficeFallsOnTheLastTickOfAnAct_NothingIsOffered()
     {
         // The box office stands against the second door with one hit point. A critic enters there on the tick
-        // before the act's last, touching it, and strikes on the last: the show closes with the act's applause
-        // picked up and another act to come.
+        // before the act's last, touching it, and strikes on the last: the show closes with an encore taken in
+        // the act and another act to come.
         Tuning tuning = Scene with
         {
             BoxOfficePosition = OtherDoor + new Vector2(0f, 2f),
@@ -324,21 +624,25 @@ public class CardTests
             CriticStrikeDamage = 1f,
         };
         var simulation = new Simulation(tuning, seed: 1, [[AtOnce, new PlannedEntry(ActTicks - 2, Door: 1, Kind: 0)], []]);
-        Run(simulation, ActTicks - 1);
+        PlayTheAct(simulation);
+        simulation.Pick(0);
+        Run(simulation, ActTicks - PieceTick - 2);
         Assert.That(simulation.Phase, Is.EqualTo(Phase.Act));
-        Assert.That(simulation.ActApplauseBand, Is.EqualTo(ApplauseBand.Second));
+        Assert.That(simulation.ActTicksLeft, Is.EqualTo(1));
 
         simulation.Step(default);
 
         Assert.That(simulation.ActTicksLeft, Is.Zero);
         Assert.That(simulation.Phase, Is.EqualTo(Phase.Closed));
         Assert.That(simulation.Offer, Is.Empty);
-        Assert.That(simulation.ProgramTicksLeft, Is.Zero);
+        Assert.That(simulation.OfferTicksLeft, Is.Zero);
 
         // And there is nothing to take.
         simulation.Pick(0);
-        Assert.That(simulation.MagicianCards, Is.EqualTo(default(SelfCards)));
+        Assert.That(simulation.ChorusCards, Is.Zero);
     }
+
+    // What each card changes (plan decision 20).
 
     [Test]
     public void Step_ACardInTheAirWhenTheTuningIsReloaded_HurtsAsItWasThrown()
@@ -361,21 +665,26 @@ public class CardTests
     }
 
     [Test]
-    public void Pick_ASelfCard_ChangesTheMagicianAndTheNextRecording_AndNoOlderUnderstudy()
+    public void Pick_ASelfCardInAnEncore_IsTheMagiciansAndEveryLaterActs_AndNotThatActsUnderstudys()
     {
-        // The first act: the piece, then down to ten units below the door, out of a throw's nine and within the
-        // ten and a half of a throw with one range card. The second, with that card: the piece, two units to the
-        // right and as far down, which is as far from the door within a third of a unit. In the third the magician
-        // walks away to the right, and when a critic that outlasts the act enters, a second and two thirds into
-        // it, both understudies have long stood where their acts ended and the magician is 25 units off.
-        ulong seed = SeedWhosePrograms([Card.Range]);
-        var simulation = new Simulation(Scene, seed, [[AtOnce], [AtOnce], [new PlannedEntry(100, Door: 0, Kind: 0)]]);
-        PlayTheAct(simulation, tick => tick is >= 4 and < 42 ? Down : default);
+        // The first act: the piece, its encore's range card, then down to ten units below the door, out of a
+        // throw's nine and within the ten and a half of a throw with one range card. The second, which began
+        // with that card: two units to the right and as far down, which is as far from the door within a third
+        // of a unit. In the third the magician walks away to the right, and when a critic that outlasts the act
+        // enters, a second and two thirds into it, both understudies have long stood where their acts ended and
+        // the magician is 25 units off.
+        ulong seed = SeedWhoseEncores([Card.Range]);
+        var simulation = new Simulation(Scene, seed, [[AtOnce], [], [new PlannedEntry(100, Door: 0, Kind: 0)]]);
+        PlayTheAct(simulation);
         Take(simulation, Card.Range);
         Assert.That(simulation.MagicianCards, Is.EqualTo(new SelfCards(Range: 1)));
-
+        PlayTheAct(simulation, tick => tick < 42 ? Down : default);
+        simulation.Pick(0);
         simulation.GoOn();
+
+        // The act the card was taken in began without it, and its understudy has what the act began with.
         Assert.That(simulation.Understudies[0].Cards, Is.EqualTo(default(SelfCards)));
+        Assert.That(simulation.MagicianCards, Is.EqualTo(new SelfCards(Range: 1)));
         PlayTheAct(simulation, tick => tick switch
         {
             < 4 => default,
@@ -383,12 +692,8 @@ public class CardTests
             < 50 => Down,
             _ => default,
         });
-
-        // Whatever the magician takes now is not the second act's: that act was played with one range card.
-        simulation.Pick(0);
-        simulation.Tuning = Scene.WithCritic(critic => critic with { HitPoints = 1000f });
+        simulation.Tuning = NoEncore.WithCritic(critic => critic with { HitPoints = 1000f });
         simulation.GoOn();
-        Assert.That(simulation.MagicianCards, Is.Not.EqualTo(new SelfCards(Range: 1)));
         Assert.That(simulation.Understudies.Select(understudy => understudy.Cards), Is.EqualTo(new[]
         {
             default(SelfCards),
@@ -536,44 +841,64 @@ public class CardTests
         Assert.That(Of(events, TickEventKind.Throw), Has.Count.EqualTo(1));
     }
 
-    [Test]
-    public void Pick_TheChorusCard_EveryUnderstudysCardsHurtMore()
+    // Two acts played at the door to their ends, each with an encore that gives a quicker Vanish, which nobody
+    // asks for, and a chorus card after it. In the third the magician walks away, and a critic of six hit points
+    // enters a second in, in range of the two understudies alone, which throw on one tick. A card of an
+    // understudy takes one, and three with two chorus cards that add one each: the first of their two cards
+    // hurts and the second fells. With chorus cards that add nothing, six cards.
+    [TestCase(1f, 1)]
+    [TestCase(0f, 5)]
+    public void Pick_TheChorusCard_EveryUnderstudysCardsHurtMore(float cardChorusDamage, int hitsBeforeTheFall)
     {
-        // The first act's magician stands at the door to the end, and takes the chorus card. The second act has
-        // no critic, and no program: its magician stands there too. In the third the magician walks away, and a
-        // critic of four hit points enters a second in, in range of the two understudies alone, which throw on
-        // one tick. A card of an understudy takes one, and two with the chorus card.
-        var simulation = new Simulation(Scene with { CardChorusChance = 1f }, seed: 1, [[AtOnce], [], [Later]]);
-        PlayTheAct(simulation);
-        Take(simulation, Card.ChorusDamage);
-        Assert.That(simulation.ChorusCards, Is.EqualTo(1));
-        Assert.That(simulation.MagicianCards, Is.EqualTo(default(SelfCards)));
-        simulation.GoOn();
-        PlayTheAct(simulation);
-        Assert.That(simulation.Phase, Is.EqualTo(Phase.BetweenActs));
-        simulation.Tuning = simulation.Tuning.WithCritic(critic => critic with { HitPoints = 4f });
+        ulong seed = SeedWhoseEncores([Card.VanishCooldown], [Card.VanishCooldown]);
+        var simulation = new Simulation(
+            Scene with { CardChorusDamage = cardChorusDamage }, seed, [[AtOnce], [AtOnce], [Later]]);
+        for (int act = 1; act <= 2; act++)
+        {
+            PlayTheAct(simulation);
+            Take(simulation, Card.VanishCooldown);
+            PlayTheAct(simulation);
+            Take(simulation, Card.ChorusDamage);
+            if (act == 1)
+            {
+                simulation.GoOn();
+            }
+        }
+
+        Assert.That(simulation.ChorusCards, Is.EqualTo(2));
+        Assert.That(simulation.MagicianCards, Is.EqualTo(new SelfCards(VanishCooldown: 2)));
+        simulation.Tuning = simulation.Tuning.WithCritic(critic => critic with { HitPoints = 6f }) with
+        {
+            EncoreFirstCost = 1000,
+        };
         simulation.GoOn();
 
         List<(int Tick, TickEvent Event)> events = PlayTheAct(simulation, _ => Right);
 
-        // The understudy of the act before the card was taken and the one of the act after it: the first of
-        // their two cards hurts and the second fells. Had one of them thrown a card of one, a third was needed.
+        // The understudy of the act before the second card was taken and the one of the act after the first.
         Assert.That(Of(events, TickEventKind.Throw).Take(2).Select(thrown => thrown.Event.Position), Is.All.EqualTo(AtTheDoor));
-        Assert.That(Of(events, TickEventKind.Hit), Has.Count.EqualTo(1));
+        Assert.That(Of(events, TickEventKind.Hit), Has.Count.EqualTo(hitsBeforeTheFall));
         Assert.That(Of(events, TickEventKind.Kill), Has.Count.EqualTo(1));
     }
 
     [Test]
     public void Pick_TheChorusCard_TheMagiciansOwnCardsHurtAsBefore()
     {
-        // A critic of two hit points and the magician alone in range of it: two cards of one, as without the
-        // chorus card.
-        Simulation simulation = ShowThatTook(Scene with { CardChorusChance = 1f }, [Later], Card.ChorusDamage);
-        simulation.Tuning = simulation.Tuning.WithCritic(critic => critic with { HitPoints = 2f });
+        // The first act's magician takes a quicker Vanish in its encore and walks away to the right, so its
+        // understudy is out of range of the door a second into the next act. There a critic of two hit points
+        // has the magician alone in range of it: two cards of one, as without the chorus card.
+        ulong seed = SeedWhoseEncores([Card.VanishCooldown]);
+        var simulation = new Simulation(Scene, seed, [[AtOnce], [Later]]);
+        PlayTheAct(simulation);
+        Take(simulation, Card.VanishCooldown);
+        PlayTheAct(simulation, _ => Right);
+        Take(simulation, Card.ChorusDamage);
+        simulation.Tuning = NoEncore.WithCritic(critic => critic with { HitPoints = 2f });
         simulation.GoOn();
 
         List<(int Tick, TickEvent Event)> events = PlayTheAct(simulation);
 
+        Assert.That(Of(events, TickEventKind.Throw).Select(thrown => thrown.Event.Position), Is.All.EqualTo(AtTheDoor));
         Assert.That(Of(events, TickEventKind.Hit), Has.Count.EqualTo(1));
         Assert.That(Of(events, TickEventKind.Kill), Has.Count.EqualTo(1));
     }
@@ -581,18 +906,20 @@ public class CardTests
     [Test]
     public void Pick_TheChorusCard_AddsToAnUnderstudysOwnDamageCard()
     {
-        // The first act's program gives a damage card; the second act, played at the door to its end with that
-        // card, gives the chorus card. In the third the magician walks away and a critic of five hit points
-        // enters: the first act's understudy takes two with a card and the second's three, the five between
-        // them.
-        ulong seed = SeedWhosePrograms([Card.Damage]);
-        var simulation = new Simulation(Scene, seed, [[AtOnce], [AtOnce], [Later]]);
+        // The first act's encore gives a damage card and its program the chorus card. The second act, played
+        // at the door to its end, begins with the damage card, and has no encore and no program. In the third
+        // the magician walks away and a critic of five hit points enters: the first act's understudy takes two
+        // with a card and the second's three, the five between them.
+        ulong seed = SeedWhoseEncores([Card.Damage]);
+        var simulation = new Simulation(Scene, seed, [[AtOnce], [], [Later]]);
         PlayTheAct(simulation);
         Take(simulation, Card.Damage);
-        simulation.Tuning = Scene with { CardChorusChance = 1f };
-        simulation.GoOn();
+        simulation.Tuning = NoEncore;
         PlayTheAct(simulation);
         Take(simulation, Card.ChorusDamage);
+        simulation.GoOn();
+        PlayTheAct(simulation);
+        Assert.That(simulation.Phase, Is.EqualTo(Phase.BetweenActs));
         simulation.Tuning = simulation.Tuning.WithCritic(critic => critic with { HitPoints = 5f });
         simulation.GoOn();
 
@@ -602,11 +929,13 @@ public class CardTests
         Assert.That(Of(events, TickEventKind.Kill), Has.Count.EqualTo(1));
     }
 
+    // The state hash.
+
     [Test]
     public void ComputeStateHash_TwoProgramsWithTwoTimesLeft_AreTwoHashes()
     {
-        Simulation one = AfterAFirstActOf(1, Scene);
-        Simulation other = AfterAFirstActOf(1, Scene);
+        Simulation one = AfterAFirstActWithAnEncore();
+        Simulation other = AfterAFirstActWithAnEncore();
 
         other.Step(default);
 
@@ -614,10 +943,34 @@ public class CardTests
     }
 
     [Test]
+    public void ComputeStateHash_TwoEncoresWithTwoTimesLeft_AreTwoHashes()
+    {
+        Simulation one = InAnEncore(Scene);
+        Simulation other = InAnEncore(Scene);
+
+        other.Step(default);
+
+        Assert.That(other.ComputeStateHash(), Is.Not.EqualTo(one.ComputeStateHash()));
+    }
+
+    [Test]
+    public void ComputeStateHash_AnActThatStandsForAnEncoreAndOneThatDoesNot_AreTwoHashes()
+    {
+        // The same act to the tick of its piece, which pays for an encore in one show and not in the other:
+        // one tuning from there on.
+        Simulation one = InAnEncore(Scene);
+        Simulation other = InAnEncore(NoEncore);
+        other.Tuning = Scene;
+
+        Assert.That((one.Phase, other.Phase), Is.EqualTo((Phase.Encore, Phase.Act)));
+        Assert.That(other.ComputeStateHash(), Is.Not.EqualTo(one.ComputeStateHash()));
+    }
+
+    [Test]
     public void ComputeStateHash_TwoMagiciansWithTwoCards_AreTwoHashes()
     {
-        Simulation one = AfterAFirstActOf(1, Scene);
-        Simulation other = AfterAFirstActOf(1, Scene);
+        Simulation one = InAnEncore(Scene);
+        Simulation other = InAnEncore(Scene);
 
         one.Pick(0);
         other.Pick(1);
@@ -626,20 +979,50 @@ public class CardTests
     }
 
     [Test]
-    public void ComputeStateHash_TheSameCardsTakenInTwoOrders_AreTwoHashes_ForTheActsWerePlayedWithOthers()
+    public void ComputeStateHash_TwoActsWithTwoCountsTowardTheNextEncore_AreTwoHashes()
+    {
+        // Two pieces each while an encore costs more than anybody has. Then it costs one piece in one show and
+        // two in the other: both stand for an encore of the same cards and take the leftmost, and one has a
+        // piece left. One tuning again: the two shows differ only in what they have toward the next encore.
+        Simulation Show(int cost)
+        {
+            var simulation = new Simulation(NoEncore, seed: 1, [[AtOnce, AtOnce with { Tick = 10 }]]);
+            Run(simulation, PieceTick + 11);
+            simulation.Tuning = Scene with { EncoreFirstCost = cost };
+            simulation.Step(default);
+            simulation.Pick(0);
+            simulation.Tuning = NoEncore;
+            return simulation;
+        }
+
+        Simulation one = Show(cost: 1);
+        Simulation other = Show(cost: 2);
+
+        Assert.That((one.EncoreApplause, other.EncoreApplause), Is.EqualTo((1, 0)));
+        Assert.That((one.EncoresTaken, other.EncoresTaken), Is.EqualTo((1, 1)));
+        Assert.That(other.MagicianCards, Is.EqualTo(one.MagicianCards));
+        Assert.That(other.ComputeStateHash(), Is.Not.EqualTo(one.ComputeStateHash()));
+    }
+
+    [Test]
+    public void ComputeStateHash_TheSameCardsTakenInTwoOrders_AreTwoHashes_ForTheActsBeganWithOthers()
     {
         // Two cards that leave nothing behind in an act played at the door: a longer throw, and a Vanish nobody
         // asks for. Both shows are offered both, twice, and take them in two orders.
         Card[] both = [Card.Range, Card.VanishCooldown];
-        ulong seed = SeedWhosePrograms(both, both);
+        ulong seed = SeedWhoseEncores(both, both);
         Simulation Show(Card first, Card second)
         {
             var simulation = new Simulation(Scene, seed, [[AtOnce], [AtOnce]]);
             PlayTheAct(simulation);
             Take(simulation, first);
+            PlayTheAct(simulation);
+            simulation.Pick(0);
             simulation.GoOn();
             PlayTheAct(simulation);
             Take(simulation, second);
+            PlayTheAct(simulation);
+            simulation.Pick(0);
             return simulation;
         }
 
@@ -675,38 +1058,6 @@ public class CardTests
         Assert.That(Show(cardDamage: 1f).ComputeStateHash(), Is.Not.EqualTo(Show(cardDamage: 2f).ComputeStateHash()));
     }
 
-    [Test]
-    public void ComputeStateHash_TwoProgramsThatOfferUnlike_AreTwoHashes()
-    {
-        // The same act, and a program of three cards in both: one with a chorus card and one without. The two
-        // differ in what is offered and in what the program's generator has left, which go together: no play
-        // has one without the other.
-        Simulation one = AfterAFirstActOf(1, Scene);
-        Simulation other = AfterAFirstActOf(1, Scene with { CardChorusChance = 1f });
-
-        Assert.That(other.Offer, Is.Not.EqualTo(one.Offer));
-        Assert.That(other.ComputeStateHash(), Is.Not.EqualTo(one.ComputeStateHash()));
-    }
-
-    [Test]
-    public void ComputeStateHash_TwoProgramsThatDrewUnlike_AreTwoHashes_WhenTheSameCardWasTaken()
-    {
-        // One seed and one act, a quarter of whose critics' pieces were picked up, under two first thresholds:
-        // one show is offered two cards and the other one. The leftmost is the first drawn in both, and both take
-        // it. Nothing tells the two apart now but what the program's generator has left: the next program of one
-        // will not offer what the other's does.
-        Simulation one = AfterAFirstActOf(4, Scene with { ApplauseFirstThreshold = 0.15f });
-        Simulation other = AfterAFirstActOf(4, Scene with { ApplauseFirstThreshold = 0.3f });
-        Assert.That((one.Offer.Count, other.Offer.Count), Is.EqualTo((2, 1)));
-        Assert.That(other.Offer[0], Is.EqualTo(one.Offer[0]));
-
-        one.Pick(0);
-        other.Pick(0);
-
-        Assert.That(other.MagicianCards, Is.EqualTo(one.MagicianCards));
-        Assert.That(other.ComputeStateHash(), Is.Not.EqualTo(one.ComputeStateHash()));
-    }
-
     /// <summary>Two places are one when they are within a hundredth of a unit: a walk is a sum of floats.</summary>
     private static bool Near(Vector2 one, Vector2 other) => Vector2.Distance(one, other) < 0.01f;
 
@@ -722,9 +1073,9 @@ public class CardTests
     }
 
     /// <summary>
-    /// Plays what is left of the act by <paramref name="script"/>, which is asked for each tick of the act by its
-    /// number, the first being 0; with no script the magician stands. All that the ticks reported, in order, each
-    /// with the number of its tick.
+    /// Plays the act by <paramref name="script"/> until it stands for an encore or is over: the script is asked for
+    /// each tick of the act by its number, the first being 0, and with no script the magician stands. All that
+    /// the ticks reported, in order, each with the number of its tick.
     /// </summary>
     private static List<(int Tick, TickEvent Event)> PlayTheAct(
         Simulation simulation, Func<int, MagicianInput>? script = null)
@@ -740,7 +1091,7 @@ public class CardTests
         return events;
     }
 
-    /// <summary>Takes a card that the program must be offering.</summary>
+    /// <summary>Takes a card that must be on offer.</summary>
     private static void Take(Simulation simulation, Card card)
     {
         Assert.That(simulation.Offer, Does.Contain(card));
@@ -748,42 +1099,52 @@ public class CardTests
     }
 
     /// <summary>
-    /// A show whose first act is over: <paramref name="critics"/> entered in it, the first by the first door and
-    /// the rest by the second, ten ticks apart, and the magician stood at the first door, felled who it could and
-    /// picked up the one piece in its reach.
+    /// A show whose first act is over: one critic entered in it by the first door on its first tick, and the
+    /// magician stood there, felled it, picked its piece up and took the leftmost card of the encore it paid for.
     /// </summary>
-    private static Simulation AfterAFirstActOf(int critics, Tuning tuning, ulong seed = 1)
+    private Simulation AfterAFirstActWithAnEncore(Tuning? tuning = null)
     {
-        IEnumerable<PlannedEntry> rest =
-            Enumerable.Range(1, critics - 1).Select(i => new PlannedEntry(10 * i, Door: 1, Kind: 0));
-        var simulation = new Simulation(tuning, seed, [[AtOnce, .. rest], [AtOnce]]);
-        Run(simulation, ActTicks);
-        Assert.That(simulation.ActEntriesMade, Is.EqualTo(critics));
-        Assert.That(simulation.ActApplause, Is.LessThanOrEqualTo(1));
+        var simulation = new Simulation(tuning ?? Scene, seed: 1, [[AtOnce], [AtOnce]]);
+        PlayTheAct(simulation);
+        simulation.Pick(0);
+        PlayTheAct(simulation);
+        Assert.That(simulation.EncoresTaken, Is.EqualTo(1));
         return simulation;
     }
 
     /// <summary>
-    /// The first seed whose programs, one after each act of <see cref="Scene"/> played at the door, offer these
-    /// cards: the first program all of <paramref name="programs"/>' first, the second all of its second. What a
-    /// program offers follows from the seed, the bands of the acts so far and the tuning's chance of a chorus
-    /// card, and from nothing else in the play: a show of that seed whose acts earn the second band is offered
-    /// the same, wherever its magician walks and whichever card it takes.
+    /// A show on the tick its first act's one piece is picked up: where an encore that costs one piece opens.
     /// </summary>
-    private ulong SeedWhosePrograms(params Card[][] programs)
+    private static Simulation InAnEncore(Tuning tuning, ulong seed = 1)
+    {
+        var simulation = new Simulation(tuning, seed, [[AtOnce], [AtOnce]]);
+        Run(simulation, PieceTick + 1);
+        Assert.That(simulation.EncoreApplause, Is.EqualTo(1));
+        return simulation;
+    }
+
+    /// <summary>
+    /// The first seed whose encores, one in each act of <see cref="Scene"/> played at the door, offer these
+    /// cards: the first encore all of <paramref name="encores"/>' first, the second all of its second. What an
+    /// encore offers follows from the seed and from how many encores were opened before it, and from nothing
+    /// else in the play: a show of that seed is offered the same, wherever its magician walks and whichever
+    /// card it takes.
+    /// </summary>
+    private ulong SeedWhoseEncores(params Card[][] encores)
     {
         for (ulong seed = 1; seed <= 1000; seed++)
         {
-            // An act more than the programs: nothing is offered after the last act.
             var simulation = new Simulation(
-                Scene with { ActsInPerformance = programs.Length + 1 },
+                Scene with { ActsInPerformance = encores.Length + 1 },
                 seed,
-                [.. programs.Select(_ => new[] { AtOnce })]);
+                [.. encores.Select(_ => new[] { AtOnce })]);
             bool offered = true;
-            foreach (Card[] cards in programs)
+            foreach (Card[] cards in encores)
             {
-                Run(simulation, ActTicks);
+                PlayTheAct(simulation);
                 offered &= cards.All(simulation.Offer.Contains);
+                simulation.Pick(0);
+                PlayTheAct(simulation);
                 simulation.Pick(0);
                 simulation.GoOn();
             }
@@ -799,15 +1160,15 @@ public class CardTests
     }
 
     /// <summary>
-    /// A show that has taken <paramref name="cards"/>, one after each of as many acts, and stands between two
-    /// acts: the next has <paramref name="entries"/>. In each act played the magician picked up the piece of its
-    /// one critic and walked away to the right from the fifth tick on, so a second into every later act its
-    /// understudy is fourteen units from the first door and further from the second: out of range of both.
+    /// A show that has taken <paramref name="cards"/>, one in an encore of each of as many acts, and their
+    /// programs' chorus cards, and stands between two acts: the next has <paramref name="entries"/>, and no
+    /// encore that anybody can pay for. In each act played the magician picked up the piece of its one critic
+    /// and walked away to the right from the fifth tick on, so a second into every later act its understudy is
+    /// fourteen units from the first door and further from the second: out of range of both.
     /// </summary>
     private Simulation ShowThatTook(Tuning tuning, PlannedEntry[] entries, params Card[] cards)
     {
-        // A chorus card is the leftmost of every program when the tuning gives it every chance.
-        ulong seed = SeedWhosePrograms([.. cards.Where(card => card != Card.ChorusDamage).Select(card => new[] { card })]);
+        ulong seed = SeedWhoseEncores([.. cards.Select(card => new[] { card })]);
         var simulation = new Simulation(tuning, seed, [.. cards.Select(_ => new[] { AtOnce }), entries]);
         for (int i = 0; i < cards.Length; i++)
         {
@@ -816,10 +1177,13 @@ public class CardTests
                 simulation.GoOn();
             }
 
-            PlayTheAct(simulation, tick => tick < 4 ? default : Right);
+            PlayTheAct(simulation);
             Take(simulation, cards[i]);
+            PlayTheAct(simulation, _ => Right);
+            simulation.Pick(0);
         }
 
+        simulation.Tuning = simulation.Tuning with { EncoreFirstCost = 1000 };
         return simulation;
     }
 }
