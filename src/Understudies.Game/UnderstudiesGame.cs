@@ -277,12 +277,19 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
     private readonly FontSystem[] _faces = new FontSystem[FaceFiles.Length];
 
     /// <summary>With a <paramref name="capturePath"/> the game does not play: it saves one frame there and exits.</summary>
+    /// <param name="tuning">The plain tuning, which a night is composed from.</param>
+    /// <param name="nights">The nights, at least one, every one of which composes with the tuning.</param>
+    /// <param name="night">The one night to play whatever the progress says, or null.</param>
+    /// <param name="progressPath">The file of the player's progress, or null for a game that keeps none.</param>
     /// <param name="captureTheMenu">The frame is the main menu's, and no tick is played for it.</param>
     /// <param name="spritesFolder">Where the figures' images are.</param>
     /// <param name="fontsFolder">Where the two faces' files are.</param>
     /// <param name="cardsFolder">Where the cards' pictures are.</param>
     public UnderstudiesGame(
         Tuning tuning,
+        IReadOnlyList<Night> nights,
+        int? night,
+        string? progressPath,
         string? capturePath,
         int captureTicks,
         bool captureTheMenu,
@@ -293,7 +300,17 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
         _spritesFolder = spritesFolder;
         _fontsFolder = fontsFolder;
         _cardsFolder = cardsFolder;
-        _simulation = capturePath is null ? NewShow(tuning) : new Simulation(tuning, CaptureSeed);
+        _plain = tuning;
+        _nights = nights;
+        _askedNight = night;
+        _progressPath = progressPath;
+        _progress = LoadTheProgress();
+
+        // A capture of a show that asks for no night plays the plain tuning as it is, as before the nights; the
+        // game and the menu's frame have a night, the newest that is open.
+        _night = night ?? (capturePath is not null && !captureTheMenu ? null : Unlocked[^1]);
+        Tuning played = _night is { } number ? Night.Compose(tuning, nights, number) : tuning;
+        _simulation = capturePath is null ? NewShow(played) : new Simulation(played, CaptureSeed);
         _boxOfficeAtTheActsStart = _simulation.BoxOfficeHitPoints;
         _juice = new Juice(capturePath is null ? Random.Shared : new Random((int)CaptureSeed));
         _sound = new Sound(silent: capturePath is not null);
@@ -387,11 +404,22 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
         // A key held down counts once.
         bool Pressed(Keys key) => keys.IsKeyDown(key) && !_keysBefore.IsKeyDown(key);
 
-        // F5 reads tuning.json again and the next tick runs on the new numbers. A file that does not parse leaves
-        // the numbers as they were.
-        if (Pressed(Keys.F5) && TuningFile.Read() is { } tuning)
+        // F5 reads tuning.json and nights.json again and the next tick runs on the new numbers, composed for the
+        // night that is played or chosen. A file that does not parse, or nights without that night, leave the
+        // numbers as they were. In a show the acts' entries stay as they were planned (a new scale of the budget
+        // or new kinds count from the next show) and everything else counts at once, the number of acts too.
+        if (Pressed(Keys.F5) && TuningFile.Read() is var (plain, nights))
         {
-            _simulation.Tuning = tuning;
+            if (nights.Any(night => night.Number == _night))
+            {
+                _plain = plain;
+                _nights = nights;
+                ChooseTheNight(_night!.Value);
+            }
+            else
+            {
+                Console.Error.WriteLine($"Night {_night} is not in nights.json any more: the numbers stay as they were");
+            }
         }
 
         // M mutes the sound, and M again brings it back.
@@ -414,11 +442,13 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
         else if (Pressed(Keys.Escape) || PadPressed(Buttons.Back))
         {
             // Esc, or the gamepad's Back, is the way back to the menu, from an act as from a show that is over: the show is given up.
+            GiveUp();
             ShowTheMenu();
         }
         else if (Pressed(Keys.R))
         {
-            // R starts the show again, on the numbers of now.
+            // R starts the same night again, on the numbers of now.
+            GiveUp();
             StartAgain();
         }
         else if (IsOffered)
@@ -525,6 +555,7 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
         _taken = 0;
         _takenLeft = 0f;
         _guardLeft = 0f;
+        _opened = null;
         _boxOfficeAtTheActsStart = _simulation.BoxOfficeHitPoints;
         _actKills.Clear();
     }
@@ -551,7 +582,14 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
     private void Tick(MagicianInput input)
     {
         bool wasOffered = IsOffered;
+        Phase before = _simulation.Phase;
         _simulation.Step(input);
+        if (_simulation.Phase != before && _simulation.Phase is Phase.Ovation or Phase.Closed)
+        {
+            // The show has ended, in its ovation or by the box office's fall: the night is played.
+            Remember();
+        }
+
         _juice.Feed(_simulation);
         _sound.Feed(_simulation);
         foreach (TickEvent happened in _simulation.Events)
@@ -1142,8 +1180,8 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
             Phase.BetweenActs when _simulation.ActEncores == 0 =>
                 $"Act {_simulation.Act} is over. No encore, no card for the chorus.",
             Phase.BetweenActs => $"Act {_simulation.Act} is over. The chorus has its card.",
-            Phase.Ovation => "A standing ovation! R starts a new performance.",
-            Phase.Closed => "The box office fell. R starts a new performance.",
+            Phase.Ovation => $"A standing ovation! {TheWayOn}",
+            Phase.Closed => $"The box office fell. {TheWayOn}",
             Phase.Act when _simulation.MagicianHasFallen =>
                 "The magician has fallen. The understudies carry on to the end of the act.",
             _ => null,
