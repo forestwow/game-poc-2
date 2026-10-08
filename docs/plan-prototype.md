@@ -208,9 +208,19 @@ The radius and the reach are constants of the players. A test run by name (`[Exp
 | 3. The rule | T20 | Is it worth leaving the box office? And the verdict: does the idea hold? |
 | 4. The package | §7 | G1 of the vision, with five testers |
 
+### The owner's verdict (stop 3, 2026-10-08)
+
+**The idea holds.** The owner played the build with the sprites and the set (after T07d) and said: it is taking shape; it is good to play when something is happening and one has to steer; the second attempt went easier than the first; the game already asks something of the player, and standing alone does not win it. Earlier the same day, on the build of T20, the owner had found the third act probably not to be won and put the balance off ("balance later").
+
+What follows from it:
+
+- The proof of concept has answered its question. Stops 1 and 2 were judged in passing (the keys, the Vanish, the auto-throw and the sounds work; the idea "starts to get interesting"), not in writing.
+- **The package for outside testers (stop 4) waits.** The owner wants to add a good deal to the game before anything is given out. What is added is not listed yet: each thing becomes a ticket when the owner names it.
+- The owner counts it a gain that the game can go to nearly any platform. As built it is MonoGame DesktopGL, which is Windows, macOS and Linux; a phone or a console is another MonoGame project around the same Core, and not a part of this plan.
+
 ## 7. Not yet specified
 
-In scope, but not sharp enough for a ticket yet. The first four wait for the verdict of stop 3:
+In scope, but not sharp enough for a ticket yet. The first four waited for the verdict of stop 3, which is given (§6), and now wait for the owner's word that the game is ready to be given out:
 
 - The log of a performance (a line per act: time near the box office, applause, cards, whether a second performance was started).
 - The start screen and the way back to it.
