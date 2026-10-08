@@ -15,6 +15,7 @@ A figure is an ordinary theatre person or thing with one part that is something 
 - Two tries and pick one. The picture is 768 pixels with twelve to a sprite pixel.
 - A building comes back isometric with `High Angle`: ask for "a flat front elevation, no side walls visible" with `--perspective "Any perspective"`.
 - `Top-Down` gives a view straight down onto the hat: not used.
+- A wide prop (the rival's understudy, a cut-out on a board) comes back smaller than a person unless it is asked to "fill the whole frame from the top edge to the bottom edge": `art/ludo/rival/manifest.json` has both tries.
 
 ## The other views
 

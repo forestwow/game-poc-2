@@ -221,6 +221,26 @@ public class CriticTests
     }
 
     [Test]
+    public void Step_ARivalAndACriticOnOnePoint_ArePushedApartHalfTheOverlapEach_HoweverWideEitherIs()
+    {
+        // The push-apart knows no weight. Both stand still and enter on one tick at a door of no width, on one
+        // point: the next tick parts them until their circles touch, each by half of that, the wide one too.
+        EnemyKind critic = Tuning.Critic() with { Speed = 0f };
+        EnemyKind rival = Tuning.Rival() with { Speed = 0f };
+        Tuning tuning = Tuning with { StageDoorWidth = 0f, EnemyKinds = [critic, rival] };
+        var simulation = new Simulation(
+            tuning, seed: 1, [[new PlannedEntry(Tick: 0, Door: 0, Kind: 1), new PlannedEntry(Tick: 0, Door: 0, Kind: 0)]]);
+        Vector2 door = tuning.StageDoors[0].Position;
+        float half = (critic.Radius + rival.Radius) / 2f;
+        Assert.That(rival.Radius, Is.GreaterThan(critic.Radius));
+
+        Run(simulation, ticks: 2);
+
+        Assert.That(Vector2.Distance(simulation.Critics[0].Position, door), Is.EqualTo(half).Within(Tolerance), "the rival");
+        Assert.That(Vector2.Distance(simulation.Critics[1].Position, door), Is.EqualTo(half).Within(Tolerance), "the critic");
+    }
+
+    [Test]
     public void Step_TheCommittedRivalAtTheBoxOffice_StrikesItHarderThanACritic_ByItsOwnNumber()
     {
         Assert.That(Tuning.Rival().StrikeDamage, Is.GreaterThan(Tuning.Critic().StrikeDamage));
