@@ -38,7 +38,7 @@ public class CardTests
     private static readonly PlannedEntry Later = new(Tick: Simulation.TicksPerSecond, Door: 0, Kind: 0);
 
     /// <summary>
-    /// A performance of four acts of two seconds whose critics stand still and fall to one card. The doors have
+    /// A performance of six acts of two seconds whose critics stand still and fall to one card. The doors have
     /// no width and a critic no speed, so each enters exactly at its door and stays there, and no critic turns on
     /// the magician. The magician stands on <see cref="AtTheDoor"/>, walks a quarter of a unit a tick, throws every
     /// six ticks at what is within nine units, and its card flies a unit a tick: a critic that enters by the first
@@ -53,7 +53,7 @@ public class CardTests
     {
         CurtainTime = 0f,
         ActLength = 2f,
-        ActsInPerformance = 4,
+        ActsInPerformance = 6,
         StageFloorTop = 0f,
         StageDoors = [new StageDoor(Door, 1), new StageDoor(OtherDoor, 1)],
         StageDoorWidth = 0f,
@@ -311,6 +311,56 @@ public class CardTests
     }
 
     [Test]
+    public void Step_TheBoxOfficeFallsOnTheLastTickOfAnActThatPickedUpApplause_NothingIsOffered()
+    {
+        // The box office stands against the second door with one hit point. A critic enters there on the tick
+        // before the act's last, touching it, and strikes on the last: the show closes with the act's applause
+        // picked up and another act to come.
+        Tuning tuning = Scene with
+        {
+            BoxOfficePosition = OtherDoor + new Vector2(0f, 2f),
+            BoxOfficeSize = 4f,
+            BoxOfficeHitPoints = 1f,
+            CriticStrikeDamage = 1f,
+        };
+        var simulation = new Simulation(tuning, seed: 1, [[AtOnce, new PlannedEntry(ActTicks - 2, Door: 1, Kind: 0)], []]);
+        Run(simulation, ActTicks - 1);
+        Assert.That(simulation.Phase, Is.EqualTo(Phase.Act));
+        Assert.That(simulation.ActApplauseBand, Is.EqualTo(ApplauseBand.Second));
+
+        simulation.Step(default);
+
+        Assert.That(simulation.ActTicksLeft, Is.Zero);
+        Assert.That(simulation.Phase, Is.EqualTo(Phase.Closed));
+        Assert.That(simulation.Offer, Is.Empty);
+        Assert.That(simulation.ProgramTicksLeft, Is.Zero);
+
+        // And there is nothing to take.
+        simulation.Pick(0);
+        Assert.That(simulation.MagicianCards, Is.EqualTo(default(SelfCards)));
+    }
+
+    [Test]
+    public void Step_ACardInTheAirWhenTheTuningIsReloaded_HurtsAsItWasThrown()
+    {
+        // A critic of two hit points, and a card thrown with a damage card that adds one. While the card is in
+        // the air the tuning is given a damage card that adds nothing: the card still takes two, and the critic
+        // falls to it.
+        Simulation simulation = ShowThatTook(Scene, [Later], Card.Damage);
+        simulation.Tuning = simulation.Tuning.WithCritic(critic => critic with { HitPoints = 2f });
+        simulation.GoOn();
+        Run(simulation, ticks: 62);
+        Assert.That(simulation.ThrownCards, Has.Count.EqualTo(1));
+        Assert.That(simulation.Critics, Has.Count.EqualTo(1));
+
+        simulation.Tuning = simulation.Tuning with { CardDamage = 0f };
+        simulation.Step(default);
+
+        Assert.That(simulation.Events.Select(happened => happened.Kind), Does.Contain(TickEventKind.Kill));
+        Assert.That(simulation.Critics, Is.Empty);
+    }
+
+    [Test]
     public void Pick_ASelfCard_ChangesTheMagicianAndTheNextRecording_AndNoOlderUnderstudy()
     {
         // The first act: the piece, then down to ten units below the door, out of a throw's nine and within the
@@ -387,10 +437,14 @@ public class CardTests
         Assert.That(Of(events, TickEventKind.Hit), Is.Empty);
     }
 
-    // Six ticks from throw to throw; a fifth faster is five, and two fifths faster four and a bit.
+    // Six ticks from throw to throw; a fifth more often is five, and two fifths four and a bit. Five cards are
+    // twice as often, three ticks: a cooldown that lost a fifth of itself with every card would be none by then,
+    // a throw on every tick, and a rate that grew by a fifth of itself with every card would make it two and a
+    // half times as often, two ticks.
     [TestCase(0, 6)]
     [TestCase(1, 5)]
     [TestCase(2, 4)]
+    [TestCase(5, 3)]
     public void Pick_TheAttackSpeedCard_TheMagicianThrowsSooner(int cards, int ticksBetweenThrows)
     {
         Simulation simulation = ShowThatTook(
@@ -425,13 +479,20 @@ public class CardTests
         Assert.That(Of(events, TickEventKind.Hit).Count > 0, Is.EqualTo(reaches));
     }
 
-    // Half a second from Vanish to Vanish, thirty ticks; a quarter faster is twenty-four.
-    [TestCase(0.25f, 24)]
-    [TestCase(0f, 30)]
-    public void Pick_TheVanishCooldownCard_TheVanishComesBackSooner(float cardVanishCooldown, int ticksBetweenVanishes)
+    // Half a second from Vanish to Vanish, thirty ticks; a quarter sooner is twenty-four. Five cards are two and
+    // a quarter times as soon, thirteen ticks and a bit: a cooldown that lost a quarter of itself with every card
+    // would be none by the fourth, a Vanish on every tick, and a rate that grew by a quarter of itself with every
+    // card would make it ten ticks.
+    [TestCase(1, 0.25f, 24)]
+    [TestCase(1, 0f, 30)]
+    [TestCase(5, 0.25f, 13)]
+    public void Pick_TheVanishCooldownCard_TheVanishComesBackSooner(
+        int cards, float cardVanishCooldown, int ticksBetweenVanishes)
     {
         Simulation simulation = ShowThatTook(
-            Scene with { CardVanishCooldown = cardVanishCooldown }, [], Card.VanishCooldown);
+            Scene with { CardVanishCooldown = cardVanishCooldown },
+            [],
+            [.. Enumerable.Repeat(Card.VanishCooldown, cards)]);
         simulation.GoOn();
         var vanish = new MagicianInput(Vector2.Zero, Vanish: true);
 
@@ -627,6 +688,25 @@ public class CardTests
         Assert.That(other.ComputeStateHash(), Is.Not.EqualTo(one.ComputeStateHash()));
     }
 
+    [Test]
+    public void ComputeStateHash_TwoProgramsThatDrewUnlike_AreTwoHashes_WhenTheSameCardWasTaken()
+    {
+        // One seed and one act, a quarter of whose critics' pieces were picked up, under two first thresholds:
+        // one show is offered two cards and the other one. The leftmost is the first drawn in both, and both take
+        // it. Nothing tells the two apart now but what the program's generator has left: the next program of one
+        // will not offer what the other's does.
+        Simulation one = AfterAFirstActOf(4, Scene with { ApplauseFirstThreshold = 0.15f });
+        Simulation other = AfterAFirstActOf(4, Scene with { ApplauseFirstThreshold = 0.3f });
+        Assert.That((one.Offer.Count, other.Offer.Count), Is.EqualTo((2, 1)));
+        Assert.That(other.Offer[0], Is.EqualTo(one.Offer[0]));
+
+        one.Pick(0);
+        other.Pick(0);
+
+        Assert.That(other.MagicianCards, Is.EqualTo(one.MagicianCards));
+        Assert.That(other.ComputeStateHash(), Is.Not.EqualTo(one.ComputeStateHash()));
+    }
+
     /// <summary>Two places are one when they are within a hundredth of a unit: a walk is a sum of floats.</summary>
     private static bool Near(Vector2 one, Vector2 other) => Vector2.Distance(one, other) < 0.01f;
 
@@ -694,7 +774,11 @@ public class CardTests
     {
         for (ulong seed = 1; seed <= 1000; seed++)
         {
-            var simulation = new Simulation(Scene, seed, [.. programs.Select(_ => new[] { AtOnce })]);
+            // An act more than the programs: nothing is offered after the last act.
+            var simulation = new Simulation(
+                Scene with { ActsInPerformance = programs.Length + 1 },
+                seed,
+                [.. programs.Select(_ => new[] { AtOnce })]);
             bool offered = true;
             foreach (Card[] cards in programs)
             {
