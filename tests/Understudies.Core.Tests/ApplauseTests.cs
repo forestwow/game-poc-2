@@ -106,6 +106,30 @@ public class ApplauseTests
     }
 
     [Test]
+    public void Step_ARivalFallsToTheMagiciansOwnCard_OnePieceIsLeftWhereItFell()
+    {
+        // The rival's understudy as the committed file has it, but for hit points that two cards take: it walks
+        // from the door toward the committed box office, sixteen units off, and falls on its way, far outside
+        // the floor on which a fall earns nothing.
+        Tuning committed = CommittedTuning.Parse();
+        Tuning tuning = Scene with
+        {
+            EnemyKinds = [Scene.Critic(), committed.Stagehand(), committed.Rival() with { HitPoints = 2f }],
+        };
+        Simulation simulation = Shows.WithOneOfKind(tuning, kind: 2);
+
+        StepUntil(simulation, TickEventKind.Kill);
+
+        Vector2 fell = simulation.Events[0].Position;
+        Assert.That(simulation.Events, Is.EqualTo(new[]
+        {
+            new TickEvent(TickEventKind.Kill, fell, CriticId: 0),
+            new TickEvent(TickEventKind.ApplauseDropped, fell, CriticId: 0),
+        }));
+        Assert.That(simulation.ApplauseOnTheFloor.Select(piece => piece.Position), Is.EqualTo(new[] { fell }));
+    }
+
+    [Test]
     public void Step_ACriticFallsToAnUnderstudysCard_NothingIsDropped()
     {
         // The first act is stood through on the mark, with nobody on the stage. In the second the magician walks

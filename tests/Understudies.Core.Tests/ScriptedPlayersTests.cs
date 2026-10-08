@@ -37,7 +37,7 @@ public class ScriptedPlayersTests
             // An act that stood for an encore is in what is pinned.
             Assert.That(performance.Acts.Sum(act => act.Encores), Is.GreaterThan(0), "encores");
             Assert.That(performance.Acts[2].StateHash, Is.EqualTo(851245374359038781UL), "the end of act three");
-            Assert.That(performance.Acts[^1].StateHash, Is.EqualTo(5562514752516699903UL), "the end of the performance");
+            Assert.That(performance.Acts[^1].StateHash, Is.EqualTo(1309939110706663255UL), "the end of the performance");
         });
     }
 

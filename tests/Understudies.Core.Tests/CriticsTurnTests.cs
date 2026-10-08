@@ -94,6 +94,30 @@ public class CriticsTurnTests
     }
 
     [Test]
+    public void Step_ARivalWithTheMagicianInItsWay_WalksOnToTheBoxOfficeAndNeverHurtsTheMagician()
+    {
+        // The rival's understudy as the committed file has it, on the scene's way down the stage, and the
+        // magician standing right on that way, six units below the door: the rival walks through it, as slowly
+        // as it walks, takes nothing from it and strikes the box office.
+        EnemyKind rival = CommittedTuning.Parse().Rival();
+        Tuning tuning = Scene with
+        {
+            MagicianMark = Door + new Vector2(0f, 6f),
+            EnemyKinds = [Scene.Critic(), CommittedTuning.Parse().Stagehand(), rival],
+        };
+        Simulation simulation = Shows.WithOneOfKind(tuning, kind: 2);
+
+        while (simulation.BoxOfficeHitPoints == 100f && simulation.Phase == Phase.Act)
+        {
+            simulation.Step(default);
+            Assert.That(simulation.Critics[0].Position.X, Is.EqualTo(Door.X));
+        }
+
+        Assert.That(simulation.MagicianHitPoints, Is.EqualTo(10f));
+        Assert.That(simulation.BoxOfficeHitPoints, Is.EqualTo(100f - rival.StrikeDamage));
+    }
+
+    [Test]
     public void Step_ACriticThatHasTurned_StopsWhereItsCircleTouchesTheMagicians()
     {
         var simulation = Shows.WithOneCritic(Scene);

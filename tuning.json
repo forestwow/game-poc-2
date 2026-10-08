@@ -49,6 +49,17 @@
       "weight": 1,
       "fromAct": 4,
       "turnsOnTheMagician": false
+    },
+    {
+      "name": "rival",
+      "speed": 1.5,
+      "radius": 0.9,
+      "hitPoints": 150,
+      "strikeDamage": 3,
+      "cost": 1,
+      "weight": 1,
+      "fromAct": 7,
+      "turnsOnTheMagician": false
     }
   ],
   "firstActBudget": 40,

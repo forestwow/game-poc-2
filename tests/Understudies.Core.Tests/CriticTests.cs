@@ -221,6 +221,20 @@ public class CriticTests
     }
 
     [Test]
+    public void Step_TheCommittedRivalAtTheBoxOffice_StrikesItHarderThanACritic_ByItsOwnNumber()
+    {
+        Assert.That(Tuning.Rival().StrikeDamage, Is.GreaterThan(Tuning.Critic().StrikeDamage));
+        Simulation simulation = Shows.WithOneOfKind(Tuning, kind: 2);
+
+        RunUntil(simulation, () => simulation.BoxOfficeHitPoints < Tuning.BoxOfficeHitPoints);
+
+        Assert.That(simulation.BoxOfficeHitPoints, Is.EqualTo(Tuning.BoxOfficeHitPoints - Tuning.Rival().StrikeDamage));
+        Assert.That(
+            Vector2.Distance(simulation.Critics[0].Position, Tuning.BoxOfficePosition),
+            Is.EqualTo((Tuning.BoxOfficeSize / 2f) + Tuning.Rival().Radius).Within(Tolerance));
+    }
+
+    [Test]
     public void Step_ACriticStrikesTheBoxOffice_ItIsReportedWhereTheCriticStandsForThatTickOnly()
     {
         var simulation = Shows.WithOneCritic(Tuning);
