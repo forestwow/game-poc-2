@@ -20,9 +20,12 @@ public class UnderstudyTests
     /// tick, which a float adds and takes away without a rounding. Nobody throws, and no critic turns on the
     /// magician; a Vanish takes it six units, is ready again half a second later, and leaves a cloud that is there
     /// for the tick of the Vanish only.
+    /// The curtain has no length, which is no curtain: these tests count their ticks from the first
+    /// tick of an act, and the curtain has tests of its own.
     /// </summary>
     private Tuning Scene { get; } = CommittedTuning.Parse() with
     {
+        CurtainTime = 0f,
         ActLength = 2f,
         ActsInPerformance = 5,
         StageFloorTop = 0f,

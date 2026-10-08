@@ -18,9 +18,12 @@ public class VanishTests
     /// The committed numbers with a magician that throws at nobody and that no critic turns on, and a Vanish of six
     /// units, ready again two seconds later, with a quarter of a second in which nothing hurts and a cloud that is
     /// there for half a second.
+    /// The curtain has no length, which is no curtain: these tests count their ticks from the first
+    /// tick of an act, and the curtain has tests of its own.
     /// </summary>
     private Tuning Scene { get; } = CommittedTuning.Parse() with
     {
+        CurtainTime = 0f,
         MagicianMark = Mark,
         ThrowRange = 0f,
         CriticTurnRadius = 0f,
@@ -471,9 +474,11 @@ public class VanishTests
     {
         // The committed stage with a critic every second and strikes that take nothing, so the show goes on: forty
         // critics, most of them at the side of the box office the magician's mark is on, and none turns on the
-        // magician. The cloud lies on them, and those it does not reach walk on into their backs.
+        // magician. The cloud lies on them, and those it does not reach walk on into their backs. No curtain: the
+        // forty seconds are counted from the first tick of the act.
         Tuning tuning = CommittedTuning.Parse() with
         {
+            CurtainTime = 0f,
             ThrowRange = 0f,
             CriticTurnRadius = 0f,
             CriticEntryInterval = 1f,
