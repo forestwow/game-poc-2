@@ -63,6 +63,18 @@
       "weight": 1,
       "fromAct": 4,
       "turnsOnTheMagician": false
+    },
+    {
+      "name": "headliner",
+      "speed": 1.5,
+      "radius": 0.9,
+      "hitPoints": 300,
+      "hitPointsPerAct": 150,
+      "strikeDamage": 2,
+      "cost": 1,
+      "weight": 1,
+      "fromAct": 8,
+      "turnsOnTheMagician": false
     }
   ],
   "firstActBudget": 40,
@@ -90,5 +102,5 @@
   "cardRicochetReach": 4,
   "cardBurstRadius": 2,
   "cardBurstShare": 0.5,
-  "cardMaxCopies": 0
+  "cardMaxCopies": 3
 }

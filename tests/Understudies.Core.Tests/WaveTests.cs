@@ -93,14 +93,16 @@ public class WaveTests
         }
     }
 
-    [Test]
-    public void Plan_TheCommittedRival_ChangesNoActBeforeItsOwn_AndIsBoughtInEveryActFromIt()
+    // The rival's understudy (plan T29) and the headliner (plan T41), by their places.
+    [TestCase(2, 4)]
+    [TestCase(3, 8)]
+    public void Plan_ACommittedLaterKind_ChangesNoActBeforeItsOwn_AndIsBoughtInEveryActFromIt(int kind, int notBefore)
     {
-        // A kind that an act may not buy yet takes no part in that act's draws: the plan with the rival's
-        // understudy is, up to its act, the plan without it, entry for entry.
-        int from = Tuning.Rival().FromAct;
-        Assert.That(from, Is.GreaterThanOrEqualTo(4), "acts one to three are as they were");
-        Tuning without = Tuning with { EnemyKinds = [Tuning.Critic(), Tuning.Stagehand()] };
+        // A kind that an act may not buy yet takes no part in that act's draws: the plan with it is, up to its
+        // act, the plan without it and without those after it, entry for entry.
+        int from = Tuning.EnemyKinds[kind].FromAct;
+        Assert.That(from, Is.GreaterThanOrEqualTo(notBefore), "the acts before are as they were");
+        Tuning without = Tuning with { EnemyKinds = [.. Tuning.EnemyKinds.Take(kind)] };
         foreach (ulong seed in Seeds)
         {
             IReadOnlyList<IReadOnlyList<PlannedEntry>> plan = Waves.Plan(Tuning, seed);
@@ -114,7 +116,7 @@ public class WaveTests
                 }
                 else
                 {
-                    Assert.That(plan[act - 1].Select(entry => entry.Kind), Has.Some.EqualTo(2), $"seed {seed}, act {act}");
+                    Assert.That(plan[act - 1].Select(entry => entry.Kind), Has.Some.EqualTo(kind), $"seed {seed}, act {act}");
                 }
             }
         }

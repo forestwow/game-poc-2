@@ -36,8 +36,8 @@ public class ScriptedPlayersTests
 
             // An act that stood for an encore is in what is pinned.
             Assert.That(performance.Acts.Sum(act => act.Encores), Is.GreaterThan(0), "encores");
-            Assert.That(performance.Acts[2].StateHash, Is.EqualTo(9787319584506315531UL), "the end of act three");
-            Assert.That(performance.Acts[^1].StateHash, Is.EqualTo(17624584197219898077UL), "the end of the performance");
+            Assert.That(performance.Acts[2].StateHash, Is.EqualTo(162178741610036784UL), "the end of act three");
+            Assert.That(performance.Acts[^1].StateHash, Is.EqualTo(4023339526767687653UL), "the end of the performance");
         });
     }
 
@@ -70,7 +70,7 @@ public class ScriptedPlayersTests
             Assert.That(stunned, Is.GreaterThan(0), "stunned critics");
             Assert.That(performance.Acts.Sum(act => act.Encores), Is.GreaterThan(0), "encores");
             Assert.That(performance.Acts[2].StateHash, Is.EqualTo(14979360235718945559UL), "the end of act three");
-            Assert.That(performance.Acts[^1].StateHash, Is.EqualTo(5480085658794934295UL), "the end of the performance");
+            Assert.That(performance.Acts[^1].StateHash, Is.EqualTo(6100973595553144623UL), "the end of the performance");
         });
     }
 
@@ -435,13 +435,16 @@ public class ScriptedPlayersTests
     /// <summary>
     /// Plan T29, two tripwires on the seeds 1 to 20, which the numbers are searched on. The first fails a step
     /// before the guard's count moves: the doors player's box office at the end is at least 350 of 400 on
-    /// average. On the committed numbers it is 392; one seed that collapses leaves some 370 and two some 350,
-    /// and the guard's own floor of 16 finished lets four collapse, which is 320: a tuning between "fine" and
-    /// "the guard's floor" is caught here. The second is the card order, which must not be a hidden hinge
-    /// (T29's first numbers held by the committed order alone and lost act seven on every seed by any other):
-    /// taking the longer arm first, the doors player still finishes act ten on at least 16 of 20. Since plan T25
-    /// it finishes 20 (and 20 on the seeds 101 to 120), where it finished 18 and 17 before the three cards that
-    /// change what a card does: a break here is a finding about a card or a player, not a floor to lower unread.
+    /// average. It was 392 before plan T41, when one seed that collapsed left some 370 and two some 350, and the
+    /// guard's own floor of 16 finished lets four collapse, which is 320: a tuning between "fine" and "the
+    /// guard's floor" is caught here. Since plan T41 it is 370, and no seed collapses: the headliner of acts
+    /// eight to ten takes some thirty off every performance (284 at the worst), so the floor is twenty away and
+    /// is now what a late threat is tuned against: plan T41 says what a stronger one would ask of it. The
+    /// second is the card order, which must not be a hidden hinge (T29's first numbers held by the committed
+    /// order alone and lost act seven on every seed by any other): taking the longer arm first, the doors
+    /// player still finishes act ten on at least 16 of 20. It finishes 20 (19 on the seeds 101 to 120, 20 on
+    /// 301 to 320), with 256 of the box office: a break here is a finding about a card or a player, not a
+    /// floor to lower unread.
     /// </summary>
     [Test]
     public void TheGuard_OnTheCommittedTuning_TheDoorsPlayerKeepsTheBoxOfficeAndFinishesByAnotherCardOrderToo()
@@ -464,11 +467,13 @@ public class ScriptedPlayersTests
     /// <summary>
     /// Plan T37, the kiter as the rival of going out to the doors: over each set of seeds the doors player
     /// finishes act ten at least as often as the kiter, with at least half as many encores again a performance
-    /// and at least fifty more of the box office left on average (on the committed numbers both finish every
-    /// seed, and the doors player has 40.2 encores against 18.5 and 392 of the box office against 337 on the
-    /// first set, 40.9 against 17.9 and 395 against 330 on the second: the fifty-five of the first set is barely
-    /// over the fifty, and plan T25 says what the order of the cards has to do with it). Whether the kiter has to lose outright is the owner's question, open in the plan:
-    /// nothing here says it loses, and by the committed card order it does not.
+    /// and at least fifty more of the box office left on average. Since plan T41 the doors player finishes
+    /// every seed and the kiter 5 of 20 on the first set and 7 on the second, most of its losses in act eight,
+    /// when the headliner comes; the doors player has 35.2 encores against 17.8 and 370 of the box office
+    /// against 55 on the first set, 34.5 against 20.2 and 370 against 82 on the second. The encores are the
+    /// thin one now (34.5 where 30.3 are asked). With the limit on copies and no headliner the comparison failed:
+    /// 395 against 349. Whether the kiter has to lose outright is the owner's question, open in the plan:
+    /// nothing here says it loses, though on the committed numbers it now does on most seeds.
     /// </summary>
     [TestCase(1)]
     [TestCase(101)]
