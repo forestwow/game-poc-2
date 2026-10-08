@@ -41,8 +41,8 @@ public class ScriptedPlayersTests
 
             // And a piece of applause that a scalper ate (plan T57), by the end of act three already.
             Assert.That(performance.Acts[2].Eaten, Is.GreaterThan(0), "pieces eaten in act three");
-            Assert.That(performance.Acts[2].StateHash, Is.EqualTo(12702712684919628558UL), "the end of act three");
-            Assert.That(performance.Acts[^1].StateHash, Is.EqualTo(9137874734297419918UL), "the end of the performance");
+            Assert.That(performance.Acts[2].StateHash, Is.EqualTo(7271430650498841170UL), "the end of act three");
+            Assert.That(performance.Acts[^1].StateHash, Is.EqualTo(7888441933022282597UL), "the end of the performance");
         });
     }
 
@@ -81,8 +81,8 @@ public class ScriptedPlayersTests
             Assert.That(stunned, Is.GreaterThan(0), "stunned critics");
             Assert.That(performance.Acts.Sum(act => act.Encores), Is.GreaterThan(0), "encores");
             Assert.That(performance.Acts, Has.Count.GreaterThan(3), "acts: the two pins are two");
-            Assert.That(performance.Acts[2].StateHash, Is.EqualTo(2328840268431754505UL), "the end of act three");
-            Assert.That(performance.Acts[^1].StateHash, Is.EqualTo(4568895241987383333UL), "the end of the performance");
+            Assert.That(performance.Acts[2].StateHash, Is.EqualTo(18023014187851883714UL), "the end of act three");
+            Assert.That(performance.Acts[^1].StateHash, Is.EqualTo(17619972686499663456UL), "the end of the performance");
         });
     }
 
@@ -572,6 +572,59 @@ public class ScriptedPlayersTests
     }
 
     /// <summary>
+    /// Plan T58, night 3 (seven acts, the scalper from act three, the stagehand from act four, no crowds, three
+    /// quarters of the budget; the document's scale, not searched). Whoever moves wins it, as nights 1 and 2:
+    /// the doors player and the kiter each finish act seven on at least 18 seeds of 20 (both finish 20 on both
+    /// sets), and the orbit has lost by the end of act five on every circle on at least 16 (it has in act four
+    /// on every seed of both). And the night's own: **the scalper costs whoever earns applause encores**. Beside
+    /// the night as it is, the same night with the scalper never bought (which is the night that does not name
+    /// it) is played by the two scripts that fetch, the doors player and the roamer, which goes out to wherever
+    /// a piece lies: the doors player takes at least 1.5 fewer encores a performance with the scalpers (19.8 for
+    /// 22.8 and 19.7 for 22.9), the roamer at least 2 fewer (19.8 for 24.4 and 20.2 for 24.4), and the roamer
+    /// loses at least 50 pieces a performance to them (134 and 145). The first two fail when a scalper's own
+    /// fall leaves a piece (22.8 for 22.8, and 23.4 for 24.4), which is what the kind's leavesApplause is for.
+    /// What they do not show: two thirds of the cost is that a scalper pays nothing where a critic in its place
+    /// would have, and one third what it eats (plan T58 has the control); and no script hesitates, so "fetch
+    /// it now" is asked of nobody here.
+    /// </summary>
+    [TestCase(1)]
+    [TestCase(101)]
+    public void NightThree_OnTheCommittedNights_WhoeverMovesWinsTheOrbitLosesByActFiveAndTheScalperCostsEncores(int firstSeed)
+    {
+        Tuning night = CommittedNights.Tuning(3);
+        Tuning noScalpers = night with
+        {
+            EnemyKinds = [.. night.EnemyKinds.Select(kind => kind.EatsApplause ? kind with { Weight = 0 } : kind)],
+        };
+        (string Name, Func<Simulation, MagicianInput> Player)[] fetchers = [GuardPlayers[Doors], ("roamer", ScriptedPlayers.Roamer)];
+        Performance[] performances = PlayTheGuard(night, firstSeed);
+        Performance[] with = PlayTheGuard(night, firstSeed, fetchers);
+        Performance[] without = PlayTheGuard(noScalpers, firstSeed, fetchers);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(Of(performances, Doors).Count(Finished), Is.GreaterThanOrEqualTo(18), "seeds on which the doors player finished act seven");
+            Assert.That(Of(performances, Kiter).Count(Finished), Is.GreaterThanOrEqualTo(18), "seeds on which the kiter finished act seven");
+            Assert.That(
+                SeedsTheOrbitLostBy(performances, act: 5),
+                Is.GreaterThanOrEqualTo(16),
+                "seeds on which the orbit player lost the box office by the end of act five on every circle");
+            Assert.That(
+                Of(with, 0).Average(Encores),
+                Is.LessThanOrEqualTo(Of(without, 0).Average(Encores) - 1.5),
+                "the doors player's encores with the scalpers, against the night without them");
+            Assert.That(
+                Of(with, 1).Average(Encores),
+                Is.LessThanOrEqualTo(Of(without, 1).Average(Encores) - 2.0),
+                "the roamer's encores with the scalpers, against the night without them");
+            Assert.That(
+                Of(with, 1).Average(played => played.Acts.Sum(act => act.Eaten)),
+                Is.GreaterThanOrEqualTo(50.0),
+                "the pieces the roamer dropped that a scalper ate, a performance");
+        });
+    }
+
+    /// <summary>
     /// The instrument, read out: the orbit player on each of its circles, the doors player and the kiter over
     /// the seeds 1 to 20 on the committed numbers, act by act, and the guard's counts at the foot.
     /// </summary>
@@ -645,7 +698,7 @@ public class ScriptedPlayersTests
     /// refused as a key of the tuning, unless the tuning has one of that name, and then the night's committed
     /// value is played over the variant's in silence: add it here with the key.
     /// </summary>
-    private static readonly string[] NightKeys = ["actsInPerformance", "budgetScale", "kindsAllowed", "waveBurstShare", "name", "rules"];
+    private static readonly string[] NightKeys = ["actsInPerformance", "budgetScale", "kindsAllowed", "waveBurstShare", "name", "rules", "note"];
 
     /// <summary>
     /// What the one order the players take cards by decides (plan T37): the doors player and the kiter on the

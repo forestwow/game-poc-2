@@ -278,10 +278,36 @@ public class ScalperTests
     }
 
     [Test]
-    public void Step_AScalperFallsToTheMagiciansOwnCard_OnePieceIsLeftWhereItFell()
+    public void Parse_TheCommittedKinds_TheScalperAloneLeavesNoApplause()
     {
-        // The scalper as the committed file has it, in range from the moment it enters.
+        Assert.That(
+            CommittedTuning.Parse().EnemyKinds.Select(kind => kind.LeavesApplause),
+            Is.EqualTo(new[] { true, true, true, true, false }));
+    }
+
+    [Test]
+    public void Step_AScalperFallsToTheMagiciansOwnCard_NoPieceIsLeftAndNoneIsTold()
+    {
+        // The scalper as the committed file has it, in range from the moment it enters, outside the quiet floor
+        // (the scene has none): plan T58, a thief's own fall earns nothing.
         Tuning tuning = Scene with { EnemyKinds = [Scene.Critic(), CommittedTuning.Parse().Scalper()] };
+        Simulation simulation = Show(tuning, (0, DoorBetween, Scalper));
+
+        TicksUntil(simulation, TickEventKind.Kill);
+
+        Vector2 fell = simulation.Events.Single(happened => happened.Kind == TickEventKind.Kill).Position;
+        Assert.That(
+            simulation.Events.Where(happened => happened.Kind != TickEventKind.Throw),
+            Is.EqualTo(new[] { new TickEvent(TickEventKind.Kill, fell, CriticId: 0) }));
+        Assert.That(simulation.ApplauseOnTheFloor, Is.Empty);
+    }
+
+    [Test]
+    public void Step_AKindThatLeavesApplauseFallsToTheMagiciansOwnCard_OnePieceIsLeftWhereItFell()
+    {
+        // The same fall of the same kind with the flag the other way: the flag alone decides, and a kind that
+        // eats may leave a piece.
+        Tuning tuning = Scene with { EnemyKinds = [Scene.Critic(), CommittedTuning.Parse().Scalper() with { LeavesApplause = true }] };
         Simulation simulation = Show(tuning, (0, DoorBetween, Scalper));
 
         TicksUntil(simulation, TickEventKind.Kill);

@@ -34,6 +34,15 @@ namespace Understudies.Core;
 /// nothing of a rule, and whoever a rule is for asks the night (<see cref="Has"/>). The one rule there is, the
 /// spotlight night, is the view's alone.
 /// </param>
+/// <param name="Note">
+/// One sentence the night's poster says beside what is new (plan T58; the key is <c>note</c>): night 3's names
+/// the quiet floor. The night's own words, as its name is: it overrides nothing, no rule reads it and
+/// <see cref="Compose"/> does not look at it. Left out, the poster has no such row; one that is there has
+/// words in it.
+/// ponytail: the sentence is the file's and nothing holds it to the rule it speaks of. It has no number in it,
+/// so it is wrong only when the rule itself goes (an applauseBoxOfficeRadius of nothing): a note by a name,
+/// with its sentence made from the tuning as a card's is, when a second night has one that must carry a number.
+/// </param>
 public sealed record Night(
     [property: JsonPropertyName("night"), JsonRequired] int Number,
     int? ActsInPerformance,
@@ -41,7 +50,8 @@ public sealed record Night(
     IReadOnlyList<string>? KindsAllowed,
     float? WaveBurstShare,
     string? Name,
-    IReadOnlyList<string>? Rules)
+    IReadOnlyList<string>? Rules,
+    string? Note)
 {
     /// <summary>
     /// The spotlight night (the ladder's document, §1.4): what is dark is not drawn, and is still there. Only a
@@ -73,7 +83,8 @@ public sealed record Night(
     /// <exception cref="JsonException">
     /// The text is not the nights. For an unknown key, a key written twice and a night with no number the message
     /// names the key; for a night that is not after the one before it (twice, out of order, less than 1) its number;
-    /// for a list of kinds that is empty or has a null in it, and for a name of no words, the key and the night;
+    /// for a list of kinds that is empty or has a null in it, and for a name or a note of no words, the key and
+    /// the night;
     /// for a rule that is not one of <see cref="RuleNames"/> or is there twice, the key, the night and the rule.
     /// </exception>
     public static IReadOnlyList<Night> Parse(string json)
@@ -109,6 +120,11 @@ public sealed record Night(
             if (night.Name is { } name && string.IsNullOrWhiteSpace(name))
             {
                 throw new JsonException($"'name' of night {night.Number} has no words in it: leave the key out for a night with no name.");
+            }
+
+            if (night.Note is { } note && string.IsNullOrWhiteSpace(note))
+            {
+                throw new JsonException($"'note' of night {night.Number} has no words in it: leave the key out for a night with no note.");
             }
 
             // An unknown rule is refused here and not at the composition, as an unknown key is: a rule is the
