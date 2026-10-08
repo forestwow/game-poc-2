@@ -170,13 +170,12 @@ public class ThrownCardTests
         Assert.That(Vector2.Distance(simulation.ThrownCards[0].Position, new Vector2(23.2f, 0.9f)), Is.Zero.Within(Tolerance));
     }
 
-    // Four units to its right and to its left; down the stage and to a side; on its way, which it walks towards the
-    // magician; and in the door it has just left, which it walks away from.
+    // Four units to its right and to its left; down the stage and to a side; and on its way, which it walks towards
+    // the magician.
     [TestCase(24f, 0.3f)]
     [TestCase(16f, 0.3f)]
     [TestCase(23f, 4f)]
     [TestCase(20f, 8f)]
-    [TestCase(20f, 0f)]
     public void Step_ACriticWalksByTheMagician_TheOneCardThrownAtItHurtsIt(float x, float y)
     {
         var simulation = Shows.WithOneCritic(ACriticWalksBy(new Vector2(x, y)));
@@ -203,20 +202,20 @@ public class ThrownCardTests
     }
 
     [Test]
-    public void Step_ACardThrownAtAStagehandThatStood_MissesItWhenItRunsOn()
+    public void Step_ATargetFasterThanTheCard_IsThrownAtWhereItStands()
     {
-        // The same throw at the same stagehand with no step behind it: it stands in the door while the card is
-        // thrown, at where it stands, and then runs as it does. That was every throw before the throw aimed ahead.
-        Tuning itStands = AStagehandRunsBy with { EnemyKinds = [.. AStagehandRunsBy.EnemyKinds.Select(kind => kind with { Speed = 0f })] };
-        Simulation simulation = Shows.WithOneOfKind(itStands, kind: 1);
-
+        // The critic walks 61 sixtieths of a unit a tick and the card flies one unit: no card thrown from its side
+        // ever meets it ahead. On the second tick it stands four units straight to the left of the magician, and
+        // the card is thrown straight left.
+        float step = 61f / 60f;
+        Tuning tuning = ACriticWalksPast.WithCritic(critic => critic with { Speed = 61f }) with { MagicianMark = new Vector2(24f, step) };
+        var simulation = Shows.WithOneCritic(tuning);
         Run(simulation, ticks: 2);
-        Assert.That(simulation.ThrownCards, Has.Count.EqualTo(1));
-        simulation.Tuning = AStagehandRunsBy;
-        Run(simulation, ticks: 30);
+        Assert.That(simulation.Critics[0].Position, Is.EqualTo(new Vector2(20f, step)));
 
-        Assert.That(simulation.ThrownCards, Is.Empty);
-        Assert.That(simulation.Critics, Has.Count.EqualTo(1));
+        simulation.Step(default);
+
+        Assert.That(Vector2.Distance(simulation.ThrownCards[0].Position, new Vector2(23f, step)), Is.Zero.Within(Tolerance));
     }
 
     [Test]

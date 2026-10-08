@@ -810,7 +810,8 @@ public sealed class Simulation(Tuning tuning, ulong seed, IReadOnlyList<IReadOnl
         // magician, a cloud) has left the meeting place by as much as it strays in that time, and is missed when
         // that is more than its radius: at most its speed x throwRange / thrownCardSpeed, 2 units for the
         // committed stagehand. A target near the end of the range that walks away is met past the range, where the
-        // card has fallen. A slower card or a longer range makes both worse; a card that turns in the air is what
+        // card has fallen. And a card first flies on the tick after its throw, so its target is up to one of its
+        // own steps behind the aim: 0.13 of a unit for the committed stagehand, whose radius is 0.4. A slower card or a longer range makes both worse; a card that turns in the air is what
         // mends them.
         Vector2 to = target.Position - from;
         Vector2 step = target.Position - target.PreviousPosition;
