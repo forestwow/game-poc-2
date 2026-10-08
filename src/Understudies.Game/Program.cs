@@ -1,13 +1,20 @@
 string? capturePath = null;
 int captureTicks = 0;
+bool captureTheMenu = false;
 if (args is ["--capture", var path, "--ticks", var ticks] && int.TryParse(ticks, out captureTicks) && captureTicks >= 0)
 {
     capturePath = path;
 }
+else if (args is ["--capture", var menuPath, "--menu"])
+{
+    // The main menu's frame: no show is played for it.
+    capturePath = menuPath;
+    captureTheMenu = true;
+}
 else if (args.Length > 0)
 {
     // Anything else is refused: a mistyped --capture must not leave the game open on the screen.
-    Console.Error.WriteLine("Usage: Understudies.Game [--capture <file.png> --ticks <n>]");
+    Console.Error.WriteLine("Usage: Understudies.Game [--capture <file.png> (--ticks <n> | --menu)]");
     return 2;
 }
 
@@ -44,6 +51,6 @@ if (Found(Path.Combine("art", "ludo", "sprites"), "sprites") is not { } sprites
     return 1;
 }
 
-using var game = new Understudies.Game.UnderstudiesGame(tuning, capturePath, captureTicks, sprites, fonts, cards);
+using var game = new Understudies.Game.UnderstudiesGame(tuning, capturePath, captureTicks, captureTheMenu, sprites, fonts, cards);
 game.Run();
 return 0;
