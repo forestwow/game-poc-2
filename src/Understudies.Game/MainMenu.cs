@@ -95,12 +95,14 @@ internal sealed partial class UnderstudiesGame
 
     /// <summary>
     /// A frame's presses on the menu. Up and down (the arrows, W and S, a gamepad's d-pad or its left stick) move
-    /// the choice; Enter, Space or the gamepad's A take the chosen entry; Esc quits. Every one of them is a press
+    /// the choice; Enter, Space or the gamepad's A or Start take the chosen entry; Esc or the gamepad's Back quits. Every one of them is a press
     /// and never a hold, as in the program, and in the menu's first moment (<see cref="MenuGuardTime"/>) the
     /// choice moves and nothing else is done.
     /// </summary>
     private void ChooseOnTheMenu(KeyboardState keys, GamePadState pad)
     {
+        // ponytail: the third copy of these two (Update, ChooseInTheProgram, here). The ladder's L4 adds a
+        // fourth screen, the poster: that is where they become one.
         bool Pressed(Keys key) => keys.IsKeyDown(key) && !_keysBefore.IsKeyDown(key);
         bool PadPressed(Buttons button) => pad.IsButtonDown(button) && _padBefore.IsButtonUp(button);
 
@@ -118,8 +120,10 @@ internal sealed partial class UnderstudiesGame
             return;
         }
 
-        bool taken = Pressed(Keys.Enter) || Pressed(Keys.Space) || PadPressed(Buttons.A);
-        if (Pressed(Keys.Escape) || (taken && _chosenEntry == Quit))
+        // Start takes as A does: it is held on the show's first frame, so it is no edge there and goes on to
+        // nothing, as Enter.
+        bool taken = Pressed(Keys.Enter) || Pressed(Keys.Space) || PadPressed(Buttons.A) || PadPressed(Buttons.Start);
+        if (Pressed(Keys.Escape) || PadPressed(Buttons.Back) || (taken && _chosenEntry == Quit))
         {
             Exit();
         }
@@ -239,7 +243,7 @@ internal sealed partial class UnderstudiesGame
         Write(
             Face.Sentence,
             ControlsHeight,
-            "Move: WASD, the arrows or the stick  ·  Vanish: Space or A  ·  Go on: Enter or Start  ·  R starts a new show  ·  Esc comes back here",
+            "Move: WASD, the arrows or the stick  ·  Vanish: Space or A  ·  Go on: Enter or Start  ·  R starts a new show  ·  Esc or Back comes back here",
             new Vector2(stage.X / 2f, ControlsLine),
             0.5f,
             Words);

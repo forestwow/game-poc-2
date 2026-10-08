@@ -411,9 +411,9 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
         {
             ChooseOnTheMenu(keys, pad);
         }
-        else if (Pressed(Keys.Escape))
+        else if (Pressed(Keys.Escape) || PadPressed(Buttons.Back))
         {
-            // Esc is the way back to the menu, from an act as from a show that is over: the show is given up.
+            // Esc, or the gamepad's Back, is the way back to the menu, from an act as from a show that is over: the show is given up.
             ShowTheMenu();
         }
         else if (Pressed(Keys.R))
