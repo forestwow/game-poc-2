@@ -149,7 +149,9 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
         new(196, 120, 150),
     ];
 
-    private readonly SimulationClock _clock = new();
+    // What the view keeps for one show is set back in StartAgain, every field of it: one added here, or to the
+    // program's screen, is added there.
+    private SimulationClock _clock = new();
     private readonly string? _capturePath;
     private readonly int _captureTicks;
 
@@ -290,11 +292,7 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
         // R starts the show again, on the numbers of now.
         if (Pressed(Keys.R))
         {
-            _simulation = NewShow(Tuning);
-            _juice = new Juice(Random.Shared);
-            _offered = [];
-            _takenLeft = 0f;
-            _guardLeft = 0f;
+            StartAgain();
         }
 
         // M mutes the sound, and M again brings it back.
@@ -376,6 +374,26 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
             _offered = [];
             _simulation.GoOn();
         }
+    }
+
+    /// <summary>
+    /// A new show, and nothing of the last one left in the view: no part of a tick owed, no Vanish asked for, the
+    /// magician facing the viewer, no card lit or shown. What is the player's and not the show's stays: the keys
+    /// that are down, and the sound's mute.
+    /// </summary>
+    private void StartAgain()
+    {
+        _simulation = NewShow(Tuning);
+        _juice = new Juice(Random.Shared);
+        _clock = new SimulationClock();
+        _walkClock = 0f;
+        _magicianToward = Vector2.UnitY;
+        _vanishAsked = false;
+        _offered = [];
+        _highlighted = 0;
+        _taken = 0;
+        _takenLeft = 0f;
+        _guardLeft = 0f;
     }
 
     /// <summary>A show nobody has seen: its seed is the time, which Core never reads.</summary>
