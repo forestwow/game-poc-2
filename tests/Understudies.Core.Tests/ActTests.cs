@@ -27,7 +27,7 @@ public class ActTests
     /// The curtain has no length, which is no curtain: these tests count their ticks from the first
     /// tick of an act, and the curtain has tests of its own.
     /// </summary>
-    private Tuning Scene { get; } = CommittedTuning.Parse().WithCritic(critic => critic with { Speed = 60f, Radius = 0.5f }) with
+    private Tuning Scene { get; } = CommittedTuning.Parse().WithCritic(critic => critic with { Speed = 60f, Radius = 0.5f, StrikeDamage = 1f }) with
     {
         CurtainTime = 0f,
         ActLength = 2f,
@@ -42,7 +42,6 @@ public class ActTests
         VanishDistance = 6f,
         ThrowRange = 0f,
         CriticTurnRadius = 0f,
-        CriticStrikeDamage = 1f,
         CriticBlowCooldown = 0.5f,
     };
 

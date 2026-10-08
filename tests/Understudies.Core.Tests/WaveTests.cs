@@ -31,14 +31,13 @@ public class WaveTests
     /// throws at them, they turn on nobody and their strikes take nothing, so every one that enters is still there.
     /// The curtain has no length, which is no curtain: these tests count their ticks from the first tick of an act.
     /// </summary>
-    private Tuning ShortActs => Tuning with
+    private Tuning ShortActs => Tuning.WithStrikesOf(0f) with
     {
         CurtainTime = 0f,
         ActLength = 10f,
         ActQuietEnd = 1f,
         ThrowRange = 0f,
         CriticTurnRadius = 0f,
-        CriticStrikeDamage = 0f,
     };
 
     [Test]

@@ -25,7 +25,7 @@ public class CriticsTurnTests
     /// The curtain has no length, which is no curtain: these tests count their ticks from the first
     /// tick of an act, and the curtain has tests of its own.
     /// </summary>
-    private Tuning Scene { get; } = CommittedTuning.Parse().WithCritic(critic => critic with { Speed = 60f, Radius = 0.5f }) with
+    private Tuning Scene { get; } = CommittedTuning.Parse().WithCritic(critic => critic with { Speed = 60f, Radius = 0.5f, StrikeDamage = 1f }) with
     {
         CurtainTime = 0f,
         StageDoors = [new StageDoor(Door, 1)],
@@ -38,7 +38,6 @@ public class CriticsTurnTests
         MagicianHitPoints = 10f,
         ThrowRange = 0f,
         CriticTurnRadius = 3f,
-        CriticStrikeDamage = 1f,
         CriticTouchDamage = 2f,
         CriticBlowCooldown = 0.5f,
     };
@@ -269,12 +268,11 @@ public class CriticsTurnTests
         // office, where one that has turned is left. The Vanish goes nowhere, so its cloud lies on them with the
         // magician still in their midst. A stunned critic has not turned: it is put back out of the box office.
         // No curtain: the forty seconds are counted from the first tick of the act.
-        Tuning tuning = CommittedTuning.Parse() with
+        Tuning tuning = CommittedTuning.Parse().WithStrikesOf(0f) with
         {
             CurtainTime = 0f,
             ThrowRange = 0f,
             VanishDistance = 0f,
-            CriticStrikeDamage = 0f,
             CriticTouchDamage = 0f,
         };
         Simulation simulation = Shows.WithACriticEvery(Simulation.TicksPerSecond, tuning);

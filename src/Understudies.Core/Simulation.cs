@@ -950,7 +950,7 @@ public sealed class Simulation(Tuning tuning, ulong seed, IReadOnlyList<IReadOnl
             }
             else
             {
-                BoxOfficeHitPoints = MathF.Max(0f, BoxOfficeHitPoints - Tuning.CriticStrikeDamage);
+                BoxOfficeHitPoints = MathF.Max(0f, BoxOfficeHitPoints - kind.StrikeDamage);
                 _events.Add(new TickEvent(TickEventKind.BoxOfficeStruck, critic.Position));
             }
 

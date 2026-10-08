@@ -172,10 +172,7 @@ public class CriticTests
     public void Step_ACriticAtTheBoxOffice_StrikesItOncePerCooldown()
     {
         const int cooldown = Simulation.TicksPerSecond / 2;
-        Tuning tuning = Tuning with
-        {
-            BoxOfficeHitPoints = 100f, CriticStrikeDamage = 3f, CriticBlowCooldown = 0.5f,
-        };
+        Tuning tuning = Tuning.WithStrikesOf(3f) with { BoxOfficeHitPoints = 100f, CriticBlowCooldown = 0.5f };
         var simulation = Shows.WithOneCritic(tuning);
         Assert.That(simulation.BoxOfficeHitPoints, Is.EqualTo(100f));
 
@@ -194,6 +191,33 @@ public class CriticTests
 
         Run(simulation, ticks: cooldown);
         Assert.That(simulation.BoxOfficeHitPoints, Is.EqualTo(91f));
+    }
+
+    [Test]
+    public void Step_AStrikeOnTheBoxOffice_TakesWhatTheStrikersOwnKindSays()
+    {
+        // Two kinds that are the critic but for their strike: one of each enters, a second apart, and each
+        // strike takes its own kind's number.
+        Tuning tuning = Tuning with
+        {
+            BoxOfficeHitPoints = 100f,
+            CriticBlowCooldown = 60f,
+            EnemyKinds =
+            [
+                Tuning.Critic() with { StrikeDamage = 1f },
+                Tuning.Critic() with { Name = "heavy", StrikeDamage = 3f },
+            ],
+        };
+        var simulation = new Simulation(
+            tuning,
+            seed: 1,
+            [[new PlannedEntry(Tick: 0, Door: 0, Kind: 1), new PlannedEntry(Simulation.TicksPerSecond, Door: 0, Kind: 0)]]);
+
+        RunUntil(simulation, () => simulation.BoxOfficeHitPoints < 100f);
+        Assert.That(simulation.BoxOfficeHitPoints, Is.EqualTo(97f), "the heavy one's strike");
+
+        RunUntil(simulation, () => simulation.BoxOfficeHitPoints < 97f);
+        Assert.That(simulation.BoxOfficeHitPoints, Is.EqualTo(96f), "the critic's strike");
     }
 
     [Test]
@@ -220,7 +244,7 @@ public class CriticTests
     public void Step_TheBoxOfficesHitPointsRunOut_TheShowCloses()
     {
         // Two strikes are not enough and the third is more than enough.
-        Tuning tuning = Tuning with { BoxOfficeHitPoints = 5f, CriticStrikeDamage = 2f };
+        Tuning tuning = Tuning.WithStrikesOf(2f) with { BoxOfficeHitPoints = 5f };
         var simulation = Shows.WithOneCritic(tuning);
 
         RunUntil(simulation, () => simulation.BoxOfficeHitPoints <= 1f);
@@ -263,7 +287,7 @@ public class CriticTests
     public void Step_AfterTheShowCloses_LeavesNoEventsBehind()
     {
         // The first strike is more than enough: the tick that closes the show reports it.
-        Tuning tuning = Tuning with { BoxOfficeHitPoints = 1f, CriticStrikeDamage = 2f };
+        Tuning tuning = Tuning.WithStrikesOf(2f) with { BoxOfficeHitPoints = 1f };
         var simulation = Shows.WithOneCritic(tuning);
         RunUntil(simulation, () => simulation.ShowClosed);
         Assert.That(simulation.Events.Select(e => e.Kind), Is.EqualTo(new[] { TickEventKind.BoxOfficeStruck }));
@@ -325,7 +349,7 @@ public class CriticTests
     /// </summary>
     private Simulation ACrowd()
     {
-        Simulation simulation = Shows.WithACriticEvery(Simulation.TicksPerSecond, Tuning with { CriticStrikeDamage = 0f });
+        Simulation simulation = Shows.WithACriticEvery(Simulation.TicksPerSecond, Tuning.WithStrikesOf(0f));
         Run(simulation, ticks: 40 * Simulation.TicksPerSecond);
         return simulation;
     }
