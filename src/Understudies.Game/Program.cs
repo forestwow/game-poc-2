@@ -3,13 +3,40 @@ int captureTicks = 0;
 bool captureTheMenu = false;
 int? captureThePoster = null;
 
-// The way round the gates (plan T54): "--night n" at the end plays that night, or captures it, whatever the
-// player's progress says, and no progress is read or written.
+// The last words of any command line, in either order. "--night n" is the way round the gates (plan T54): it plays
+// that night, or captures it, whatever the player's progress says, and no progress is read or written. "--rule
+// name" puts a house rule on whatever night is played (plan T56): the way to play the spotlight night while no
+// night has it.
 int? night = null;
-if (args is [.. var before, "--night", var number] && int.TryParse(number, out int asked))
+List<string> rules = [];
+while (true)
 {
-    night = asked;
-    args = before;
+    if (night is null && args is [.. var before, "--night", var number] && int.TryParse(number, out int asked))
+    {
+        night = asked;
+        args = before;
+    }
+    else if (args is [.. var first, "--rule", var rule])
+    {
+        if (!Understudies.Core.Night.RuleNames.Contains(rule))
+        {
+            Console.Error.WriteLine($"No house rule '{rule}': there is {string.Join(", ", Understudies.Core.Night.RuleNames)}");
+            return 2;
+        }
+
+        if (rules.Contains(rule))
+        {
+            Console.Error.WriteLine($"The house rule '{rule}' is asked for twice");
+            return 2;
+        }
+
+        rules.Add(rule);
+        args = first;
+    }
+    else
+    {
+        break;
+    }
 }
 
 if (args is ["--capture", var path, "--ticks", var ticks] && int.TryParse(ticks, out captureTicks) && captureTicks >= 0)
@@ -32,7 +59,7 @@ else if (args is ["--capture", var posterPath, "--poster", var page] && int.TryP
 else if (args.Length > 0)
 {
     // Anything else is refused: a mistyped --capture must not leave the game open on the screen.
-    Console.Error.WriteLine("Usage: Understudies.Game [--capture <file.png> (--ticks <n> | --menu | --poster <n>)] [--night <n>]");
+    Console.Error.WriteLine("Usage: Understudies.Game [--capture <file.png> (--ticks <n> | --menu | --poster <n>)] [--night <n>] [--rule <name>]");
     return 2;
 }
 
@@ -90,6 +117,6 @@ if (Found(Path.Combine("art", "ludo", "sprites"), "sprites") is not { } sprites
     return 1;
 }
 
-using var game = new Understudies.Game.UnderstudiesGame(tuning, nights, night, progress, capturePath, captureTicks, captureTheMenu, captureThePoster, sprites, fonts, cards);
+using var game = new Understudies.Game.UnderstudiesGame(tuning, nights, night, rules, progress, capturePath, captureTicks, captureTheMenu, captureThePoster, sprites, fonts, cards);
 game.Run();
 return 0;

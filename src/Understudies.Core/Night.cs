@@ -27,14 +27,40 @@ namespace Understudies.Core;
 /// <see cref="Compose"/> does not look at it. It may be left out as every other key may, and the poster then has
 /// the night's number alone; a name that is there has words in it.
 /// </param>
+/// <param name="Rules">
+/// The night's house rules, by their names (plan T56; the key is <c>rules</c>), each one of
+/// <see cref="RuleNames"/> and each once. Left out or empty, the night has none. A rule is a name and nothing
+/// more here: <see cref="Compose"/> does not look at it, so the tuning a <see cref="Simulation"/> is given says
+/// nothing of a rule, and whoever a rule is for asks the night (<see cref="Has"/>). The one rule there is, the
+/// spotlight night, is the view's alone.
+/// </param>
 public sealed record Night(
     [property: JsonPropertyName("night"), JsonRequired] int Number,
     int? ActsInPerformance,
     decimal? BudgetScale,
     IReadOnlyList<string>? KindsAllowed,
     float? WaveBurstShare,
-    string? Name)
+    string? Name,
+    IReadOnlyList<string>? Rules)
 {
+    /// <summary>
+    /// The spotlight night (the ladder's document, §1.4): what is dark is not drawn, and is still there. Only a
+    /// circle of <see cref="Tuning.SpotlightRadius"/> round the magician and a pool of light at every open door
+    /// are lit. No rule of the simulation knows of it.
+    /// </summary>
+    public const string Spotlight = "spotlight";
+
+    /// <summary>
+    /// Every house rule there is, by its name.
+    /// ponytail: a night's rules are written in the file. The document draws them from pools by the show's seed
+    /// (a stream RngStream.House, the compatibility check): build the draw with the second rule, when there is
+    /// something to draw from.
+    /// </summary>
+    public static readonly IReadOnlyList<string> RuleNames = [Spotlight];
+
+    /// <summary>Whether the night has the house rule of that name.</summary>
+    public bool Has(string rule) => Rules?.Contains(rule) ?? false;
+
     // As strict as the tuning's, but for one thing: every key but the number may be left out.
     private static readonly JsonSerializerOptions Options = new()
     {
@@ -47,7 +73,8 @@ public sealed record Night(
     /// <exception cref="JsonException">
     /// The text is not the nights. For an unknown key, a key written twice and a night with no number the message
     /// names the key; for a night that is not after the one before it (twice, out of order, less than 1) its number;
-    /// for a list of kinds that is empty or has a null in it, and for a name of no words, the key and the night.
+    /// for a list of kinds that is empty or has a null in it, and for a name of no words, the key and the night;
+    /// for a rule that is not one of <see cref="RuleNames"/> or is there twice, the key, the night and the rule.
     /// </exception>
     public static IReadOnlyList<Night> Parse(string json)
     {
@@ -82,6 +109,23 @@ public sealed record Night(
             if (night.Name is { } name && string.IsNullOrWhiteSpace(name))
             {
                 throw new JsonException($"'name' of night {night.Number} has no words in it: leave the key out for a night with no name.");
+            }
+
+            // An unknown rule is refused here and not at the composition, as an unknown key is: a rule is the
+            // game's own word, where a kind's name is the tuning's.
+            for (int i = 0; i < (night.Rules?.Count ?? 0); i++)
+            {
+                string rule = night.Rules![i];
+                if (!RuleNames.Contains(rule))
+                {
+                    throw new JsonException(
+                        $"'rules' of night {night.Number} names '{rule}', which is no house rule: there is {string.Join(", ", RuleNames)}.");
+                }
+
+                if (night.Rules.Take(i).Contains(rule))
+                {
+                    throw new JsonException($"'rules' of night {night.Number} names '{rule}' twice.");
+                }
             }
 
             before = night.Number;

@@ -138,6 +138,11 @@ namespace Understudies.Core;
 /// How many of one self card the magician may hold (plan T41, decision 31): an encore does not offer a card it
 /// holds this many of. With nothing, or less, there is no limit.
 /// </param>
+/// <param name="SpotlightRadius">
+/// On the spotlight night (plan T56, <see cref="Night.Spotlight"/>), how far round the magician the stage is lit.
+/// The view's alone: no rule reads it, since what is dark is still there. It is here because a number that
+/// decides what the player can see is tuned as every other is, in the one file.
+/// </param>
 public sealed record Tuning(
     float ActLength,
     int ActsInPerformance,
@@ -189,7 +194,8 @@ public sealed record Tuning(
     float CardRicochetReach,
     float CardBurstRadius,
     float CardBurstShare,
-    int CardMaxCopies)
+    int CardMaxCopies,
+    float SpotlightRadius)
 {
     // ponytail: the serializer reads the types by reflection; a trimmed or AOT build needs a source-generated context.
     private static readonly JsonSerializerOptions Options = new()

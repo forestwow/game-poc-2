@@ -286,6 +286,7 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
     /// <param name="tuning">The plain tuning, which a night is composed from.</param>
     /// <param name="nights">The nights, at least one, every one of which composes with the tuning.</param>
     /// <param name="night">The one night to play whatever the progress says, or null.</param>
+    /// <param name="rules">The house rules to play whatever night is played with, by their names.</param>
     /// <param name="progressPath">The file of the player's progress, or null for a game that keeps none.</param>
     /// <param name="captureTheMenu">The frame is the main menu's, and no tick is played for it.</param>
     /// <param name="captureThePoster">The frame is the poster's page of that night, and no tick is played for it.</param>
@@ -296,6 +297,7 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
         Tuning tuning,
         IReadOnlyList<Night> nights,
         int? night,
+        IReadOnlyList<string> rules,
         string? progressPath,
         string? capturePath,
         int captureTicks,
@@ -311,6 +313,7 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
         _plain = tuning;
         _nights = nights;
         _askedNight = night;
+        _askedRules = rules;
         _progressPath = progressPath;
         _progress = LoadTheProgress();
 
@@ -730,6 +733,15 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
         FitTheStage(_juice.Shake);
         Vector2 past = Vector2.Abs(_juice.Shake);
         Matrix worldToScreen = _worldToScreen;
+        Vector2 magicianFeet = Vector2.Lerp(_simulation.MagicianPreviousPosition, _simulation.MagicianPosition, alpha);
+
+        // The spotlight night (plan T56): the dark is made first, and laid over the figures below.
+        // Read once for the frame: Lit asks it for every enemy.
+        bool dark = _lightsDown = LightsAreDown;
+        if (dark)
+        {
+            MakeTheDark(magicianFeet, past);
+        }
 
         GraphicsDevice.Clear(Surround);
         LayTheSet(past, Tuning.StageFloorTop, curtainMeasure: 1f, GoldLine);
@@ -765,7 +777,7 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
             // A critic that fell lies where it fell and fades away, under the feet of whoever stands there.
             // Whatever it was: the juice kept its kind from when it stood.
             DrawFigure(
-                FigureOf(body.Kind), body.Position, white: body.White, fallen: true, opacity: body.Opacity, tint: WashOf(body.Kind));
+                FigureOf(body.Kind), body.Position, white: body.White, fallen: true, opacity: body.Opacity * Lit(body.Position), tint: WashOf(body.Kind));
         }
 
         _spriteBatch.End();
@@ -782,7 +794,6 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
         // office stands a hair behind its foot line, so whoever stands exactly on that line is in front.
         const float hair = 0.001f;
         DrawFigure(Figure.BoxOffice, boxOfficeFeet - new Vector2(0f, hair), white: _juice.BoxOfficeWhite);
-        Vector2 magicianFeet = Vector2.Lerp(_simulation.MagicianPreviousPosition, _simulation.MagicianPosition, alpha);
         Vector2 magicianStep = _simulation.MagicianPosition - _simulation.MagicianPreviousPosition;
         if (magicianStep != Vector2.Zero)
         {
@@ -833,6 +844,14 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
         {
             Vector2 feet = Vector2.Lerp(critic.PreviousPosition, critic.Position, alpha);
             Figure figure = FigureOf(critic.Kind);
+
+            // What is dark is not drawn, and is still there.
+            float seen = Lit(feet);
+            if (seen <= 0f)
+            {
+                continue;
+            }
+
             // A critic that stands is at its work: it faces the box office.
             Vector2 step = critic.Position - critic.PreviousPosition;
             DrawFigure(
@@ -840,6 +859,7 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
                 feet,
                 pale: critic.IsStunned,
                 white: _juice.CriticWhite(critic.Id),
+                opacity: seen,
                 tint: WashOf(critic.Kind),
                 toward: step != Vector2.Zero ? step : Tuning.BoxOfficePosition - critic.Position,
                 walking: step != Vector2.Zero,
@@ -847,42 +867,10 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
                 beat: critic.Id);
         }
 
-        foreach (ThrownCard card in _simulation.ThrownCards)
+        // In the light a card is among the figures: one behind a figure is behind it.
+        if (!dark)
         {
-            // The card's position is the point of the floor it is over.
-            Vector2 below = Vector2.Lerp(card.PreviousPosition, card.Position, alpha);
-            Color face = card.ThrownByMagician ? ThrownCardFace : UnderstudysCardFace;
-            Vector2 heart = below - new Vector2(0f, ThrownCardLift + (ThrownCardHeight / 2f));
-
-            // Its turn is told by how far it has flown, so a card left in the air when the world stands hangs still.
-            float turn = Vector2.Distance(below, card.ThrownFrom) * ThrownCardSpin * MathF.Tau;
-            var size = new Vector2(ThrownCardWidth, ThrownCardHeight);
-            FillTurned(heart, size + new Vector2(2f * ThrownCardEdge), turn, CardEdge, Depth(below));
-            FillTurned(heart, size, turn, face, MathF.Min(1f, Depth(below) + 0.0001f));
-
-            // A card thrown on this tick has not flown yet and has no way to trail along.
-            Vector2 flown = card.Position - card.PreviousPosition;
-            if (flown == Vector2.Zero)
-            {
-                continue;
-            }
-
-            // The trail: a streak from the middle of the card back along its flight, so that a card that is in the
-            // air for an eighth of a second is seen. It never reaches back past where the card was thrown from,
-            // or where it last turned (plan T25): the trail of a card that turns bends there with it.
-            Vector2 behind = card.ThrownFrom - below;
-            if (behind == Vector2.Zero)
-            {
-                continue;
-            }
-
-            Vector2 back = Vector2.Normalize(behind) * MathF.Min(Juice.TrailLength, behind.Length());
-            FillTurned(
-                heart + (back / 2f),
-                new Vector2(back.Length(), Juice.TrailWidth),
-                MathF.Atan2(back.Y, back.X),
-                face * Juice.TrailOpacity,
-                Depth(below));
+            TheThrownCards();
         }
 
         _spriteBatch.End();
@@ -890,7 +878,19 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
         // Over everything: the scraps in the air, then a performance that is over goes dark, and the box office's
         // hit points are a bar above it, a critic's height above, clear of the heads of the critics who stand
         // behind the box.
+        if (dark)
+        {
+            LayTheDark();
+        }
+
         _spriteBatch.Begin(samplerState: SamplerState.PointClamp, transformMatrix: worldToScreen);
+
+        // On the spotlight night every card is drawn over the dark, as its effects below are: the understudies'
+        // cards are what shows where the dark is not empty. Nothing is sorted here, so a card is over every figure.
+        if (dark)
+        {
+            TheThrownCards();
+        }
 
         // The cards' effects go under the applause: a splash of ink must not hide the piece its kill drops.
         foreach (var effect in _juice.Effects)
@@ -1009,6 +1009,47 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
         DrawTheApplauseBar();
         _spriteBatch.End();
 
+        void TheThrownCards()
+        {
+            foreach (ThrownCard card in _simulation.ThrownCards)
+            {
+                // The card's position is the point of the floor it is over.
+                Vector2 below = Vector2.Lerp(card.PreviousPosition, card.Position, alpha);
+                Color face = card.ThrownByMagician ? ThrownCardFace : UnderstudysCardFace;
+                Vector2 heart = below - new Vector2(0f, ThrownCardLift + (ThrownCardHeight / 2f));
+
+                // Its turn is told by how far it has flown, so a card left in the air when the world stands hangs still.
+                float turn = Vector2.Distance(below, card.ThrownFrom) * ThrownCardSpin * MathF.Tau;
+                var size = new Vector2(ThrownCardWidth, ThrownCardHeight);
+                FillTurned(heart, size + new Vector2(2f * ThrownCardEdge), turn, CardEdge, Depth(below));
+                FillTurned(heart, size, turn, face, MathF.Min(1f, Depth(below) + 0.0001f));
+
+                // A card thrown on this tick has not flown yet and has no way to trail along.
+                Vector2 flown = card.Position - card.PreviousPosition;
+                if (flown == Vector2.Zero)
+                {
+                    continue;
+                }
+
+                // The trail: a streak from the middle of the card back along its flight, so that a card that is in the
+                // air for an eighth of a second is seen. It never reaches back past where the card was thrown from,
+                // or where it last turned (plan T25): the trail of a card that turns bends there with it.
+                Vector2 behind = card.ThrownFrom - below;
+                if (behind == Vector2.Zero)
+                {
+                    continue;
+                }
+
+                Vector2 back = Vector2.Normalize(behind) * MathF.Min(Juice.TrailLength, behind.Length());
+                FillTurned(
+                    heart + (back / 2f),
+                    new Vector2(back.Length(), Juice.TrailWidth),
+                    MathF.Atan2(back.Y, back.X),
+                    face * Juice.TrailOpacity,
+                    Depth(below));
+            }
+        }
+
         // The HUD's shapes at a figure's feet (plan T45): the magician's pips and its Vanish, and a headliner's
         // hit points (plan T46), the one enemy whose hit points the player counts: a small bar in its own red.
         // ponytail: full is what one enters with in this act, so one left from the act before is never shown
@@ -1021,8 +1062,16 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
             {
                 // As everywhere a critic's kind is read: a tuning read again (F5) may have fewer kinds than the stage.
                 EnemyKind headliner = Tuning.EnemyKinds[Math.Min(critic.Kind, Tuning.EnemyKinds.Count - 1)];
+
+                // A headliner that the dark hides has no bar to give it away.
+                Vector2 feet = Vector2.Lerp(critic.PreviousPosition, critic.Position, alpha);
+                if (Lit(feet) < 0.5f)
+                {
+                    continue;
+                }
+
                 FillBar(
-                    Vector2.Lerp(critic.PreviousPosition, critic.Position, alpha) + new Vector2(-headlinerBar.X / 2f, 0.3f),
+                    feet + new Vector2(-headlinerBar.X / 2f, 0.3f),
                     headlinerBar,
                     critic.HitPoints / (headliner.HitPoints + (headliner.HitPointsPerAct * (_simulation.Act - headliner.FromAct))),
                     HeadlinerWash);

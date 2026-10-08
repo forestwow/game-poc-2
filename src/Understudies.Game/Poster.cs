@@ -262,6 +262,16 @@ internal sealed partial class UnderstudiesGame
             kinds.Select(kind =>
                 $"{(kind < KindsInWords.Length ? KindsInWords[kind].Plural : tuning.EnemyKinds[kind].Name)}, from act {Math.Max(1, tuning.EnemyKinds[kind].FromAct)}"));
 
+        // The night's house rules, each its name and its one sentence (plan T56; the document's §4), where the
+        // document has them: after who comes and before what opens the next night. A night without one has no row.
+        // ponytail: no icon, since no rule has one, and a long night's page has room for one rule under four
+        // kinds: lay the column out again when a night has two.
+        string[] houseRules = [.. Night.RuleNames.Where(HasRule)];
+        if (houseRules.Length > 0)
+        {
+            Row("HOUSE RULES", houseRules.SelectMany(rule => Broken(RuleInWords(rule))));
+        }
+
         // What opens the next night: Core's gate, in words, or that it is open already.
         string next = _askedNight is not null ? "Started with --night: nothing of this night is remembered."
             : place == _nights.Count - 1 ? "This is the last night there is, for now."
