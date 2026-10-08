@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Program: the chorus card</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;600;700&amp;family=Atkinson+Hyperlegible:wght@400;700&amp;display=swap">
+<style>
+body{margin:0;background:#18121c}
+a{color:#1e161e}a:hover{color:#1e161e}
+.floor{background:linear-gradient(rgba(10,6,14,.35),rgba(10,6,14,.35)),url(/_blob/abc0b06706e9c863fe37bb8c75be28bc);background-size:auto,128px 128px;image-rendering:pixelated}
+.curtain{background:url(/_blob/028584c4a7513c74924194c07c76c820) repeat-x;background-size:auto 80px;image-rendering:pixelated}
+.magician{width:64px;height:132px;background:url(/_blob/2c0ecae2a113228c25ee84a4aea9e756) 0 0/192px 396px no-repeat;image-rendering:pixelated}
+.understudy{width:64px;height:132px;background-color:var(--tint);-webkit-mask:url(/_blob/2c0ecae2a113228c25ee84a4aea9e756) 0 0/192px 396px no-repeat;mask:url(/_blob/2c0ecae2a113228c25ee84a4aea9e756) 0 0/192px 396px no-repeat;opacity:.9}
+.understudy .skin{position:absolute;inset:0;background:url(/_blob/2c0ecae2a113228c25ee84a4aea9e756) 0 0/192px 396px no-repeat;opacity:.45;image-rendering:pixelated}
+.door{width:80px;height:80px;background:url(/_blob/1c58d14e19cfe87615bfef2de051c2f5) center/contain no-repeat;image-rendering:pixelated}
+.lamp{width:24px;height:24px;background:url(/_blob/6842c9fc854370688ee5d6bcdf5cfcc8) center/contain no-repeat;image-rendering:pixelated}
+.outline{text-shadow:2px 0 #1e161e,-2px 0 #1e161e,0 2px #1e161e,0 -2px #1e161e,2px 2px #1e161e,-2px -2px #1e161e,2px -2px #1e161e,-2px 2px #1e161e}
+.shadow{position:absolute;border-radius:50%;background:rgba(0,0,0,.38)}
+.panel{box-sizing:border-box;background:rgba(24,18,28,.88);border:3px solid #ece4d2;color:#ece4d2;padding:20px 24px;display:flex;flex-direction:column;gap:12px}
+.panel h2{margin:0;font:600 16px "Pixelify Sans",monospace;letter-spacing:3px;color:#fae278;text-transform:uppercase}
+.row{display:flex;justify-content:space-between;gap:16px;font-size:18px}
+.row b{font:700 20px "Pixelify Sans",monospace}
+.offer{display:flex;flex-direction:column;box-sizing:border-box;width:320px;height:380px;background:#fffdf4;color:#1e161e;border:4px solid #1e161e;box-shadow:6px 6px 0 #1e161e,0 0 0 4px #78c8aa,0 0 28px 8px rgba(120,200,170,.45);text-decoration:none;text-align:center}
+.offer .head{display:flex;align-items:center;gap:12px;height:44px;padding:0 14px;background:#78c8aa;border-bottom:4px solid #1e161e;font:700 19px "Pixelify Sans",monospace}
+.offer .name{margin:44px 0 12px;font:700 38px/1 "Pixelify Sans",monospace}
+.offer .what{font:400 21px/1.3 "Atkinson Hyperlegible",sans-serif;padding:0 20px}
+.offer .held{margin-top:auto;padding:14px;font:400 16px "Atkinson Hyperlegible",sans-serif;color:#5a4d5e}
+.chip{display:flex;align-items:center;gap:6px;height:26px;padding:0 10px;background:#faf6ec;color:#1e161e;border:2px solid #1e161e;font:600 15px "Pixelify Sans",monospace;box-shadow:2px 2px 0 #1e161e}
+.cast{width:30px;height:30px;display:flex;align-items:center;justify-content:center;border:2px solid #1e161e;font:700 15px "Pixelify Sans",monospace;color:#1e161e;box-shadow:2px 2px 0 #1e161e}
+.key{display:inline-block;min-width:16px;padding:0 6px;border:2px solid #ece4d2;font:600 14px "Pixelify Sans",monospace;color:#ece4d2;text-align:center}
+</style>
+</helmet>
+<div style="position: relative; width: 1280px; height: 720px; overflow: hidden; background: #18121c; font-family: 'Atkinson Hyperlegible', sans-serif; color: #ece4d2">
+
+  <div class="curtain" style="position: absolute; left: 0; top: 0; width: 1280px; height: 80px"></div>
+  <div style="position: absolute; left: 0; top: 80px; width: 1280px; height: 4px; background: #fae278"></div>
+  <div class="floor" style="position: absolute; left: 0; top: 84px; width: 1280px; height: 636px"></div>
+  <div style="position: absolute; left: 614px; top: 107px; width: 426px; height: 426px; border-radius: 50%; background: rgba(0,0,0,.14); border: 2px dashed rgba(236,228,210,.28); box-sizing: border-box"></div>
+  <div class="door" style="position: absolute; left: 413px; top: 8px"></div>
+  <div class="door" style="position: absolute; left: -8px; top: 360px"></div>
+  <div class="door" style="position: absolute; left: 1208px; top: 200px"></div>
+  <div class="shadow" style="left: 787px; top: 358px; width: 90px; height: 22px"></div>
+  <img src="/_blob/5535cdaad7da88bc70d0ea9af91c4282" alt="The box office" style="position: absolute; left: 773px; top: 266px; width: 108px; height: 108px; image-rendering: pixelated">
+  <div class="magician" style="position: absolute; left: 688px; top: 221px"></div>
+
+  <div style="position: absolute; left: 0; top: 84px; width: 1280px; height: 636px; background: rgba(0,0,0,.6)"></div>
+
+  <div style="position: absolute; left: 24px; top: 10px; display: flex; flex-direction: column; gap: 2px">
+    <div class="outline" style="font: 700 34px/1 'Pixelify Sans', monospace; color: #fae278">Act 6 of 10</div>
+    <div class="outline" style="font-size: 17px; color: #ece4d2">is over</div>
+  </div>
+  <div style="position: absolute; right: 24px; top: 8px; display: flex; flex-direction: column; align-items: flex-end">
+    <div class="outline" style="font: 700 40px/1 'Pixelify Sans', monospace; color: #8c8290">0:00</div>
+    <div class="outline" style="font-size: 16px; color: #ece4d2">the stage stands</div>
+  </div>
+
+  <div style="position: absolute; left: 0; top: 104px; width: 1280px; display: flex; flex-direction: column; align-items: center; gap: 6px">
+    <div class="outline" style="font: 700 44px/1 'Pixelify Sans', monospace; color: #78c8aa">The program</div>
+    <div class="outline" style="font-size: 20px; color: #ece4d2">Two encores tonight paid for a card for the whole chorus.</div>
+  </div>
+
+  <div style="position: absolute; left: 60px; top: 210px; width: 360px; display: flex; flex-direction: column; gap: 16px">
+    <div class="panel">
+      <h2>Act 6 on the books</h2>
+      <div class="row"><span>Applause picked up</span><b style="color: #ff8ad8">23</b></div>
+      <div class="row"><span>Encores taken</span><b>2</b></div>
+      <div class="row"><span>Box office left</span><b style="color: #84cc6e">352 / 400</b></div>
+      <div class="row"><span>The magician</span><b>stood to the end</b></div>
+    </div>
+    <div class="panel" style="flex-direction: row; align-items: center; gap: 20px">
+      <div style="position: relative; width: 64px; height: 132px; flex: none">
+        <div class="understudy" style="position: absolute; left: 0; top: 0; --tint: #6ebece"><div class="skin"></div></div>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 8px">
+        <h2 style="color: #6ebece">Understudy 6 joins the cast</h2>
+        <div style="font-size: 17px; line-height: 1.3">It will run tonight's route, every act from now on, with the cards you had:</div>
+        <div style="display: flex; flex-wrap: wrap; gap: 6px">
+          <div class="chip">Sharper cards <span style="color: #a0365f">&times;2</span></div>
+          <div class="chip">Quicker hands <span style="color: #a0365f">&times;1</span></div>
+          <div class="chip">Longer arm <span style="color: #a0365f">&times;2</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div style="position: absolute; left: 480px; top: 196px; display: flex; flex-direction: column; align-items: center; gap: 14px">
+    <a class="offer" href="HUD.dc.html">
+      <div class="head"><span>1</span><span style="flex: 1">For the chorus</span></div>
+      <div class="name">Sharper chorus</div>
+      <div class="what">every understudy's cards<br>hurt 0.5 more</div>
+      <div class="held">the chorus holds 1 already</div>
+    </a>
+    <div class="outline" style="font: 600 18px 'Pixelify Sans', monospace; color: #ffe2f6">9 s left: then it is taken for you</div>
+    <div style="width: 320px; height: 10px; background: #1e161e; outline: 2px solid #1e161e"><div style="width: 75%; height: 100%; background: #78c8aa"></div></div>
+  </div>
+
+  <div style="position: absolute; left: 860px; top: 210px; width: 360px; display: flex; flex-direction: column; gap: 16px">
+    <div class="panel">
+      <h2>Next: act 7 of 10</h2>
+      <div style="font-size: 17px; line-height: 1.35">All three doors are open. The rival's understudy comes tougher by the act. The encore costs 7 pieces now.</div>
+    </div>
+    <div class="panel">
+      <h2>The cast at the curtain</h2>
+      <div style="display: flex; gap: 6px">
+        <div class="cast" style="background: #78c8aa">1</div>
+        <div class="cast" style="background: #d68478">2</div>
+        <div class="cast" style="background: #b094d6">3</div>
+        <div class="cast" style="background: #a0c46e">4</div>
+        <div class="cast" style="background: #dc96be">5</div>
+        <div class="cast" style="background: #6ebece">6</div>
+      </div>
+      <div style="font-size: 15px; color: #c8bfcc">Every understudy snaps back to its mark when the curtain rises.</div>
+    </div>
+  </div>
+
+  <div class="outline" style="position: absolute; left: 0; top: 636px; width: 1280px; text-align: center; font-size: 16px; color: #ece4d2"><span class="key">Enter</span> or <span class="key">Space</span> takes the card &middot; gamepad: A &middot; then <span class="key">Enter</span> or Start raises the curtain</div>
+
+  <div style="position: absolute; left: 0; top: 694px; width: 1280px; display: flex; justify-content: space-around; padding: 0 16px; box-sizing: border-box; opacity: .35">
+    <div class="lamp"></div><div class="lamp"></div><div class="lamp"></div><div class="lamp"></div><div class="lamp"></div><div class="lamp"></div><div class="lamp"></div><div class="lamp"></div><div class="lamp"></div><div class="lamp"></div><div class="lamp"></div><div class="lamp"></div><div class="lamp"></div><div class="lamp"></div><div class="lamp"></div><div class="lamp"></div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":720}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>
