@@ -110,5 +110,6 @@
   "cardRicochetReach": 4,
   "cardBurstRadius": 2,
   "cardBurstShare": 0.5,
-  "cardMaxCopies": 3
+  "cardMaxCopies": 3,
+  "spotlightRadius": 8
 }

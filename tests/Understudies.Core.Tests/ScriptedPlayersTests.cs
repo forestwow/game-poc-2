@@ -641,7 +641,7 @@ public class ScriptedPlayersTests
     /// refused as a key of the tuning, unless the tuning has one of that name, and then the night's committed
     /// value is played over the variant's in silence: add it here with the key.
     /// </summary>
-    private static readonly string[] NightKeys = ["actsInPerformance", "budgetScale", "kindsAllowed", "waveBurstShare", "name"];
+    private static readonly string[] NightKeys = ["actsInPerformance", "budgetScale", "kindsAllowed", "waveBurstShare", "name", "rules"];
 
     /// <summary>
     /// What the one order the players take cards by decides (plan T37): the doors player and the kiter on the
