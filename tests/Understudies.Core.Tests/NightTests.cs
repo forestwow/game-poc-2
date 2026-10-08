@@ -22,23 +22,21 @@ public class NightTests
         Assert.That(nights[0].BudgetScale, Is.EqualTo(0.6m));
         Assert.That(nights[0].KindsAllowed, Is.EqualTo(new[] { "critic" }));
         Assert.That(nights[0].WaveBurstShare, Is.Zero);
-        Assert.That(nights[0].WaveBurstTime, Is.Null);
 
         Assert.That(nights[1].ActsInPerformance, Is.EqualTo(7));
         Assert.That(nights[1].BudgetScale, Is.EqualTo(0.7m));
         Assert.That(nights[1].KindsAllowed, Is.EqualTo(new[] { "critic", "stagehand" }));
         Assert.That(nights[1].WaveBurstShare, Is.Zero);
-        Assert.That(nights[1].WaveBurstTime, Is.Null);
 
         // The plain night overrides nothing.
-        Assert.That(nights[2], Is.EqualTo(new Night(10, null, null, null, null, null)));
+        Assert.That(nights[2], Is.EqualTo(new Night(10, null, null, null, null)));
     }
 
     [Test]
     public void Parse_EveryKeyANightMayHave_IsRead()
     {
         Night night = Night.Parse(
-            """[{ "night": 3, "actsInPerformance": 4, "budgetScale": 1.25, "kindsAllowed": ["rival"], "waveBurstShare": 0.5, "waveBurstTime": 6 }]""")
+            """[{ "night": 3, "actsInPerformance": 4, "budgetScale": 1.25, "kindsAllowed": ["rival"], "waveBurstShare": 0.5 }]""")
             .Single();
 
         Assert.That(night.Number, Is.EqualTo(3));
@@ -46,11 +44,12 @@ public class NightTests
         Assert.That(night.BudgetScale, Is.EqualTo(1.25m));
         Assert.That(night.KindsAllowed, Is.EqualTo(new[] { "rival" }));
         Assert.That(night.WaveBurstShare, Is.EqualTo(0.5f));
-        Assert.That(night.WaveBurstTime, Is.EqualTo(6f));
     }
 
     [TestCase("""[{ "night": 1, "doors": 2 }]""", "'doors'", TestName = "an unknown key")]
-    [TestCase("""[{ "actsInPerformance": 5 }]""", "'night'", TestName = "a night with no number")]
+    [TestCase("""[{ "actsInPerformance": 5 }]""", "missing required properties including: 'night'", TestName = "a night with no number")]
+    [TestCase("""[{ "night": 1, "kindsAllowed": [] }]""", "'kindsAllowed' of night 1", TestName = "a night that allows no kind")]
+    [TestCase("""[{ "night": 1 }, { "night": 2, "kindsAllowed": ["critic", null] }]""", "'kindsAllowed' of night 2", TestName = "a kind that says null")]
     [TestCase("""[{ "night": 1, "budgetScale": 0.6, "budgetScale": 0.7 }]""", "'budgetScale'", TestName = "a key written twice")]
     [TestCase("""[{ "night": 1 }, { "night": 1 }]""", "night 1", TestName = "a night twice")]
     [TestCase("""[{ "night": 2 }, { "night": 1 }]""", "night 1", TestName = "a night out of order")]
@@ -80,6 +79,21 @@ public class NightTests
         Assert.That(
             () => Night.Compose(CommittedTuning.Parse(), nights, 4),
             Throws.TypeOf<JsonException>().With.Message.Contains("'tout'").And.Message.Contains("night 4"));
+    }
+
+    [Test]
+    public void Compose_EveryNightOfTheCommittedFile_IsATuning()
+    {
+        // A kind's name is checked against the tuning, so only when a night is composed: a slip in the name of a
+        // night nobody plays yet is seen here.
+        Tuning plain = CommittedTuning.Parse();
+        IReadOnlyList<Night> nights = CommittedNights.Parse();
+
+        Assert.That(nights, Is.Not.Empty);
+        foreach (Night night in nights)
+        {
+            Assert.That(() => Night.Compose(plain, nights, night.Number), Throws.Nothing, $"night {night.Number}");
+        }
     }
 
     [Test]
@@ -118,13 +132,13 @@ public class NightTests
         Tuning plain = CommittedTuning.Parse() with { FirstActBudget = 40, BudgetGrowthPerAct = 5, BudgetGrowthRise = 3 };
 
         // 40 × 0.7 is 28 and not the 27 a float's 27.999998 would be cut to; 3.5 is 4 and 2.1 is 2.
-        Tuning scaled = Night.Compose(plain, [new Night(1, null, 0.7m, null, null, null)], 1);
+        Tuning scaled = Night.Compose(plain, [new Night(1, null, 0.7m, null, null)], 1);
         Assert.That(
             (scaled.FirstActBudget, scaled.BudgetGrowthPerAct, scaled.BudgetGrowthRise),
             Is.EqualTo((28, 4, 2)));
 
         // 2.5 is 3 and 1.5 is 2: a half goes up, never to the even number.
-        Tuning halved = Night.Compose(plain, [new Night(1, null, 0.5m, null, null, null)], 1);
+        Tuning halved = Night.Compose(plain, [new Night(1, null, 0.5m, null, null)], 1);
         Assert.That(
             (halved.FirstActBudget, halved.BudgetGrowthPerAct, halved.BudgetGrowthRise),
             Is.EqualTo((20, 3, 2)));

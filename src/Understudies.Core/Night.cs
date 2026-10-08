@@ -18,17 +18,16 @@ namespace Understudies.Core;
 /// whole number and a half up. A decimal, so that 0.6 is six tenths and nothing beside it.
 /// </param>
 /// <param name="KindsAllowed">
-/// The kinds the night's acts may buy, by <see cref="EnemyKind.Name"/>. One that is not named is never bought.
+/// The kinds the night's acts may buy, by <see cref="EnemyKind.Name"/>, at least one. One that is not named is
+/// never bought.
 /// </param>
 /// <param name="WaveBurstShare">The night's <see cref="Tuning.WaveBurstShare"/>: with 0 it has no crowds.</param>
-/// <param name="WaveBurstTime">The night's <see cref="Tuning.WaveBurstTime"/>.</param>
 public sealed record Night(
     [property: JsonPropertyName("night"), JsonRequired] int Number,
     int? ActsInPerformance,
     decimal? BudgetScale,
     IReadOnlyList<string>? KindsAllowed,
-    float? WaveBurstShare,
-    float? WaveBurstTime)
+    float? WaveBurstShare)
 {
     // As strict as the tuning's, but for one thing: every key but the number may be left out.
     private static readonly JsonSerializerOptions Options = new()
@@ -41,7 +40,8 @@ public sealed record Night(
     /// <summary>Reads the text of a nights.json.</summary>
     /// <exception cref="JsonException">
     /// The text is not the nights. For an unknown key, a key written twice and a night with no number the message
-    /// names the key; for a night that is not after the one before it (twice, out of order, less than 1) its number.
+    /// names the key; for a night that is not after the one before it (twice, out of order, less than 1) its number;
+    /// for a list of kinds that is empty or has a null in it the key and the night.
     /// </exception>
     public static IReadOnlyList<Night> Parse(string json)
     {
@@ -64,6 +64,13 @@ public sealed record Night(
                 throw new JsonException(
                     $"'night' is {night.Number} after night {before}: night {night.Number} is out of its place. "
                     + "The nights are numbered from 1 and stand in order, each once.");
+            }
+
+            // A list of no kinds would shut every kind, and a night of nobody is not something left out by a slip.
+            if (night.KindsAllowed is { } allowed && (allowed.Count == 0 || allowed.Contains(null!)))
+            {
+                throw new JsonException(
+                    $"'kindsAllowed' of night {night.Number} is empty or has a null in it: it names the kinds, at least one.");
             }
 
             before = night.Number;
@@ -90,7 +97,6 @@ public sealed record Night(
         {
             ActsInPerformance = night.ActsInPerformance ?? plain.ActsInPerformance,
             WaveBurstShare = night.WaveBurstShare ?? plain.WaveBurstShare,
-            WaveBurstTime = night.WaveBurstTime ?? plain.WaveBurstTime,
         };
 
         if (night.BudgetScale is { } scale)
@@ -110,10 +116,10 @@ public sealed record Night(
 
         if (night.KindsAllowed is { } allowed)
         {
-            if (allowed.FirstOrDefault(name => plain.EnemyKinds.All(kind => kind.Name != name)) is { } unknown)
+            foreach (string name in allowed.Where(name => plain.EnemyKinds.All(kind => kind.Name != name)))
             {
                 throw new JsonException(
-                    $"'kindsAllowed' of night {number} names '{unknown}', which 'enemyKinds' does not have.");
+                    $"'kindsAllowed' of night {number} names '{name}', which 'enemyKinds' does not have.");
             }
 
             tuning = tuning with
