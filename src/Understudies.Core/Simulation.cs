@@ -543,10 +543,10 @@ public sealed class Simulation(Tuning tuning, ulong seed, IReadOnlyList<IReadOnl
         // No test tells EncoresTaken, ActEncores, the encore stream's state or the offer's cards apart from the rest
         // of the hash: as the rule stands EncoresTaken is the number of the magician's self cards, the stream and
         // the offer follow from the seed and that number, and ActEncores is the number of the recording's encores.
-        // Plan T24 broke none of those. Of what it added, the tick of a recorded encore has its test, in the
-        // recording and in an understudy; the card of one has none, since two shows that took two cards on one
-        // tick have two magicians; nor have the cards an understudy has now, which follow from those it begins
-        // with, its encores and the tick of the act. Whatever breaks one of those adds the test that isolates it.
+        // Plan T24 broke none of those. Of what it added, the tick of a recorded encore and its card each have a
+        // test (the same encore on two ticks; two encores of one act taken in two orders). The number of a
+        // recording's encores and the cards an understudy begins with are told apart only together with those,
+        // and the cards an understudy has now follow from the rest. Whatever changes that adds the test.
         hasher.AddInt(ActApplause);
         hasher.AddInt(EncoreApplause);
         hasher.AddInt(EncoresTaken);
@@ -725,15 +725,14 @@ public sealed class Simulation(Tuning tuning, ulong seed, IReadOnlyList<IReadOnl
     /// </summary>
     private static void Place(Understudy understudy, int tick)
     {
-        // Worked out afresh from the recording on every tick, a handful of encores at most: nothing to set back
-        // when an act begins.
+        // Worked out afresh from the recording on every tick, so there is nothing to set back when an act begins.
+        // The encores are in the order they were taken: the first that is still to come ends the walk.
+        // ponytail: every understudy walks its encores up to now on every tick, some twenty at most each; an index
+        // of the next one in each replaces the walk when an act holds hundreds.
         SelfCards cards = understudy.FirstCards;
-        foreach ((int taken, Card card) in understudy.Encores)
+        for (int i = 0; i < understudy.Encores.Count && understudy.Encores[i].Tick <= tick; i++)
         {
-            if (taken <= tick)
-            {
-                cards = cards.With(card);
-            }
+            cards = cards.With(understudy.Encores[i].Card);
         }
 
         understudy.Cards = cards;

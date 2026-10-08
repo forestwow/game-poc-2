@@ -17,7 +17,6 @@ public sealed class Understudy
     {
         Act = act;
         FirstCards = cards;
-        Cards = cards;
         Route = route;
         Vanishes = vanishes;
         Encores = encores;

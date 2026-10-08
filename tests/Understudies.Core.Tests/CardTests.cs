@@ -1126,6 +1126,43 @@ public class CardTests
     }
 
     [Test]
+    public void ComputeStateHash_TwoEncoresOfOneActTakenInTwoOrders_AreTwoHashes_ForTheCardsOfTheRecording()
+    {
+        // Two critics in one act, ten ticks apart, and two encores: both shows are offered the same two cards at
+        // both and take them in two orders. The magicians end alike and the ticks of the encores are the same:
+        // the shows differ only in which card the recording keeps for which tick.
+        Card[] both = [Card.Range, Card.VanishCooldown];
+        ulong seed = SeedWhoseEncores(both, both);
+        Simulation Show(Card first, Card second)
+        {
+            var simulation = new Simulation(Scene, seed, [[AtOnce, AtOnce with { Tick = 10 }]]);
+            PlayTheAct(simulation);
+            Take(simulation, first);
+            PlayTheAct(simulation);
+            Take(simulation, second);
+            PlayTheAct(simulation);
+            Assert.That(simulation.Phase, Is.EqualTo(Phase.Program));
+            return simulation;
+        }
+
+        Simulation one = Show(Card.Range, Card.VanishCooldown);
+        Simulation other = Show(Card.VanishCooldown, Card.Range);
+
+        Assert.That(other.MagicianCards, Is.EqualTo(one.MagicianCards));
+        Assert.That(other.ComputeStateHash(), Is.Not.EqualTo(one.ComputeStateHash()));
+
+        // Between the two ticks of the next act the two understudies have each its own first encore's card.
+        foreach (Simulation simulation in new[] { one, other })
+        {
+            simulation.Pick(0);
+            simulation.GoOn();
+            Run(simulation, ticks: 8);
+        }
+
+        Assert.That(other.Understudies[0].Cards, Is.Not.EqualTo(one.Understudies[0].Cards));
+    }
+
+    [Test]
     public void ComputeStateHash_TwoCardsInTheAirThatHurtUnlike_AreTwoHashes()
     {
         // A critic that outlasts the act enters a second into it, and the magician throws on the next tick: its
