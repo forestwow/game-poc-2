@@ -12,8 +12,8 @@ namespace Understudies.Core.Tests;
 /// <param name="Dropped">The pieces of applause dropped in the act, picked up or not.</param>
 /// <param name="FellInReach">
 /// Of the pieces picked up, those dropped inside the magician's pick-up reach of where it stood on that tick. A
-/// critic that touches the magician stands further off than that reach on the committed numbers, so this counts
-/// only what a squeezed crowd drops: it is no measure of how safe a player stood.
+/// critic that touches the magician stands inside that reach on the committed numbers (plan T21), so this counts
+/// every critic that fell touching it: it is no measure of how safe a player stood.
 /// </param>
 /// <param name="WalkedTo">Of the pieces picked up, the others: those the magician had to go to.</param>
 /// <param name="StateHash">The simulation's state hash at that moment.</param>

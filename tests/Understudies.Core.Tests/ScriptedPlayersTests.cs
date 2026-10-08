@@ -30,8 +30,8 @@ public class ScriptedPlayersTests
 
         Assert.Multiple(() =>
         {
-            Assert.That(performance.Acts[2].StateHash, Is.EqualTo(18416097257097476696UL), "the end of act three");
-            Assert.That(performance.Acts[^1].StateHash, Is.EqualTo(5429885305550085217UL), "the end of the performance");
+            Assert.That(performance.Acts[2].StateHash, Is.EqualTo(11646234639164644491UL), "the end of act three");
+            Assert.That(performance.Acts[^1].StateHash, Is.EqualTo(18366125120241640357UL), "the end of the performance");
         });
     }
 
@@ -58,8 +58,8 @@ public class ScriptedPlayersTests
             Assert.That(vanishes, Is.GreaterThan(0), "Vanishes");
             Assert.That(blows, Is.GreaterThan(0), "blows on the box office");
             Assert.That(stunned, Is.GreaterThan(0), "stunned critics");
-            Assert.That(performance.Acts[2].StateHash, Is.EqualTo(8628429157010245494UL), "the end of act three");
-            Assert.That(performance.Acts[^1].StateHash, Is.EqualTo(12465959235886267719UL), "the end of the performance");
+            Assert.That(performance.Acts[2].StateHash, Is.EqualTo(2910077769663245940UL), "the end of act three");
+            Assert.That(performance.Acts[^1].StateHash, Is.EqualTo(13414949432979666193UL), "the end of the performance");
         });
     }
 
@@ -408,7 +408,7 @@ public class ScriptedPlayersTests
         table.WriteLine(
             $"in reach: a piece dropped within the pick-up reach ({Number(tuning.MagicianRadius + tuning.ApplausePickUpReach, "0.0#")}) of where the magician stood. "
             + $"A critic that touches the magician stands {Number(tuning.MagicianRadius + tuning.EnemyKinds[0].Radius, "0.0#")} from it, "
-            + "so this counts only what a squeezed crowd drops: it is near nothing by the numbers' geometry and says nothing of how safe a player stood.");
+            + "so while the reach is the longer of the two this counts every critic that fell touching the magician, and says nothing of how safe a player stood.");
         table.WriteLine();
         int orbits = players.Length - 1;
         table.WriteLine($"The guard (decision 22, at least 16 of {Seeds} each).");
