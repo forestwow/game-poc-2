@@ -60,7 +60,7 @@ Taken without a question, each a setting or a hypothesis:
 
 - **Tick rate:** 60 per second. It is the one number that lives in code and not in `tuning.json`, because recordings are counted in ticks; 30 is tried at stop 1.
 - **Sound:** synthesised in code at start-up. No sound files.
-- **Text:** a system font found at start-up. `ponytail:` a font file is shipped when a build leaves the owner's machine (§7).
+- **Text:** a system font found at start-up (Arial on macOS and Windows; DejaVu Sans or Liberation Sans on Linux, since T39). `ponytail:` a font file is shipped when a build leaves the owner's machine (§7); which font is the owner's choice.
 - **Collisions:** critics push each other apart softly and pass through understudies. Nothing blocks the magician; a critic touching the magician hurts on a cooldown.
 - **The mark:** every act starts with the magician on the same mark beside the box office, so every recording begins there.
 - **The program:** the world stands, twelve seconds to choose, and when they run out the leftmost card is taken.
@@ -344,6 +344,24 @@ The guard of decision 22 is the one measure of the game's central rule, and thre
 - *Saturation.* For a player that goes out, the late acts decide nothing: the doors player's box office stands untouched from act five on, as on `main` (T23, T24, T26), with 2560 enemies in act ten. "By the end of act six" tells nothing apart for the orbit, which loses in act three everywhere. The one probe that moved a winner's box office was a tougher kind of enemy (T26), which is T29.
 - *What it never measured:* a person. No script reads the stage as a player does, and the owner's own report (no trouble winning) is the only measure of that.
 
+**T39 The small bugs.** *The review's R6. The view only: no rule, no number of `tuning.json`, and the pinned hashes are as they were.*
+Mended:
+- **Fonts.** `FontFiles` has the Linux paths its comment and the README had promised: DejaVu Sans and then Liberation Sans, each where Debian, Fedora and Arch keep it, after the two Arial paths, so macOS and Windows find what they found. Not run on a Linux desktop: CI has no window.
+- **The invulnerability cue.** While `MagicianIsInvulnerable` the magician is drawn through `DrawFigure` at `InvulnerableOpacity` and washed with the cloud's colour.
+- **The kill burst.** A pale disc under it for the first half of its time (`KillFlashRadius`, `KillFlashOpacity`, `KillFlashShare` in `Juice.cs`): black ink on a pale flash reads on the dark boards. The sprite is as it was.
+- **The shake** is a function of the juice's time, sixty places a second (`ShakesPerSecond`), each from a hash of its number: as strong as before, the same at every frame rate, and it draws nothing from the juice's `Random`.
+- **The walk.** A figure's frames go at twelve a second times its speed over `WalkReferenceSpeed` (4), kept between four and twenty: a critic six, a stagehand and the magician twenty. The speed is the kind's number, so a pushed critic's walk does not skip.
+- **R** goes through `StartAgain`, which sets back every field the view keeps for a show: the clock's owed part of a tick, the walk clock, a Vanish asked for, the magician's facing and the program's highlight and taken card were left behind before.
+- **The back wall's words.** The middle line was drawn over the act's line wherever it was long: "The magician has fallen…" in every act (seen in a capture of tick 42900, where the doors player falls in act ten). It is now fitted between the act's line and the clock: in the middle where there is room, aside where not, and smaller where it is longer than what is left.
+- **Dead code and stale notes.** `DrawUpright` is gone; `CLAUDE.md` has the stagehand from act four; `art/ludo/styles/manifest.json` says that its folders, its frames and the `--art` flag were removed. `TickEventKind.Throw`'s doc was right already (T28).
+- `art/frames`: 410, 12000, 26621 and 39570 are taken again (walks, and the pale flash where a critic has just fallen); 4560, 4575 and 45600 came out the same to the byte.
+
+Left:
+- **The font file.** None is in the repository and nothing was downloaded: which font ships is the owner's choice (the road, below).
+- **A figure taller than the back wall at the back door** was seen with T29's rival, which is not on `main`: the words are drawn after every figure already, so what is left is a tall figure standing over the wall and to the window's edge. For T29 or after it.
+- A kill does nothing to the camera and the hit-stop is the Vanish's alone (the review's §3.5): juice to be designed, not a bug. R5's other half and R8 are their own tickets.
+- For the owner's eye and ear when playing: whether the magician at twenty frames a second runs or scurries (`WalkReferenceSpeed`), whether the pale moment after a Vanish is seen in a crowd (`InvulnerableOpacity`), and whether the pale flashes of a late act's many kills are too much (`KillFlashOpacity`).
+
 ### The road from here
 
 On 2026-10-08 the owner brought in three documents and said they are what is to be built: the review of the skeleton with its proposed tickets R1 to R9 (`docs/reviews/2026-10-08-skeleton-review.md`), the cast and the cards (`docs/design/2026-10-08-enemies-and-cards.md`) and the chorus's synergies with the notices (`docs/design/2026-10-08-chorus-synergies-and-notices.md`). A fourth followed, the card catalogue (below). They are the specification of what follows (decision 28); this section is the order and the plan's own numbers. The order is this table's and not the numbers': T25 is taken fourth. What has no number here (the review's R tickets, more of the cast) gets the next free one when it is taken. A ticket is written out here in full when it is taken, from its document, and each still runs the guard and pins the hashes.
@@ -369,7 +387,7 @@ What the documents could not know, since they were written on `main` before T23:
 
 Taken between those, when they are next in the way:
 
-- **R6, the small bugs**: a small pull request. **R7, macOS in CI**, is built as T38 (#38): the job runs on `ubuntu-latest` and `macos-latest`.
+- **R6, the small bugs**, is built as T39 (written out above), all but its font file: which font is put in the repository is the owner's open choice, and until then a Linux machine reads a system font. **R7, macOS in CI**, is built as T38 (#38): the job runs on `ubuntu-latest` and `macos-latest`.
 - **R5's other half and R8** (a card described by Core, kinds by name, a sprite atlas, a hash that does not walk every route): when a ticket is slowed by the lack of them.
 - **R9** (the package and three friends now) is against what the owner said on the same day (§6: a good deal is to be added before anything is given out). It stays the owner's to call.
 
