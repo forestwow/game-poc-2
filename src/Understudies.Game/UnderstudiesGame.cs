@@ -126,8 +126,8 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
         Path.Combine("atkinson-hyperlegible", "AtkinsonHyperlegible-Regular.ttf"),
     ];
 
-    // Words on the stage carry an outline in ink, this wide in world units: two screen pixels in a window 1280
-    // wide, and two as well in the 1024 the window opens at, where 1.6 is rounded; never less than one, and
+    // Words on the stage carry an outline in ink, this wide in world units: two screen pixels in the window of
+    // 1280 the game opens in, and two as well in one 1024 wide, where 1.6 is rounded; never less than one, and
     // never more than one part in SmallestOutlined of the words' height.
     private static readonly Color OutlineInk = new(30, 22, 30);
     private const float OutlineWidth = 0.075f;

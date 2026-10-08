@@ -26,7 +26,7 @@ A figure is an ordinary theatre person or thing with one part that is something 
 `ludo sprite animate --initial-image <view> --motion-prompt "walking towards the viewer" --model forge-pixel --duration 1 --frames 9 --frame-size <n>` ("walking away from the viewer", "walking to the right" for the other views). One and a half credits each.
 
 - `forge-pixel` keeps the pixel grid; the default model does not, and costs six times as much.
-- The sheet must come back with one file pixel to a sprite pixel, and every figure to one measure: the magician is 64 sprite pixels for its three units, so a figure of two units is about 43. `--frame-size 64` gives the magician that, and `--frame-size 32` a figure of two units (the size names the sprite's width more than its height). A sheet that came back larger is exported again for nothing with `ludo sprite adjust --spritesheet-url <its url> --frame-size 32`.
+- The sheet must come back with one file pixel to a sprite pixel, and every figure to one measure: the magician is 64 sprite pixels for its three units, so a figure of two units is about 43. (Those are units of the sheets' own measure: since plan T42 the game draws a walking figure 1.6 times that against the stage.) `--frame-size 64` gives the magician that, and `--frame-size 32` a figure of two units (the size names the sprite's width more than its height). A sheet that came back larger is exported again for nothing with `ludo sprite adjust --spritesheet-url <its url> --frame-size 32`.
 - The sheet is three rows of three frames, each frame cropped to the same size within a sheet.
 
 ## The set
