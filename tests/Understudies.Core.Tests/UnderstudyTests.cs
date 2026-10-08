@@ -295,7 +295,7 @@ public class UnderstudyTests
         simulation.Step(new MagicianInput(new Vector2(0f, 1f)));
 
         Assert.That(
-            simulation.ThrownCards.Select(card => (card.Position, card.ThrownByMagician)),
+            simulation.ThrownCards.Select(card => (card.ThrownFrom, card.ThrownByMagician)),
             Is.EqualTo(new[]
             {
                 (Mark + new Vector2(0f, 0.25f), true),
