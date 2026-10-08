@@ -18,6 +18,7 @@
   <ItemGroup>
     <!-- The tests read the committed numbers, the same file the game reads. -->
     <None Include="..\..\tuning.json" Link="tuning.json" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\..\nights.json" Link="nights.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
 </Project>

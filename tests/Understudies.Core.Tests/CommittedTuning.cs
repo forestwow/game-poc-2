@@ -8,3 +8,13 @@ internal static class CommittedTuning
 
     public static Tuning Parse() => Tuning.Parse(Json);
 }
+
+/// <summary>The repository's nights.json, copied beside the tests as tuning.json is.</summary>
+internal static class CommittedNights
+{
+    public static IReadOnlyList<Night> Parse() =>
+        Night.Parse(File.ReadAllText(Path.Combine(TestContext.CurrentContext.TestDirectory, "nights.json")));
+
+    /// <summary>The committed tuning under the committed overlay of a night.</summary>
+    public static Tuning Tuning(int night) => Night.Compose(CommittedTuning.Parse(), Parse(), night);
+}
