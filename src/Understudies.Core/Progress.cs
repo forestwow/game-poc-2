@@ -9,6 +9,19 @@ namespace Understudies.Core;
 /// <param name="Won">Whether a show of that night ended in its ovation.</param>
 public sealed record NightPlayed(int Night, int BestAct, bool Won);
 
+/// <summary>What a night asks of the player before the night after it opens (<see cref="Progress.GateOf"/>).</summary>
+public enum Gate
+{
+    /// <summary>The night was played, whatever came of it.</summary>
+    Played,
+
+    /// <summary>A show of the night reached act <see cref="Progress.ActThatUnlocks"/>, or the night was won.</summary>
+    ActReachedOrWon,
+
+    /// <summary>The night was won.</summary>
+    Won,
+}
+
 /// <summary>
 /// What the player has done, between one run of the game and the next (plan T54, decision 33): the nights played,
 /// in the order of their numbers, each once. It is no part of a show: <see cref="Simulation"/> never reads it, it
@@ -36,6 +49,13 @@ public sealed record Progress(IReadOnlyList<NightPlayed> Nights)
     /// it: "reaching is reaching"). With 6 here act five would have to be outlived.
     /// </summary>
     public const int ActThatUnlocks = 5;
+
+    /// <summary>
+    /// The gate of a night, by its number: what <see cref="Unlocked"/> opens the next night by, and what the
+    /// poster says of it in words (plan T55), so that the two are one rule.
+    /// </summary>
+    public static Gate GateOf(int night) =>
+        night < PlayedUnlocksBefore ? Gate.Played : night < WinAloneUnlocksFrom ? Gate.ActReachedOrWon : Gate.Won;
 
     /// <summary>What <see cref="Load"/> adds to the name of a file it could not read, to keep it.</summary>
     public const string DamagedSuffix = ".damaged";
@@ -112,9 +132,12 @@ public sealed record Progress(IReadOnlyList<NightPlayed> Nights)
 
         bool HasPassedItsGate(int night) =>
             Played(night) is { } played
-            && (night < PlayedUnlocksBefore
-                || played.Won
-                || (night < WinAloneUnlocksFrom && played.BestAct >= ActThatUnlocks));
+            && GateOf(night) switch
+            {
+                Gate.Played => true,
+                Gate.ActReachedOrWon => played.Won || played.BestAct >= ActThatUnlocks,
+                _ => played.Won,
+            };
 
         var unlocked = new List<int>();
         for (int i = 0; i < nights.Count; i++)

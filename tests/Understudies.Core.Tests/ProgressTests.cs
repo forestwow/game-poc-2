@@ -99,6 +99,28 @@ public class ProgressTests
     }
 
     [Test]
+    public void GateOf_ANight_IsWhatItAsksBeforeTheNextOpens()
+    {
+        // What the poster says in words (plan T55) and what Unlocked opens by are the one rule.
+        Assert.That(Progress.GateOf(1), Is.EqualTo(Gate.Played));
+        Assert.That(Progress.GateOf(5), Is.EqualTo(Gate.Played));
+        Assert.That(Progress.GateOf(6), Is.EqualTo(Gate.ActReachedOrWon));
+        Assert.That(Progress.GateOf(15), Is.EqualTo(Gate.ActReachedOrWon));
+        Assert.That(Progress.GateOf(16), Is.EqualTo(Gate.Won));
+    }
+
+    [TestCase(5, 1, false, true, TestName = "night 5 lost in act one: played")]
+    [TestCase(6, 4, false, false, TestName = "night 6 lost in act four")]
+    [TestCase(6, 5, false, true, TestName = "night 6 lost in act five")]
+    [TestCase(16, 9, false, false, TestName = "night 16 lost in act nine")]
+    [TestCase(16, 9, true, true, TestName = "night 16 won")]
+    public void Unlocked_OpensTheNextNight_ByTheGateThatGateOfNames(int night, int act, bool won, bool opens) =>
+        Assert.That(
+            Progress.None.With(night, act, won).Unlocked(Nights(night, night + 1)),
+            Is.EqualTo(opens ? new[] { night, night + 1 } : new[] { night }),
+            $"the gate is {Progress.GateOf(night)}");
+
+    [Test]
     public void Unlocked_ThroughNightFive_ByBeingPlayed() =>
         Assert.That(Progress.None.With(5, 1, won: false).Unlocked(Nights(5, 6)), Is.EqualTo(new[] { 5, 6 }));
 

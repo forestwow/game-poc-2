@@ -22,12 +22,18 @@ namespace Understudies.Core;
 /// never bought.
 /// </param>
 /// <param name="WaveBurstShare">The night's <see cref="Tuning.WaveBurstShare"/>: with 0 it has no crowds.</param>
+/// <param name="Name">
+/// The night's name on its poster (plan T55; the key is <c>name</c>). It overrides nothing and no rule reads it:
+/// <see cref="Compose"/> does not look at it. It may be left out as every other key may, and the poster then has
+/// the night's number alone; a name that is there has words in it.
+/// </param>
 public sealed record Night(
     [property: JsonPropertyName("night"), JsonRequired] int Number,
     int? ActsInPerformance,
     decimal? BudgetScale,
     IReadOnlyList<string>? KindsAllowed,
-    float? WaveBurstShare)
+    float? WaveBurstShare,
+    string? Name)
 {
     // As strict as the tuning's, but for one thing: every key but the number may be left out.
     private static readonly JsonSerializerOptions Options = new()
@@ -41,7 +47,7 @@ public sealed record Night(
     /// <exception cref="JsonException">
     /// The text is not the nights. For an unknown key, a key written twice and a night with no number the message
     /// names the key; for a night that is not after the one before it (twice, out of order, less than 1) its number;
-    /// for a list of kinds that is empty or has a null in it the key and the night.
+    /// for a list of kinds that is empty or has a null in it, and for a name of no words, the key and the night.
     /// </exception>
     public static IReadOnlyList<Night> Parse(string json)
     {
@@ -71,6 +77,11 @@ public sealed record Night(
             {
                 throw new JsonException(
                     $"'kindsAllowed' of night {night.Number} is empty or has a null in it: it names the kinds, at least one.");
+            }
+
+            if (night.Name is { } name && string.IsNullOrWhiteSpace(name))
+            {
+                throw new JsonException($"'name' of night {night.Number} has no words in it: leave the key out for a night with no name.");
             }
 
             before = night.Number;

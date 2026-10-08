@@ -28,15 +28,16 @@ public class NightTests
         Assert.That(nights[1].KindsAllowed, Is.EqualTo(new[] { "critic", "stagehand" }));
         Assert.That(nights[1].WaveBurstShare, Is.Zero);
 
-        // The plain night overrides nothing.
-        Assert.That(nights[2], Is.EqualTo(new Night(10, null, null, null, null)));
+        // The plain night overrides nothing: it has its name, which no rule reads.
+        Assert.That(nights[2], Is.EqualTo(new Night(10, null, null, null, null, "Opening night")));
+        Assert.That(nights.Select(night => night.Name), Is.EqualTo(new[] { "A quiet Tuesday", "The crew arrives", "Opening night" }));
     }
 
     [Test]
     public void Parse_EveryKeyANightMayHave_IsRead()
     {
         Night night = Night.Parse(
-            """[{ "night": 3, "actsInPerformance": 4, "budgetScale": 1.25, "kindsAllowed": ["rival"], "waveBurstShare": 0.5 }]""")
+            """[{ "night": 3, "actsInPerformance": 4, "budgetScale": 1.25, "kindsAllowed": ["rival"], "waveBurstShare": 0.5, "name": "The tout" }]""")
             .Single();
 
         Assert.That(night.Number, Is.EqualTo(3));
@@ -44,6 +45,19 @@ public class NightTests
         Assert.That(night.BudgetScale, Is.EqualTo(1.25m));
         Assert.That(night.KindsAllowed, Is.EqualTo(new[] { "rival" }));
         Assert.That(night.WaveBurstShare, Is.EqualTo(0.5f));
+        Assert.That(night.Name, Is.EqualTo("The tout"));
+    }
+
+    [Test]
+    public void ANightsName_MayBeLeftOut_AndChangesNoNumber()
+    {
+        // The name is the poster's (plan T55): a night without one is read, and one with a name alone is the
+        // plain night still.
+        Tuning plain = CommittedTuning.Parse();
+        IReadOnlyList<Night> nights = Night.Parse("""[{ "night": 1 }, { "night": 2, "name": "The crew arrives" }]""");
+
+        Assert.That(nights[0].Name, Is.Null);
+        Assert.That(Night.Compose(plain, nights, 2), Is.EqualTo(plain));
     }
 
     [TestCase("""[{ "night": 1, "doors": 2 }]""", "'doors'", TestName = "an unknown key")]
@@ -55,6 +69,8 @@ public class NightTests
     [TestCase("""[{ "night": 2 }, { "night": 1 }]""", "night 1", TestName = "a night out of order")]
     [TestCase("""[{ "night": 0 }]""", "night 0", TestName = "a night before the first")]
     [TestCase("""[{ "night": 1, "actsInPerformance": 5.5 }]""", "actsInPerformance", TestName = "a number of acts that is not whole")]
+    [TestCase("""[{ "night": 1, "name": 1 }]""", "name", TestName = "a name that is not words")]
+    [TestCase("""[{ "night": 1, "name": " " }]""", "'name' of night 1", TestName = "a name of no words")]
     [TestCase("""[{ "night": 1 }, null]""", "null", TestName = "a night that says null")]
     [TestCase("null", "null", TestName = "a file that says null")]
     public void Parse_AFileThatIsNotTheNights_IsRefusedWithThePlace(string json, string place)
@@ -132,13 +148,13 @@ public class NightTests
         Tuning plain = CommittedTuning.Parse() with { FirstActBudget = 40, BudgetGrowthPerAct = 5, BudgetGrowthRise = 3 };
 
         // 40 × 0.7 is 28 and not the 27 a float's 27.999998 would be cut to; 3.5 is 4 and 2.1 is 2.
-        Tuning scaled = Night.Compose(plain, [new Night(1, null, 0.7m, null, null)], 1);
+        Tuning scaled = Night.Compose(plain, [new Night(1, null, 0.7m, null, null, null)], 1);
         Assert.That(
             (scaled.FirstActBudget, scaled.BudgetGrowthPerAct, scaled.BudgetGrowthRise),
             Is.EqualTo((28, 4, 2)));
 
         // 2.5 is 3 and 1.5 is 2: a half goes up, never to the even number.
-        Tuning halved = Night.Compose(plain, [new Night(1, null, 0.5m, null, null)], 1);
+        Tuning halved = Night.Compose(plain, [new Night(1, null, 0.5m, null, null, null)], 1);
         Assert.That(
             (halved.FirstActBudget, halved.BudgetGrowthPerAct, halved.BudgetGrowthRise),
             Is.EqualTo((20, 3, 2)));
