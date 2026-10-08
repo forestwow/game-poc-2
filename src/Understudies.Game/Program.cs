@@ -24,6 +24,12 @@ while (true)
             return 2;
         }
 
+        if (rules.Contains(rule))
+        {
+            Console.Error.WriteLine($"The house rule '{rule}' is asked for twice");
+            return 2;
+        }
+
         rules.Add(rule);
         args = first;
     }

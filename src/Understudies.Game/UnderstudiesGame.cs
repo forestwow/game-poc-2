@@ -736,10 +736,11 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
         Vector2 magicianFeet = Vector2.Lerp(_simulation.MagicianPreviousPosition, _simulation.MagicianPosition, alpha);
 
         // The spotlight night (plan T56): the dark is made first, and laid over the figures below.
-        bool dark = LightsAreDown;
+        // Read once for the frame: Lit asks it for every enemy.
+        bool dark = _lightsDown = LightsAreDown;
         if (dark)
         {
-            MakeTheDark(magicianFeet);
+            MakeTheDark(magicianFeet, past);
         }
 
         GraphicsDevice.Clear(Surround);
@@ -1063,13 +1064,14 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
                 EnemyKind headliner = Tuning.EnemyKinds[Math.Min(critic.Kind, Tuning.EnemyKinds.Count - 1)];
 
                 // A headliner that the dark hides has no bar to give it away.
-                if (Lit(critic.Position) < 0.5f)
+                Vector2 feet = Vector2.Lerp(critic.PreviousPosition, critic.Position, alpha);
+                if (Lit(feet) < 0.5f)
                 {
                     continue;
                 }
 
                 FillBar(
-                    Vector2.Lerp(critic.PreviousPosition, critic.Position, alpha) + new Vector2(-headlinerBar.X / 2f, 0.3f),
+                    feet + new Vector2(-headlinerBar.X / 2f, 0.3f),
                     headlinerBar,
                     critic.HitPoints / (headliner.HitPoints + (headliner.HitPointsPerAct * (_simulation.Act - headliner.FromAct))),
                     HeadlinerWash);

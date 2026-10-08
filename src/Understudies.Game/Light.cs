@@ -25,10 +25,12 @@ internal sealed partial class UnderstudiesGame
 
     // The light of an open door (the document's "cone"): circles from the door's picture out onto the floor
     // toward the box office, the further the wider. The view's numbers: only the magician's own circle is the
-    // tuning's (spotlightRadius), since the document gives a number to that one alone.
-    private const float DoorLampReach = 5.4f;
-    private const float DoorLampNear = 2.6f;
-    private const float DoorLampFar = 4.2f;
+    // tuning's (spotlightRadius), since the document gives a number to that one alone. The one at the door is
+    // wide enough for the door's own crowd, which the push-apart spreads sideways: a door's half and a rival's
+    // width and more to either side. The light ends DoorLampReach and DoorLampFar from the door, 9.6 units.
+    private const float DoorLampReach = 4.6f;
+    private const float DoorLampNear = 4.6f;
+    private const float DoorLampFar = 5f;
     private const int DoorLamps = 4;
 
     // The first of them is this far up the door's picture, which stands on the door's line.
@@ -55,6 +57,7 @@ internal sealed partial class UnderstudiesGame
     // The dark of the frame being drawn, as large as what is drawn to, and the lamps it was cut by. Made by the
     // first frame of a spotlight night and by none before it: a game without the rule has neither.
     private RenderTarget2D? _dark;
+    private bool _lightsDown;
     private readonly List<(Vector2 Middle, float Radius)> _lamps = [];
 
     /// <summary>
@@ -76,7 +79,7 @@ internal sealed partial class UnderstudiesGame
     /// </summary>
     private float Lit(Vector2 at)
     {
-        if (!LightsAreDown)
+        if (!_lightsDown)
         {
             return 1f;
         }
@@ -93,9 +96,11 @@ internal sealed partial class UnderstudiesGame
     /// <summary>
     /// Makes the dark of this frame: the stage's dark with a hole for every lamp, in a picture of its own that
     /// <see cref="LayTheDark"/> lays over the stage. Called before anything of the frame is drawn, since what is
-    /// drawn to is set aside for it and comes back empty.
+    /// drawn to is set aside for it and comes back empty. The dark is the stage's alone, <paramref name="past"/>
+    /// its edges as the set is laid: in a window that is not the stage's shape the surround has none, and a
+    /// lamp at a side door lights nothing there.
     /// </summary>
-    private void MakeTheDark(Vector2 magicianFeet)
+    private void MakeTheDark(Vector2 magicianFeet, Vector2 past)
     {
         // The lamps: the magician's own, and at every open door a row of circles toward the box office, the
         // first on the door's picture.
@@ -129,7 +134,10 @@ internal sealed partial class UnderstudiesGame
 
         RenderTargetBinding[] drawnTo = GraphicsDevice.GetRenderTargets();
         GraphicsDevice.SetRenderTarget(_dark);
-        GraphicsDevice.Clear(TheDark);
+        GraphicsDevice.Clear(Color.Transparent);
+        _spriteBatch.Begin(samplerState: SamplerState.PointClamp, transformMatrix: _worldToScreen);
+        Fill(-past, Tuning.StageSize + (2f * past), TheDark);
+        _spriteBatch.End();
         _spriteBatch.Begin(blendState: Cut, samplerState: SamplerState.PointClamp, transformMatrix: _worldToScreen);
         foreach ((Vector2 middle, float radius) in _lamps)
         {
