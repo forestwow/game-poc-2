@@ -119,11 +119,11 @@ internal sealed class Juice(Random random)
         return (scrap.From + flown, scrap.Turn, MathF.Min(1f, 2f * (1f - (age / ScrapTime))));
     });
 
-    /// <summary>Takes in what the last tick did. Called after every tick: a frame may run several.</summary>
     /// <summary>The cards' effects that are on the stage now, each with how far through its time it is, from 0 to 1.</summary>
     public IEnumerable<(Effect Kind, Vector2 Middle, float Through)> Effects =>
         _effects.Select(effect => (effect.Kind, effect.Middle, (_now - effect.At) / Lasts(effect.Kind)));
 
+    /// <summary>Takes in what the last tick did. Called after every tick: a frame may run several.</summary>
     public void Feed(Simulation simulation)
     {
         // An event has no id. A card hurt the critic that has less left than when it was last looked at.

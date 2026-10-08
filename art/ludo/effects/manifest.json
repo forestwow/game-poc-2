@@ -2,7 +2,7 @@
   "tool": "ludo.ai, through its CLI (ludo 0.1.6)",
   "ticket": "T22, the cards' effects",
   "credits": 5.0,
-  "note": "raw/ keeps the stills as returned. The two sheets are kept only under the names the game reads: three rows of three frames, a file pixel to a sprite pixel. A job that returned two pictures is listed twice with the credits of the whole job.",
+  "note": "raw/ keeps the stills as returned. The two sheets are kept only under the names the game reads: three rows of three frames, a file pixel to a sprite pixel. A job that returned two pictures is listed twice with the credits of the whole job. The sheets came back with frames of 82 x 78 (the hit) and 88 x 88 (the kill) pixels: the size asked names the sprite at its start, and a burst grows.",
   "game_files": {
     "hit-burst.png": "the animation of raw/hit-v2.png",
     "kill-burst.png": "the animation of raw/kill-v1.png"

@@ -27,10 +27,10 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
     private const float ShadowOpacity = 0.3f;
     private const float FootlightGap = 4f;
 
-    // A thrown card spins as it flies, this many turns a second, with a dark edge this wide about its face.
+    // A thrown card spins as it flies, this many turns for a unit flown, with a dark edge this wide about its face.
     private const float ThrownCardWidth = 0.7f;
     private const float ThrownCardHeight = 0.5f;
-    private const float ThrownCardSpin = 4f;
+    private const float ThrownCardSpin = 0.11f;
     private const float ThrownCardEdge = 0.1f;
 
     // The flick of light at a throwing hand grows to this wide as it goes out.
@@ -608,8 +608,8 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
             Color face = card.ThrownByMagician ? ThrownCardFace : UnderstudysCardFace;
             Vector2 heart = below - new Vector2(0f, ThrownCardLift + (ThrownCardHeight / 2f));
 
-            // Out of step with the card thrown beside it: its turn starts from where it was thrown.
-            float turn = ((_walkClock * ThrownCardSpin) + card.ThrownFrom.X + card.ThrownFrom.Y) * MathF.Tau;
+            // Its turn is told by how far it has flown, so a card left in the air when the world stands hangs still.
+            float turn = Vector2.Distance(below, card.ThrownFrom) * ThrownCardSpin * MathF.Tau;
             var size = new Vector2(ThrownCardWidth, ThrownCardHeight);
             FillTurned(heart, size + new Vector2(2f * ThrownCardEdge), turn, CardEdge, Depth(below));
             FillTurned(heart, size, turn, face, MathF.Min(1f, Depth(below) + 0.0001f));
@@ -639,17 +639,8 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
         // hit points are a bar above it, a critic's height above, clear of the heads of the critics who stand
         // behind the box.
         _spriteBatch.Begin(samplerState: SamplerState.PointClamp, transformMatrix: worldToScreen);
-        foreach (Applause piece in _simulation.ApplauseOnTheFloor)
-        {
-            // Over every figure, so that a crowd does not hide what is there to be fetched, and the dimmer the
-            // less of its time it has left.
-            float left = Math.Clamp(piece.TicksLeft / (Tuning.ApplauseTime * Simulation.TicksPerSecond), 0f, 1f);
-            float seen = ApplauseFaintest + ((1f - ApplauseFaintest) * left);
-            Vector2 middle = piece.Position - new Vector2(0f, ApplauseLift);
-            FillTurned(middle, new Vector2(ApplauseSize), MathF.PI / 4f, ApplauseGlow * seen);
-            FillTurned(middle, new Vector2(ApplauseSize / 2.5f), MathF.PI / 4f, ApplauseHeart * seen);
-        }
 
+        // The cards' effects go under the applause: a splash of ink must not hide the piece its kill drops.
         foreach (var effect in _juice.Effects)
         {
             // The flick is a diamond of light that grows and goes out. A burst is a sheet played through once, and
@@ -666,8 +657,8 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
             int frames = sheet.Columns * sheet.Columns;
             int frame = Math.Min(frames - 1, (int)(effect.Through * frames));
             var source = new Rectangle(
-                frame % sheet.Columns * sheet.First.Width,
-                frame / sheet.Columns * sheet.First.Height,
+                sheet.First.X + (frame % sheet.Columns * sheet.First.Width),
+                sheet.First.Y + (frame / sheet.Columns * sheet.First.Height),
                 sheet.First.Width,
                 sheet.First.Height);
             _spriteBatch.Draw(
@@ -680,6 +671,17 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
                 SpritePixel,
                 SpriteEffects.None,
                 0f);
+        }
+
+        foreach (Applause piece in _simulation.ApplauseOnTheFloor)
+        {
+            // Over every figure, so that a crowd does not hide what is there to be fetched, and the dimmer the
+            // less of its time it has left.
+            float left = Math.Clamp(piece.TicksLeft / (Tuning.ApplauseTime * Simulation.TicksPerSecond), 0f, 1f);
+            float seen = ApplauseFaintest + ((1f - ApplauseFaintest) * left);
+            Vector2 middle = piece.Position - new Vector2(0f, ApplauseLift);
+            FillTurned(middle, new Vector2(ApplauseSize), MathF.PI / 4f, ApplauseGlow * seen);
+            FillTurned(middle, new Vector2(ApplauseSize / 2.5f), MathF.PI / 4f, ApplauseHeart * seen);
         }
 
         foreach (var scrap in _juice.Scraps)
