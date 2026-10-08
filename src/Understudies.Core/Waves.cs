@@ -43,8 +43,8 @@ public static class Waves
                 // the last moment of a crowd before it, so those of one stretch between two crowds come in
                 // together.
                 // ponytail: a crowd is all on one tick, and those of it at one door stand in the door's width on
-                // top of each other until the push-apart has spread them, one pass a tick: ninety at a door three
-                // units wide by the tenth act. Entering a few ticks apart is what mends it when it shows.
+                // top of each other until the push-apart has spread them, one pass a tick: some thirty at a door
+                // three units wide by the tenth act. Entering a few ticks apart is what mends it when it shows.
                 if (burst > 0 && (int)((i + 1) * tuning.WaveBurstShare) > (int)(i * tuning.WaveBurstShare))
                 {
                     tick -= tick % burst;
