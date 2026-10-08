@@ -25,7 +25,7 @@
   "vanishStunTime": 1.5,
   "throwRange": 9,
   "throwCooldown": 0.5,
-  "thrownCardSpeed": 72,
+  "thrownCardSpeed": 36,
   "thrownCardDamage": 1,
   "enemyKinds": [
     {

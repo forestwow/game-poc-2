@@ -48,6 +48,35 @@ public class ThrownCardTests
         BoxOfficePosition = new Vector2(20f, 25f),
     };
 
+    /// <summary>
+    /// The committed stagehand, card and range on <see cref="Scene"/>'s stage: the stagehand runs straight down
+    /// from the door to a box office far below it, and the magician stands eight units to the right of its way and
+    /// four down, in range of the door.
+    /// </summary>
+    private Tuning AStagehandRunsBy => CommittedTuning.Parse() with
+    {
+        CurtainTime = 0f,
+        StageFloorTop = 0f,
+        StageDoors = [new StageDoor(Door, 1)],
+        StageDoorWidth = 0f,
+        BoxOfficePosition = new Vector2(20f, 25f),
+        MagicianMark = new Vector2(28f, 4f),
+        ThrowCooldown = 3600f,
+    };
+
+    /// <summary>
+    /// <see cref="Scene"/> with the critic walking 0.3 of a unit a tick straight down the stage, to a box office far
+    /// below the door, and a card that flies 0.5 a tick. The magician has no body, so it can stand anywhere, in the
+    /// stage's top edge too. The card is thrown on the second tick, when the critic stands 0.3 below the door.
+    /// </summary>
+    private Tuning ACriticWalksBy(Vector2 mark) => Scene.WithCritic(critic => critic with { Speed = 18f }) with
+    {
+        MagicianMark = mark,
+        MagicianRadius = 0f,
+        BoxOfficePosition = new Vector2(20f, 25f),
+        ThrownCardSpeed = 30f,
+    };
+
     [Test]
     public void Step_ACriticEnters_WithTheHitPointsOfTheTuning()
     {
@@ -122,6 +151,71 @@ public class ThrownCardTests
         ThrownCard card = simulation.ThrownCards[0];
         Assert.That(Vector2.Distance(card.Position, new Vector2(21f, 1f)), Is.Zero.Within(Tolerance));
         Assert.That(Vector2.Distance(card.PreviousPosition, new Vector2(22f, 1f)), Is.Zero.Within(Tolerance));
+    }
+
+    [Test]
+    public void Step_ACriticWalksAcrossTheLineOfFire_TheCardIsThrownAtWhereTheTwoWillMeet()
+    {
+        // On the second tick the critic stands four units straight to the left of the magician and walks 0.3 of a
+        // unit a tick down the stage; the card flies 0.5 a tick. In ten ticks the critic is three units further
+        // down and the card has flown five: three, four, five. The card is thrown at that place, 0.8 to the left
+        // and 0.6 down for every unit it flies.
+        var simulation = Shows.WithOneCritic(ACriticWalksBy(new Vector2(24f, 0.3f)));
+        Run(simulation, ticks: 2);
+        Assert.That(simulation.Critics[0].Position, Is.EqualTo(new Vector2(20f, 0.3f)));
+
+        Run(simulation, ticks: 2);
+
+        Assert.That(Vector2.Distance(simulation.ThrownCards[0].Position, new Vector2(23.2f, 0.9f)), Is.Zero.Within(Tolerance));
+    }
+
+    // Four units to its right and to its left; down the stage and to a side; on its way, which it walks towards the
+    // magician; and in the door it has just left, which it walks away from.
+    [TestCase(24f, 0.3f)]
+    [TestCase(16f, 0.3f)]
+    [TestCase(23f, 4f)]
+    [TestCase(20f, 8f)]
+    [TestCase(20f, 0f)]
+    public void Step_ACriticWalksByTheMagician_TheOneCardThrownAtItHurtsIt(float x, float y)
+    {
+        var simulation = Shows.WithOneCritic(ACriticWalksBy(new Vector2(x, y)));
+
+        Run(simulation, ticks: 30);
+
+        Assert.That(simulation.ThrownCards, Is.Empty);
+        Assert.That(simulation.Critics[0].HitPoints, Is.EqualTo(2f));
+    }
+
+    [Test]
+    public void Step_ACardThrownAtAStagehandRunningAcrossTheLineOfFire_HitsIt()
+    {
+        // Thrown on the second tick, from nearly nine units away, at a stagehand that runs two units while the
+        // card is in the air: five times its own radius.
+        Simulation simulation = Shows.WithOneOfKind(AStagehandRunsBy, kind: 1);
+
+        Run(simulation, ticks: 2);
+        Assert.That(simulation.ThrownCards, Has.Count.EqualTo(1));
+        Run(simulation, ticks: 30);
+
+        Assert.That(simulation.ThrownCards, Is.Empty);
+        Assert.That(simulation.Critics, Is.Empty);
+    }
+
+    [Test]
+    public void Step_ACardThrownAtAStagehandThatStood_MissesItWhenItRunsOn()
+    {
+        // The same throw at the same stagehand with no step behind it: it stands in the door while the card is
+        // thrown, at where it stands, and then runs as it does. That was every throw before the throw aimed ahead.
+        Tuning itStands = AStagehandRunsBy with { EnemyKinds = [.. AStagehandRunsBy.EnemyKinds.Select(kind => kind with { Speed = 0f })] };
+        Simulation simulation = Shows.WithOneOfKind(itStands, kind: 1);
+
+        Run(simulation, ticks: 2);
+        Assert.That(simulation.ThrownCards, Has.Count.EqualTo(1));
+        simulation.Tuning = AStagehandRunsBy;
+        Run(simulation, ticks: 30);
+
+        Assert.That(simulation.ThrownCards, Is.Empty);
+        Assert.That(simulation.Critics, Has.Count.EqualTo(1));
     }
 
     [Test]
