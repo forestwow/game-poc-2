@@ -52,6 +52,7 @@ The proof of concept ends at stop 3 (§6). The package for five outside testers 
 | 23 | Basic graphics | generated art, pulled forward at the owner's wish: a sprite for every figure and thing that stands on the stage in the prototype, and the stage set. This overturns the "no art is generated before G1" of vision §10 and the split of tools in the vision's decision 25. PixelLab may be used, and the owner wants to try a new tool beside it: ludo.ai is the candidate (the vision gave it one afternoon on what PixelLab does not cover; here it is tried on the figures too). Which tool and which look is the owner's pick on captured frames (T07b). An understudy is never new art: it is the magician's sprite through a treatment, as vision §10 says. The look test with its four candidate styles stays where the vision put it, after G1, and what is made now may be replaced by it |
 | 24 | The back wall | the top of the stage is a back wall, and the floor that can be walked starts at its foot (T07a). The screen stays the 48 × 27 of decision 14; the floor is what lies below the wall. The review of T02 left this to the owner as a design question (a figure at the top edge was drawn mostly off the screen) and it was not asked: it stands as recommended and is the owner's to overturn |
 | 25 | The look | after the art spike (T07b) the owner liked the pixel-art look best of the five: **ludo.ai, pixel art**. The owner's words for the look: it should mix abstraction and imagination, as the game's idea does. The frame the owner chose has a magician whose head is a dove in a top hat, a critic whose head is an eye under a bowler and a box office whose window is a mouth, all with a thick dark outline: those are the prompt's and not the owner's words. The view stays top-down three-quarter: the owner asked whether it was to be isometric and kept it. The owner asked whether the spike's stills were only pictures, and then agreed that the magician and the critic get a walk cycle from the tool in four directions (T07c) |
+| 26 | Upgrades in the act | agreed with the owner on 2026-10-08, who finds that upgrades taken in play draw a player in more: **the encore**. Applause picked up fills a bar; when it is full the act stands for a moment and the magician takes one of three self cards, there and then; every encore taken makes the next cost more. Applause not spent when the act ends is lost, as before. The program between two acts stays and changes its part: one card for the chorus after every act, always. An understudy takes its act's encores at the ticks the magician took them (T24). This replaces decisions 15 and 21: the thresholds, the bands and "no applause, no card" go. Decision 22's guard stands as it is written and the numbers are tuned to it again |
 
 Taken without a question, each a setting or a hypothesis:
 
@@ -211,6 +212,23 @@ The owner's report from play: a piece is picked up only by walking onto it exact
 **T22 The cards' effects.**
 The owner misses effects when the cards are thrown. A thrown card spins as it flies, with a dark edge about its face; a flick of light at the hand that throws it; a burst of the card's suits where it strikes; a splash of ink and torn newsprint where its critic falls, beside the scraps and the fading body there already. They change only the view (`Juice.cs` and the drawing), driven by the events `Throw`, `Hit` and `Kill`. The two bursts are sheets from the tool; at most six pictures and four animations.
 - A captured frame of a fight shows a burst. No test; the owner judges the rest by playing, since a frame does not show a spin or a flick.
+
+**T23 The encore.**
+Decision 26, the rule itself. Tests first.
+- A piece of applause picked up counts toward the encore. An encore costs `encoreFirstCost` pieces and `encoreCostGrowth` more for every encore taken so far in the performance.
+- On the tick the count reaches the cost, in an act that has time left, the act stands (a phase of its own): three different self cards are offered, drawn from a random stream of their own. `Pick` gives the card to the magician at once, takes the cost from the count (what is over stays toward the next) and the act goes on; `encoreTime` seconds without a pick take the leftmost. Nothing else moves and the act's timer does not run while an encore is read.
+- What is in the count when the act ends is lost. A fallen magician picks nothing up, so it earns no encore.
+- After every act that has another after it, the program offers the chorus card, alone and always.
+- `applauseFirstThreshold`, `applauseSecondThreshold`, `cardChorusChance`, the bands and the offer by band go.
+- An understudy still has the cards its act began with (T24 changes that).
+- The scripted players take an encore by their one card order. The guard of decision 22 holds on the tuned numbers, the table is in the pull request and the two hashes are pinned again. If no tuning holds the guard, that is the finding: the pull request says so with the best table and does not loosen the guard.
+- The view: the encore's three cards on the program's panels, the bar as the way to the next encore, the capture's script taking an encore's leftmost card.
+
+**T24 An understudy takes its encores.** *After T23.*
+The recording of an act keeps the tick of every encore and the card taken; an understudy has the cards its act began with and gains each of the others on its tick, in every later act.
+
+**T25 Cards that change what a card does.** *After T24.*
+Self cards that are not a number more: a card that goes on through the critic it strikes, one that turns to the next critic, one that bursts where it strikes. Each shows on the thrown card. Which of them, and what a second copy does, is settled with the owner when the ticket is taken.
 
 ## 6. Stops
 
