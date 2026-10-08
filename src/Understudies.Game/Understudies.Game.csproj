@@ -23,6 +23,8 @@
   <ItemGroup>
     <!-- A copy of the committed numbers goes beside the executable, for a build that leaves the repository. -->
     <None Include="..\..\tuning.json" Link="tuning.json" CopyToOutputDirectory="PreserveNewest" />
+    <!-- The nights' overlays (plan T51) go with the numbers they are laid over. Nothing in the game reads them yet. -->
+    <None Include="..\..\nights.json" Link="nights.json" CopyToOutputDirectory="PreserveNewest" />
     <None Include="..\..\art\ludo\sprites\*.png" Link="art\ludo\sprites\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
     <!-- The cards' pictures (plan T47): the nine the game reads, and nothing of the candidates' folder. -->
     <None Include="..\..\art\ludo\cards\*.png" Link="art\ludo\cards\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
