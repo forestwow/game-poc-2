@@ -7,45 +7,71 @@ using Vector2 = System.Numerics.Vector2;
 
 namespace Understudies.Game;
 
-// The program's screen (plan T18): the offer as cards on the dimmed stage, the choosing, and the card just taken
-// shown for a moment. An encore's three cards are offered on the same panels, in the act (plan T23). It is a part
-// of the game's one class because it draws with that class's batch and words.
+// The offer's screen (plan T18, laid out by T48): the offer as paper cards on the dimmed stage, the choosing, and
+// the card just taken shown for a moment. An encore's cards and the program's one are offered on the same cards
+// (plan T23). It is a part of the game's one class because it draws with that class's batch and words.
 internal sealed partial class UnderstudiesGame
 {
-    // The cards stand side by side in the front half of the floor, centred, their tops this far above the stage's
-    // bottom edge: the box office is clear of them, and whoever stands in front of it, or anywhere on that strip
-    // of the floor, the magician too, is behind them. Under them the countdown, and at the stage's bottom edge
-    // what the magician holds.
-    // A panel is as wide as three leave room for and as tall as the floor below the box office lets it be: a name,
-    // two lines of flavour and three of what the card does (plan T25, decision 29).
-    private static readonly Vector2 PanelSize = new(14.6f, 7.3f);
-    private const float PanelGap = 1f;
-    private const float PanelLift = 12.4f;
+    // The offer's screen, from the curtain down (plan T48, S5 of "The screens"): the two lines under the curtain,
+    // the row of what is held (the HUD's chips), the cards, and under them the countdown, its bar and the keys.
+    // Each size is the design's screen pixels in a window 1280 wide, kept in world units. A card is paper in an
+    // ink border with a hard shadow: a head strip in the colour of whose it is, its name, its flavour, what it
+    // does, and at its foot how many of it are held. Three are a row with room at the sides, and one is as tall
+    // as the floor leaves between the held row and the countdown.
+    private static readonly Vector2 CardSize = new(12.6f, 13.5f);
+    private const float CardGap = 1.2f;
+    private const float CardsTop = 8.6f;
+    private const float CardBorder = 0.15f;
+    private const float CardShadow = 0.225f;
 
-    // The band along a panel's top says whose the card is, and the highlighted panel stands this much higher
-    // than the others, in a frame this thick.
-    private const float PanelBand = 1.3f;
-    private const float PanelRaise = 0.4f;
-    private const float PanelFrame = 0.2f;
+    // The chosen card stands this much higher than the others, in a ring this thick, on lighter paper.
+    private const float CardRaise = 0.6f;
+    private const float CardRing = 0.15f;
+    private static readonly Color ChosenPaper = new(255, 253, 244);
+
+    // The head strip, under the card's top border, with an ink line under it: the card's key and whose it is.
+    private const float HeadStrip = 1.35f;
+    private const float HeadWordsHeight = 0.675f;
 
     // A card's name is Pixelify Sans, which is crisp at 28 screen pixels and not at 32: 1.05 units in a window
     // 1280 wide.
     private const float NameHeight = 1.05f;
     private const float SmallWordsHeight = 0.8f;
 
-    // The flavour is the smaller face, under the name; what the card does is the larger, under that, and starts
-    // at one height on every panel. A line of either is no wider than the panel less this at each side.
+    // Where the lines of a card are, from its top. The flavour is the smaller face, under the name; what the card
+    // does is the larger, under that, and starts at one height on every card: under two lines of flavour. A line
+    // of either is no wider than the card less CardMargin at each side. The foot's line is the flavour's size.
+    // The picture's place (plan S5a, T47): a square of 96 screen pixels (3.6 units) between the head strip and
+    // the name, in the middle. Nothing is drawn for it today, and the words stand in the middle of the card's
+    // body, with as much room over the name as under three lines of what the card does. With the picture NameLine
+    // is 6.55, and every line under it moves with it: three lines of what the card does then end just over the
+    // foot's line.
+    private const float NameLine = 5f;
+    private const float FlavourDrop = 1.15f;
+    private const float SentenceDrop = 3.15f;
+    private const float FootLift = 0.7f;
     private const float FlavourHeight = 0.6f;
     private const float FlavourPitch = 0.7f;
     private const float SentencePitch = 0.9f;
-    private const float PanelMargin = 0.5f;
+    private const float CardMargin = 0.6f;
 
-    private const float CountdownHeight = 1f;
-    private static readonly Vector2 CountdownBar = new(20f, 0.4f);
+    // Under the cards: the countdown's line, its bar in an ink rim, and the keys, each key a cap: its name in a
+    // thin cream border.
+    private const float CountdownLine = 23.1f;
+    private const float CountdownBarTop = 23.8f;
+    private static readonly Vector2 CountdownBar = new(18f, 0.375f);
+    private const float KeysLine = 24.85f;
+    private const float KeyHeight = 0.825f;
+    private const float KeyPad = 0.225f;
+    private const float KeyWordsHeight = 0.6f;
+    private const float KeysApart = 0.3f;
 
-    // How dark the stage goes under the cards, and how faint the cards not taken are beside the one that was.
+    // An arrow key's cap has its arrow drawn, and no letter: the face is not asked for one.
+    private const string LeftKey = "<";
+    private const string RightKey = ">";
+
+    // How dark the stage goes under the cards.
     private const float ProgramDim = 0.6f;
-    private const float NotTakenOpacity = 0.3f;
 
     // Seconds a card just taken stays on the screen before the line between two acts. No go-on is taken in them.
     private const float TakenTime = 0.8f;
@@ -57,10 +83,8 @@ internal sealed partial class UnderstudiesGame
     // the Space pressed for a Vanish a moment too late must not take a card nobody has read.
     private const float EncoreGuardTime = 0.4f;
 
-    // A self card is the magician's yellow and the chorus card the first understudy's green: the two colours the
-    // stage already has for the two.
-    private static readonly Color Ink = new(24, 18, 28);
-    private static readonly Color FaintInk = new(110, 96, 100);
+    // The flavour and the foot's line are in a fainter ink than the rest of a card.
+    private static readonly Color FaintInk = new(90, 77, 94);
 
     // The offer that is up, an encore's or the program's, or the one last taken from: the simulation empties its
     // own with the pick.
@@ -139,58 +163,30 @@ internal sealed partial class UnderstudiesGame
         _sound.Play(TickEventKind.ApplausePickedUp);
     }
 
-    /// <summary>Where the panel at <paramref name="place"/> has its top left corner, raised when it is lit.</summary>
-    private Vector2 PanelTopLeft(int place)
+    /// <summary>Where the card at <paramref name="place"/> has its top left corner, raised when it is chosen.</summary>
+    private Vector2 CardTopLeft(int place)
     {
-        float row = (_offered.Count * PanelSize.X) + ((_offered.Count - 1) * PanelGap);
+        float row = (_offered.Count * CardSize.X) + ((_offered.Count - 1) * CardGap);
         return new Vector2(
-            ((Tuning.StageSize.X - row) / 2f) + (place * (PanelSize.X + PanelGap)),
-            Tuning.StageSize.Y - PanelLift - (IsLit(place) ? PanelRaise : 0f));
+            ((Tuning.StageSize.X - row) / 2f) + (place * (CardSize.X + CardGap)),
+            CardsTop - (IsLit(place) ? CardRaise : 0f));
     }
 
     /// <summary>The highlighted card while cards are offered, and afterwards the one that was taken.</summary>
     private bool IsLit(int place) => place == (IsOffered ? _highlighted : _taken);
 
-    /// <summary>All of a card that was taken and of every card while they are offered; little of one passed over.</summary>
-    private float Seen(int place) => IsOffered || IsLit(place) ? 1f : NotTakenOpacity;
+    /// <summary>A whole screen pixel for a point of the stage, and whole screen pixels for a length in units.</summary>
+    private Vector2 OnAPixel(Vector2 point) => Vector2.Round(_corner + (point * _scale));
 
-    private float PanelsBottom => Tuning.StageSize.Y - PanelLift + PanelSize.Y;
-
-    /// <summary>The shapes of the program, in world units: the panels and the countdown's bar.</summary>
-    private void DrawProgramPanels()
-    {
-        for (int place = 0; place < _offered.Count; place++)
-        {
-            Vector2 topLeft = PanelTopLeft(place);
-            Color whose = _offered[place] == Card.ChorusDamage ? UnderstudyTints[0] : Magician;
-            if (IsLit(place))
-            {
-                // The taken card flashes: its band is white at first and comes back to its colour.
-                whose = Color.Lerp(whose, Color.White, _takenLeft / TakenTime);
-                Fill(topLeft - new Vector2(PanelFrame), PanelSize + new Vector2(2f * PanelFrame), Color.White);
-            }
-
-            Fill(topLeft, PanelSize, (IsLit(place) ? ThrownCardFace : UnderstudysCardFace) * Seen(place));
-            Fill(topLeft, PanelSize with { Y = PanelBand }, whose * Seen(place));
-        }
-
-        if (IsOffered)
-        {
-            float time = _simulation.Phase == Phase.Encore ? Tuning.EncoreTime : Tuning.ProgramTime;
-            FillBar(
-                new Vector2((Tuning.StageSize.X - CountdownBar.X) / 2f, PanelsBottom + 1.8f),
-                CountdownBar,
-                _simulation.OfferTicksLeft / MathF.Max(1f, time * Simulation.TicksPerSecond),
-                Words);
-        }
-    }
+    private float Pixels(float units) => MathF.Max(1f, MathF.Round(units * _scale));
 
     /// <summary>
-    /// The words of an encore, of the program and of the stage between two acts: how many encores were taken, under
-    /// the line that announces; and while the cards are shown the words on them, with the countdown and the keys
-    /// under them while they are offered. What the magician holds is the HUD's (<see cref="DrawTheHeld"/>).
+    /// The offer's screen, in the batch of the words (plan T48): how many encores were taken, under the line that
+    /// announces, which the stage between two acts has as well; and while the cards are shown the cards, with the
+    /// countdown and the keys under them while they are offered. What the magician holds is the HUD's, in a row
+    /// over the cards (<see cref="DrawTheHeld"/>).
     /// </summary>
-    private void DrawProgramWords()
+    private void DrawTheOffer()
     {
         float middle = Tuning.StageSize.X / 2f;
 
@@ -212,74 +208,11 @@ internal sealed partial class UnderstudiesGame
             return;
         }
 
+        // An offer of the chorus card is the chorus's colour all through, and one of self cards applause's pink.
+        Color accent = _offered[0] == Card.ChorusDamage ? UnderstudyTints[0] : ApplauseGlow;
         for (int place = 0; place < _offered.Count; place++)
         {
-            Card card = _offered[place];
-            bool chorus = card == Card.ChorusDamage;
-            (string name, string sentence, string flavour) = Describe(card);
-            Vector2 topLeft = PanelTopLeft(place);
-            Vector2 centre = topLeft + new Vector2(PanelSize.X / 2f, 0f);
-            Color ink = Ink * Seen(place);
-
-            // The band: the card's key at its left end, whose the card is, and at its right end how many of it
-            // are held, which is a number to be read and so in the sentences' face.
-            Write(Face.Label, SmallWordsHeight, $"{place + 1}", topLeft + new Vector2(0.4f, PanelBand / 2f), 0f, ink, onPaper: true);
-            if (Held(card) > 0)
-            {
-                Write(
-                    Face.Sentence,
-                    SmallWordsHeight,
-                    chorus || Tuning.CardMaxCopies <= 0 ? $"x{Held(card)}" : $"x{Held(card)} of {Tuning.CardMaxCopies}",
-                    topLeft + new Vector2(PanelSize.X - 0.4f, PanelBand / 2f),
-                    1f,
-                    ink,
-                    onPaper: true);
-            }
-
-            Write(
-                Face.Label,
-                SmallWordsHeight,
-                chorus ? "For every understudy" : "For the magician",
-                centre + new Vector2(0f, PanelBand / 2f),
-                0.5f,
-                ink,
-                onPaper: true);
-            // The name, no wider than the panel; under it the flavour in the smaller face, and under that what
-            // the card does, which is what is read first: the larger face and the darker ink.
-            float room = PanelSize.X - (2f * PanelMargin);
-            Write(
-                Face.Heading,
-                NameHeight * MathF.Min(1f, room / Wide(Face.Heading, NameHeight, name)),
-                name,
-                centre + new Vector2(0f, 2.15f),
-                0.5f,
-                ink,
-                onPaper: true);
-            List<string> flavours = Wrapped(Face.Sentence, FlavourHeight, flavour.Split(' '), room);
-            for (int line = 0; line < flavours.Count; line++)
-            {
-                Write(
-                    Face.Sentence,
-                    FlavourHeight,
-                    flavours[line],
-                    centre + new Vector2(0f, 3.2f + (line * FlavourPitch)),
-                    0.5f,
-                    FaintInk * Seen(place),
-                    onPaper: true);
-            }
-
-            List<string> sentences = Wrapped(Face.Sentence, SmallWordsHeight, sentence.Split(' '), room);
-            for (int line = 0; line < sentences.Count; line++)
-            {
-                Write(
-                    Face.Sentence,
-                    SmallWordsHeight,
-                    sentences[line],
-                    centre + new Vector2(0f, 4.9f + (line * SentencePitch)),
-                    0.5f,
-                    ink,
-                    onPaper: true);
-            }
+            DrawACard(place, accent);
         }
 
         if (!IsOffered)
@@ -293,20 +226,185 @@ internal sealed partial class UnderstudiesGame
         bool choice = _offered.Count > 1;
         Write(
             Face.Sentence,
-            CountdownHeight,
-            $"{seconds} s left: then {(choice ? "the leftmost card" : "this card")} is taken for you.",
-            new Vector2(middle, PanelsBottom + 1.2f),
+            SmallWordsHeight,
+            $"{seconds} s left: then {(choice ? "the leftmost card" : "this card")} is taken for you",
+            new Vector2(middle, CountdownLine),
             0.5f,
-            Magician);
+            ApplauseHeart);
+
+        // The bar runs down from full, whatever the offer's time is.
+        float time = _simulation.Phase == Phase.Encore ? Tuning.EncoreTime : Tuning.ProgramTime;
+        float left = Math.Clamp(_simulation.OfferTicksLeft / MathF.Max(1f, time * Simulation.TicksPerSecond), 0f, 1f);
+        Vector2 bar = OnAPixel(new Vector2(middle - (CountdownBar.X / 2f), CountdownBarTop));
+        var barSize = new Vector2(Pixels(CountdownBar.X), Pixels(CountdownBar.Y));
+        float rim = Pixels(PaperBorder);
+        Fill(bar - new Vector2(rim), barSize + new Vector2(2f * rim), OutlineInk);
+        Fill(bar, barSize with { X = MathF.Round(barSize.X * left) }, accent);
+
+        // The keys of the cards there are: one card has no choosing, and two have no 3.
+        List<(string Words, bool IsAKey)> keys = choice
+            ? [(LeftKey, true), (RightKey, true), ("choose  ·", false), ("Enter", true), ("or", false), ("Space", true), ("takes  ·  or press", false)]
+            : [("Enter", true), ("or", false), ("Space", true), ("takes it  ·  or press", false)];
+        for (int place = 0; place < _offered.Count; place++)
+        {
+            keys.Add(($"{place + 1}", true));
+        }
+
+        keys.Add((choice ? "·  gamepad: the stick and A" : "·  gamepad: A", false));
+        DrawTheKeys(keys);
+    }
+
+    /// <summary>
+    /// The card at <paramref name="place"/>: its paper, laid on whole screen pixels, and its words. The chosen one
+    /// is ringed in the offer's <paramref name="accent"/>.
+    /// </summary>
+    private void DrawACard(int place, Color accent)
+    {
+        Card card = _offered[place];
+        bool chorus = card == Card.ChorusDamage;
+        bool lit = IsLit(place);
+        (string name, string sentence, string flavour) = Describe(card);
+        Vector2 topLeft = CardTopLeft(place);
+        Vector2 centre = topLeft + new Vector2(CardSize.X / 2f, 0f);
+
+        Paper(topLeft, CardSize, lit ? ChosenPaper : ThrownCardFace, border: CardBorder, shadow: CardShadow);
+
+        // The ring is about the card and over its shadow, whole on all four sides.
+        // ponytail: the design's chosen card has a glow about its ring, which is a blur and is not drawn, as the
+        // applause bar's is not. A picture of a glow, if the ring alone is not seen.
+        if (lit)
+        {
+            float ring = Pixels(CardRing);
+            Vector2 at = OnAPixel(topLeft) - new Vector2(ring);
+            Vector2 size = Vector2.Round(CardSize * _scale) + new Vector2(2f * ring);
+            Fill(at, size with { Y = ring }, accent);
+            Fill(at + new Vector2(0f, size.Y - ring), size with { Y = ring }, accent);
+            Fill(at, size with { X = ring }, accent);
+            Fill(at + new Vector2(size.X - ring, 0f), size with { X = ring }, accent);
+        }
+
+        // The head strip, which flashes on a card just taken: white at first, and back to its colour. A self
+        // card's is the magician's gold and the chorus card's the first understudy's green.
+        float border = Pixels(CardBorder);
+        Vector2 strip = OnAPixel(topLeft) + new Vector2(border);
+        var stripSize = new Vector2(MathF.Round(CardSize.X * _scale) - (2f * border), Pixels(HeadStrip));
+        Color whose = chorus ? UnderstudyTints[0] : Magician;
+        Fill(strip, stripSize, lit ? Color.Lerp(whose, Color.White, _takenLeft / TakenTime) : whose);
+        Fill(strip + new Vector2(0f, stripSize.Y), stripSize with { Y = border }, OutlineInk);
+
+        // On the strip the card's key at its left end and whose the card is, in the sentences' face: the key is a
+        // number, and Pixelify Sans is kept for the name (plan T45).
+        float head = CardBorder + (HeadStrip / 2f);
+        Write(Face.Sentence, HeadWordsHeight, $"{place + 1}", topLeft + new Vector2(0.6f, head), 0f, OutlineInk, onPaper: true);
         Write(
             Face.Sentence,
-            SmallWordsHeight,
-            choice
-                ? $"Left and right choose, Enter or Space takes. Or press {(_offered.Count == 2 ? "1 or 2" : "1 to 3")}. Gamepad: the stick and A."
-                : "Enter, Space, 1 or a gamepad's A takes it.",
-            new Vector2(middle, PanelsBottom + 2.8f),
+            HeadWordsHeight,
+            chorus ? "For every understudy" : "For the magician",
+            centre + new Vector2(0f, head),
             0.5f,
-            Words);
+            OutlineInk,
+            onPaper: true);
+
+        // The name, no wider than the card; under it the flavour in the smaller face, and under that what the
+        // card does, which is what is read first: the larger face and the darker ink.
+        float room = CardSize.X - (2f * CardMargin);
+        Write(
+            Face.Heading,
+            NameHeight * MathF.Min(1f, room / Wide(Face.Heading, NameHeight, name)),
+            name,
+            centre + new Vector2(0f, NameLine),
+            0.5f,
+            OutlineInk,
+            onPaper: true);
+        List<string> flavours = Wrapped(Face.Sentence, FlavourHeight, flavour.Split(' '), room);
+        for (int line = 0; line < flavours.Count; line++)
+        {
+            Write(
+                Face.Sentence,
+                FlavourHeight,
+                flavours[line],
+                centre + new Vector2(0f, NameLine + FlavourDrop + (line * FlavourPitch)),
+                0.5f,
+                FaintInk,
+                onPaper: true);
+        }
+
+        List<string> sentences = Wrapped(Face.Sentence, SmallWordsHeight, sentence.Split(' '), room);
+        for (int line = 0; line < sentences.Count; line++)
+        {
+            Write(
+                Face.Sentence,
+                SmallWordsHeight,
+                sentences[line],
+                centre + new Vector2(0f, NameLine + SentenceDrop + (line * SentencePitch)),
+                0.5f,
+                OutlineInk,
+                onPaper: true);
+        }
+
+        // At the foot, how many of this card are held, against the limit where it has one (plan T41): the row
+        // over the cards says it of every card, and this of the one that is read.
+        int held = Held(card);
+        string has = chorus ? "the chorus has" : "you have";
+        Write(
+            Face.Sentence,
+            FlavourHeight,
+            held == 0 ? $"{has} none yet" : chorus || Tuning.CardMaxCopies <= 0 ? $"{has} {held}" : $"{has} {held} of {Tuning.CardMaxCopies}",
+            centre + new Vector2(0f, CardSize.Y - FootLift),
+            0.5f,
+            FaintInk,
+            onPaper: true);
+    }
+
+    /// <summary>
+    /// The line of the keys, centred under the countdown's bar: words, and each key as a cap, a thin cream border
+    /// about its name, or about an arrow drawn of squares.
+    /// </summary>
+    private void DrawTheKeys(List<(string Words, bool IsAKey)> keys)
+    {
+        float Width((string Words, bool IsAKey) piece) => !piece.IsAKey
+            ? Wide(Face.Sentence, KeyWordsHeight, piece.Words)
+            : piece.Words is LeftKey or RightKey
+                ? KeyHeight * 1.3f
+                : MathF.Max(KeyHeight, Wide(Face.Sentence, KeyWordsHeight, piece.Words) + (2f * KeyPad));
+
+        float left = (Tuning.StageSize.X - keys.Sum(Width) - ((keys.Count - 1) * KeysApart)) / 2f;
+        foreach ((string Words, bool IsAKey) piece in keys)
+        {
+            float wide = Width(piece);
+            var centre = new Vector2(left + (wide / 2f), KeysLine);
+            if (piece.IsAKey)
+            {
+                Vector2 at = OnAPixel(new Vector2(left, KeysLine - (KeyHeight / 2f)));
+                var size = new Vector2(Pixels(wide), Pixels(KeyHeight));
+                float border = Pixels(PaperBorder);
+                Fill(at, size, Words);
+                Fill(at + new Vector2(border), size - new Vector2(2f * border), OutlineInk);
+
+                if (piece.Words is LeftKey or RightKey)
+                {
+                    // An arrow of squares as large as the border is thick: a head of four columns, each two
+                    // squares taller than the one before, and a shaft as long.
+                    float way = piece.Words == LeftKey ? 1f : -1f;
+                    Vector2 mid = at + Vector2.Round(size / 2f);
+                    for (int column = 0; column < 4; column++)
+                    {
+                        float tall = ((2 * column) + 1) * border;
+                        float x = mid.X + (way * (column - 4) * border) - (way < 0f ? border : 0f);
+                        Fill(new Vector2(x, mid.Y - MathF.Floor(tall / 2f)), new Vector2(border, tall), Words);
+                    }
+
+                    Fill(new Vector2(way > 0f ? mid.X : mid.X - (4f * border), mid.Y - MathF.Floor(border / 2f)), new Vector2(4f * border, border), Words);
+                }
+            }
+
+            if (piece.Words is not (LeftKey or RightKey))
+            {
+                Write(Face.Sentence, KeyWordsHeight, piece.Words, centre, 0.5f, Words, onPaper: piece.IsAKey);
+            }
+
+            left += wide + KeysApart;
+        }
     }
 
     /// <summary>

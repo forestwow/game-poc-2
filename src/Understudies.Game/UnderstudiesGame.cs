@@ -149,8 +149,8 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
     private const float ApplauseFaintest = 0.25f;
 
     // The game's words are in two faces, read from the repository's own files so that every machine shows the
-    // same (plan decision 30, T40): Pixelify Sans for a card's name, Bold, and for its head strip, SemiBold, and
-    // Atkinson Hyperlegible for a sentence and for every number that is read in a glance (the act, the clock, the
+    // same (plan decision 30, T40): Pixelify Sans Bold for a card's name and nothing else since plan T48, and
+    // Atkinson Hyperlegible for a sentence, a label and every number that is read in a glance (the act, the clock, the
     // counts, what is held): at the sizes the game has, Pixelify's 5 is read as an S and its 2 as an 8. The files
     // are in the order of Face, under the fonts' folder; the game does not start without every one of them.
     // ponytail: Pixelify Sans is smoothed at every size. Its static weights are not drawn on one grid of whole
@@ -161,7 +161,6 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
     internal static readonly string[] FaceFiles =
     [
         Path.Combine("pixelify-sans", "PixelifySans-Bold.ttf"),
-        Path.Combine("pixelify-sans", "PixelifySans-SemiBold.ttf"),
         Path.Combine("atkinson-hyperlegible", "AtkinsonHyperlegible-Regular.ttf"),
     ];
 
@@ -845,59 +844,56 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
         }
         else if (ProgramIsShown)
         {
+            // What is at a figure's feet is under the wash with its figure while cards are shown: the cards lie
+            // over the stage, and a bar that was bright beside one would be read with it.
+            TheBarsAtTheFeet();
             Fill(Vector2.Zero, Tuning.StageSize, Color.Black * ProgramDim);
         }
 
         // The footlights, along the stage's front edge, in front of all that stands on it and of the wash: dimmer
-        // while the stage stands. While cards are shown the chips of what is held are in the lamps' row, and the
-        // lamps under them are out: the chips stand in a gap of the row (the ponytail: in DrawTheHud).
+        // while the stage stands.
         bool stands = IsOffered || _simulation.Phase == Phase.BetweenActs;
         float footlights = !stands ? 1f : _simulation.Phase == Phase.Encore ? FootlightsInAnEncore : FootlightsBetweenActs;
-        List<List<Chip>> inTheRow = ProgramIsShown ? HeldRows(HeldWidthInAnOffer) : [];
-        float chipsHalf = inTheRow.Count == 0
-            ? 0f
-            : MathF.Max(inTheRow.Max(RowWide), Wide(Face.Sentence, LabelHeight, HeldLabel, LabelSpacing)) / 2f;
         for (float x = FootlightGap / 2f; x < Tuning.StageSize.X; x += FootlightGap)
         {
-            if (inTheRow.Count == 0 || MathF.Abs(x - (Tuning.StageSize.X / 2f)) > chipsHalf + (FootlightGap / 4f))
-            {
-                DrawFigure(Figure.Footlight, new Vector2(x, Tuning.StageSize.Y), opacity: footlights);
-            }
+            DrawFigure(Figure.Footlight, new Vector2(x, Tuning.StageSize.Y), opacity: footlights);
         }
 
+        // The box office's bar is not drawn while cards are shown, nor its number: the row of what is held and
+        // the cards are where they would be (plan T48).
         var bar = new Vector2(Tuning.BoxOfficeSize, 0.4f);
         Vector2 barTopLeft = boxOfficeFeet
             - new Vector2(bar.X / 2f, Tuning.BoxOfficeSize + BoxOfficeBarLift + bar.Y);
-        FillBar(barTopLeft, bar, _simulation.BoxOfficeHitPoints / Tuning.BoxOfficeHitPoints, HitPoints);
+        if (!ProgramIsShown)
+        {
+            FillBar(barTopLeft, bar, _simulation.BoxOfficeHitPoints / Tuning.BoxOfficeHitPoints, HitPoints);
+            TheBarsAtTheFeet();
+        }
 
-        // The HUD's shapes (plan T45): the magician's pips and its Vanish under its feet, and on the curtain the
-        // way to the next encore.
-        DrawTheMagiciansBars(magicianFeet);
+        // On the curtain, the way to the next encore.
         DrawTheApplauseBar();
+        _spriteBatch.End();
 
-        // A headliner (plan T46) is the one enemy whose hit points the player counts: a small bar under its
-        // feet, in its own red.
+        // The HUD's shapes at a figure's feet (plan T45): the magician's pips and its Vanish, and a headliner's
+        // hit points (plan T46), the one enemy whose hit points the player counts: a small bar in its own red.
         // ponytail: full is what one enters with in this act, so one left from the act before is never shown
         // full. Keep what it entered with on the critic when that is seen.
-        var headlinerBar = new Vector2(1.6f, 0.25f) * FiguresMeasure;
-        foreach (Critic critic in _simulation.Critics.Where(critic => critic.Kind == 3))
+        void TheBarsAtTheFeet()
         {
-            // As everywhere a critic's kind is read: a tuning read again (F5) may have fewer kinds than the stage.
-            EnemyKind headliner = Tuning.EnemyKinds[Math.Min(critic.Kind, Tuning.EnemyKinds.Count - 1)];
-            FillBar(
-                Vector2.Lerp(critic.PreviousPosition, critic.Position, alpha) + new Vector2(-headlinerBar.X / 2f, 0.3f),
-                headlinerBar,
-                critic.HitPoints / (headliner.HitPoints + (headliner.HitPointsPerAct * (_simulation.Act - headliner.FromAct))),
-                HeadlinerWash);
+            DrawTheMagiciansBars(magicianFeet);
+            var headlinerBar = new Vector2(1.6f, 0.25f) * FiguresMeasure;
+            foreach (Critic critic in _simulation.Critics.Where(critic => critic.Kind == 3))
+            {
+                // As everywhere a critic's kind is read: a tuning read again (F5) may have fewer kinds than the stage.
+                EnemyKind headliner = Tuning.EnemyKinds[Math.Min(critic.Kind, Tuning.EnemyKinds.Count - 1)];
+                FillBar(
+                    Vector2.Lerp(critic.PreviousPosition, critic.Position, alpha) + new Vector2(-headlinerBar.X / 2f, 0.3f),
+                    headlinerBar,
+                    critic.HitPoints / (headliner.HitPoints + (headliner.HitPointsPerAct * (_simulation.Act - headliner.FromAct))),
+                    HeadlinerWash);
+            }
         }
 
-        // The program's cards lie over everything but the words.
-        if (ProgramIsShown)
-        {
-            DrawProgramPanels();
-        }
-
-        _spriteBatch.End();
         DrawWords(alpha, besideTheBar: barTopLeft + new Vector2(bar.X + 0.3f, bar.Y / 2f));
     }
 
@@ -1063,7 +1059,7 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
         _spriteBatch.Begin();
         if (_simulation.Phase is Phase.Encore or Phase.Program or Phase.BetweenActs)
         {
-            DrawProgramWords();
+            DrawTheOffer();
         }
 
         // Which act's understudy this is, on the figure itself: its act's number over its head, in its tint.
@@ -1130,7 +1126,10 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
                 keptOnTheStage: true);
         }
 
-        Write(Face.Sentence, NumberHeight, $"{MathF.Ceiling(_simulation.BoxOfficeHitPoints)}", besideTheBar, 0f, Words);
+        if (!ProgramIsShown)
+        {
+            Write(Face.Sentence, NumberHeight, $"{MathF.Ceiling(_simulation.BoxOfficeHitPoints)}", besideTheBar, 0f, Words);
+        }
 
         // The HUD last: its paper lies over whatever word stands where it is.
         DrawTheHud(said);
@@ -1218,9 +1217,6 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
     {
         /// <summary>Pixelify Sans Bold: a card's name.</summary>
         Heading,
-
-        /// <summary>Pixelify Sans SemiBold: a card's head strip, and nothing else (the HUD's labels are sentences' face).</summary>
-        Label,
 
         /// <summary>Atkinson Hyperlegible: a sentence, and a number that is read in a glance.</summary>
         Sentence,
