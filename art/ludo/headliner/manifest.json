@@ -1,0 +1,170 @@
+{
+ "tool": "ludo.ai, through its CLI (ludo 0.1.6)",
+ "ticket": "T59, the headliner's own figure: candidates for the owner to choose from, none of them in the game",
+ "credits": 7.0,
+ "note": "raw/ keeps the stills as returned (768 pixels, twelve to a sprite pixel, every cell one colour). Three ideas, two stills each. The marquee's first two came back one squat (44 x 46 sprite pixels, shorter than the magician's 63) and one cut by the frame's edges, so two more were asked for 'a very tall man with long legs ... the whole of him inside the frame with a small empty margin all round', and the second of them (41 x 61) is the pick. Two walks: of the squat one (three rows of three frames of 50 x 52) and of the pick (frames of 44 x 66), a file pixel to a sprite pixel, as returned with --frame-size 64. The squat walk exported again with --frame-size 96 came back at exactly twice the size (frames of 100 x 104), which is no size the game has: not kept. sheet.png sets every candidate beside the magician and the rival's understudy on the boards' colour, and walk.gif is the pick's walk four times its size; both were made from these files by a script that is not in the repository. A job that returned two pictures is listed twice with the credits of the whole job.",
+ "game_files": {},
+ "generations_made": [
+  {
+   "returned": "headliner-marquee-v1.png",
+   "idea": "A: a marquee of bulbs for a head",
+   "command": "ludo image create",
+   "settings": {
+    "image_type": "sprite",
+    "art_style": "16-Bit",
+    "perspective": "High Angle",
+    "aspect_ratio": "ar_1_1",
+    "prompt": "A surreal star of the theatre with no head, drawn very large so that it fills the whole frame from the top edge to the bottom edge: sitting on his shoulders, where the head should be, is a huge theatre marquee sign, a wide red and gold rectangular lightbox twice as wide as his shoulders, its whole border studded with a row of big round glowing yellow light bulbs and its middle a blank cream panel. No face, no hat, no hair. Below it a broad heavy man in a white dinner jacket with a red bow tie and a red sash, chest out, hands on his hips. Pixel art game sprite with a thick dark outline and a small limited palette, standing upright and facing the viewer, seen from the front and slightly from above as characters are in a top-down action RPG. Full body from top to feet, single subject, centred, no text, no letters, no ground, no shadow.",
+    "n": 2
+   },
+   "job_id": "7bb61b5d-101e-415b-86c1-a31f287e4c15",
+   "credits_of_the_job": 1
+  },
+  {
+   "returned": "headliner-marquee-v2.png",
+   "idea": "A: a marquee of bulbs for a head",
+   "command": "ludo image create",
+   "settings": {
+    "image_type": "sprite",
+    "art_style": "16-Bit",
+    "perspective": "High Angle",
+    "aspect_ratio": "ar_1_1",
+    "prompt": "A surreal star of the theatre with no head, drawn very large so that it fills the whole frame from the top edge to the bottom edge: sitting on his shoulders, where the head should be, is a huge theatre marquee sign, a wide red and gold rectangular lightbox twice as wide as his shoulders, its whole border studded with a row of big round glowing yellow light bulbs and its middle a blank cream panel. No face, no hat, no hair. Below it a broad heavy man in a white dinner jacket with a red bow tie and a red sash, chest out, hands on his hips. Pixel art game sprite with a thick dark outline and a small limited palette, standing upright and facing the viewer, seen from the front and slightly from above as characters are in a top-down action RPG. Full body from top to feet, single subject, centred, no text, no letters, no ground, no shadow.",
+    "n": 2
+   },
+   "job_id": "7bb61b5d-101e-415b-86c1-a31f287e4c15",
+   "credits_of_the_job": 1
+  },
+  {
+   "returned": "headliner-trunk-v1.png",
+   "idea": "B: a wardrobe trunk with a famous face, on legs",
+   "command": "ludo image create",
+   "settings": {
+    "image_type": "sprite",
+    "art_style": "16-Bit",
+    "perspective": "High Angle",
+    "aspect_ratio": "ar_1_1",
+    "prompt": "A surreal theatre thing that walks, drawn very large so that it fills the whole frame from the top edge to the bottom edge: a towering upright wardrobe steamer trunk, a solid deep box taller and wider than a man, dark green leather with brass corners, brass locks and leather straps, a big gold five-pointed star on its front, and painted across the top half of its front the huge glamorous face of a famous actress with red lips and half-closed eyes. Under the trunk two thin legs in white stockings and red high-heeled shoes, and nothing else of a body. Pixel art game sprite with a thick dark outline and a small limited palette, standing upright and facing the viewer, seen from the front and slightly from above as characters are in a top-down action RPG. Full body from top to feet, single subject, centred, no text, no letters, no ground, no shadow.",
+    "n": 2
+   },
+   "job_id": "59502638-4b91-44a6-9ee3-346de4890fca",
+   "credits_of_the_job": 1
+  },
+  {
+   "returned": "headliner-trunk-v2.png",
+   "idea": "B: a wardrobe trunk with a famous face, on legs",
+   "command": "ludo image create",
+   "settings": {
+    "image_type": "sprite",
+    "art_style": "16-Bit",
+    "perspective": "High Angle",
+    "aspect_ratio": "ar_1_1",
+    "prompt": "A surreal theatre thing that walks, drawn very large so that it fills the whole frame from the top edge to the bottom edge: a towering upright wardrobe steamer trunk, a solid deep box taller and wider than a man, dark green leather with brass corners, brass locks and leather straps, a big gold five-pointed star on its front, and painted across the top half of its front the huge glamorous face of a famous actress with red lips and half-closed eyes. Under the trunk two thin legs in white stockings and red high-heeled shoes, and nothing else of a body. Pixel art game sprite with a thick dark outline and a small limited palette, standing upright and facing the viewer, seen from the front and slightly from above as characters are in a top-down action RPG. Full body from top to feet, single subject, centred, no text, no letters, no ground, no shadow.",
+    "n": 2
+   },
+   "job_id": "59502638-4b91-44a6-9ee3-346de4890fca",
+   "credits_of_the_job": 1
+  },
+  {
+   "returned": "headliner-star-v1.png",
+   "idea": "C: a dressing-room star for a head, in a fur coat",
+   "command": "ludo image create",
+   "settings": {
+    "image_type": "sprite",
+    "art_style": "16-Bit",
+    "perspective": "High Angle",
+    "aspect_ratio": "ar_1_1",
+    "prompt": "A surreal star of the theatre with no head, drawn very large so that it fills the whole frame from the top edge to the bottom edge: standing straight up out of the collar, where the head should be, is one huge flat five-pointed gold star, wider than the shoulders and as tall as the chest, like the star off a dressing-room door, shining bright yellow with a dark outline. No face, no hat, no hair. Below it a tall broad figure in an enormous floor-length white fur coat over a red gown, the coat wide as a bell, with a red rose pinned to it. Pixel art game sprite with a thick dark outline and a small limited palette, standing upright and facing the viewer, seen from the front and slightly from above as characters are in a top-down action RPG. Full body from top to feet, single subject, centred, no text, no letters, no ground, no shadow.",
+    "n": 2
+   },
+   "job_id": "61dbd58a-95d7-4f84-a516-e12461487693",
+   "credits_of_the_job": 1
+  },
+  {
+   "returned": "headliner-star-v2.png",
+   "idea": "C: a dressing-room star for a head, in a fur coat",
+   "command": "ludo image create",
+   "settings": {
+    "image_type": "sprite",
+    "art_style": "16-Bit",
+    "perspective": "High Angle",
+    "aspect_ratio": "ar_1_1",
+    "prompt": "A surreal star of the theatre with no head, drawn very large so that it fills the whole frame from the top edge to the bottom edge: standing straight up out of the collar, where the head should be, is one huge flat five-pointed gold star, wider than the shoulders and as tall as the chest, like the star off a dressing-room door, shining bright yellow with a dark outline. No face, no hat, no hair. Below it a tall broad figure in an enormous floor-length white fur coat over a red gown, the coat wide as a bell, with a red rose pinned to it. Pixel art game sprite with a thick dark outline and a small limited palette, standing upright and facing the viewer, seen from the front and slightly from above as characters are in a top-down action RPG. Full body from top to feet, single subject, centred, no text, no letters, no ground, no shadow.",
+    "n": 2
+   },
+   "job_id": "61dbd58a-95d7-4f84-a516-e12461487693",
+   "credits_of_the_job": 1
+  },
+  {
+   "returned": "headliner-marquee-tall-v1.png",
+   "idea": "A again, asked tall",
+   "command": "ludo image create",
+   "settings": {
+    "image_type": "sprite",
+    "art_style": "16-Bit",
+    "perspective": "High Angle",
+    "aspect_ratio": "ar_1_1",
+    "prompt": "A surreal star of the theatre with no head: sitting on his shoulders, where the head should be, is a huge theatre marquee sign, a wide red and gold rectangular lightbox twice as wide as his shoulders, its whole border studded with a row of big round glowing yellow light bulbs and its middle a blank cream panel. No face, no hat, no hair. Below it a very tall, broad, heavy man with long legs in a white dinner jacket with a red bow tie and a red sash, chest out, hands on his hips; the sign is a third of his height. He is drawn large, from the sign's top near the top edge of the frame to his black shoes near the bottom edge, the whole of him inside the frame with a small empty margin all round. Pixel art game sprite with a thick dark outline and a small limited palette, standing upright and facing the viewer, seen from the front and slightly from above as characters are in a top-down action RPG. Full body from top to feet, single subject, centred, no text, no letters, no ground, no shadow.",
+    "n": 2
+   },
+   "job_id": "75e667a8-b0e0-4a14-8b0a-cf6194dde791",
+   "credits_of_the_job": 1
+  },
+  {
+   "returned": "headliner-marquee-tall-v2.png",
+   "idea": "A again, asked tall",
+   "command": "ludo image create",
+   "settings": {
+    "image_type": "sprite",
+    "art_style": "16-Bit",
+    "perspective": "High Angle",
+    "aspect_ratio": "ar_1_1",
+    "prompt": "A surreal star of the theatre with no head: sitting on his shoulders, where the head should be, is a huge theatre marquee sign, a wide red and gold rectangular lightbox twice as wide as his shoulders, its whole border studded with a row of big round glowing yellow light bulbs and its middle a blank cream panel. No face, no hat, no hair. Below it a very tall, broad, heavy man with long legs in a white dinner jacket with a red bow tie and a red sash, chest out, hands on his hips; the sign is a third of his height. He is drawn large, from the sign's top near the top edge of the frame to his black shoes near the bottom edge, the whole of him inside the frame with a small empty margin all round. Pixel art game sprite with a thick dark outline and a small limited palette, standing upright and facing the viewer, seen from the front and slightly from above as characters are in a top-down action RPG. Full body from top to feet, single subject, centred, no text, no letters, no ground, no shadow.",
+    "n": 2
+   },
+   "job_id": "75e667a8-b0e0-4a14-8b0a-cf6194dde791",
+   "credits_of_the_job": 1
+  },
+  {
+   "returned": "headliner-marquee-walk.png",
+   "idea": "A: a marquee of bulbs for a head",
+   "command": "ludo sprite animate",
+   "settings": {
+    "initial_image": "headliner-marquee-v1.png",
+    "motion_prompt": "walking slowly towards the viewer with a heavy swagger, the light bulbs twinkling",
+    "model": "forge-pixel",
+    "duration": 1,
+    "frames": 9,
+    "frame_size": 64
+   },
+   "job_id": "359cb5a1-80e2-4043-929e-e19aad668a5c",
+   "credits_of_the_job": 1.5
+  },
+  {
+   "returned": "headliner-marquee-tall-walk.png",
+   "idea": "A: a marquee of bulbs for a head",
+   "command": "ludo sprite animate",
+   "settings": {
+    "initial_image": "headliner-marquee-tall-v2.png",
+    "motion_prompt": "walking slowly towards the viewer with a heavy swagger, the light bulbs twinkling",
+    "model": "forge-pixel",
+    "duration": 1,
+    "frames": 9,
+    "frame_size": 64
+   },
+   "job_id": "d317aaa7-b8a3-4a98-90bf-a7cdcbdd3e1f",
+   "credits_of_the_job": 1.5
+  },
+  {
+   "returned": "nothing kept",
+   "idea": "A: a marquee of bulbs for a head",
+   "command": "ludo sprite adjust",
+   "settings": {
+    "spritesheet": "headliner-marquee-walk.png",
+    "frame_size": 96
+   },
+   "job_id": "e312dc4b-9166-49f5-a58a-de6c324d0f7f",
+   "credits_of_the_job": 0
+  }
+ ]
+}
