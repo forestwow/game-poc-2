@@ -283,7 +283,8 @@ public readonly record struct StageDoor(Vector2 Position, int OpensInAct);
 /// <param name="Cost">What one takes from an act's budget, 1 or more.</param>
 /// <param name="Weight">
 /// How likely an act is to buy this kind and not another it can afford: the weight's share of all their weights. A
-/// kind with no weight is never drawn.
+/// kind with no weight is never drawn: an act has it only by <paramref name="InAnAct"/>, and with neither it is
+/// never bought.
 /// </param>
 /// <param name="FromAct">The number of the first act that may buy the kind.</param>
 /// <param name="TurnsOnTheMagician">
