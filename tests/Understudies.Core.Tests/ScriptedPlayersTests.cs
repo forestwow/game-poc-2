@@ -18,8 +18,8 @@ public class ScriptedPlayersTests
 
     /// <summary>
     /// Plan decision 9's question, whether <c>float</c> gives one result on two machines: two scripted
-    /// performances, each pinned at the end of its third act and at its end, here (macOS ARM) and in CI (Linux
-    /// x64). The earlier pin says how early a disagreement starts. The first is the doors player on the committed
+    /// performances, each pinned at the end of its third act and at its end, on macOS ARM and on Linux x64,
+    /// both in CI. The earlier pin says how early a disagreement starts. The first is the doors player on the committed
     /// numbers, asserted to have an encore in it; the second, the orbit player on a circle of nine with a fuller first act, is
     /// asserted to have the Vanish and its cloud, stunned critics and blows on the box office in it. A change to tuning.json, to a
     /// rule or to a player changes them: pin them again from the failure's message, and say so in the pull
