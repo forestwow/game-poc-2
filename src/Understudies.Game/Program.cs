@@ -18,20 +18,27 @@ if (Understudies.Game.TuningFile.Read() is not { } tuning)
 }
 
 // Found as tuning.json is: the repository's own when the game is run from its root, or else beside the executable.
-// Without its pictures or its faces the game does not open a window either.
-static string? Found(string folder, string what)
+// A folder counts when it has every one of the files asked of it, so another fonts folder in the current directory
+// does not stand in the way of the game's own. Without its pictures or its faces the game does not open a window.
+static string? Found(string folder, string what, params string[] files)
 {
-    string found = Directory.Exists(folder) ? folder : Path.Combine(AppContext.BaseDirectory, folder);
-    if (Directory.Exists(found))
+    string beside = Path.Combine(AppContext.BaseDirectory, folder);
+    foreach (string found in new[] { folder, beside })
     {
-        return found;
+        if (Directory.Exists(found) && files.All(file => File.Exists(Path.Combine(found, file))))
+        {
+            return found;
+        }
     }
 
-    Console.Error.WriteLine($"No {what} in {Path.GetFullPath(found)}");
+    // The one line names the folder beside the executable, or the first file it lacks.
+    string missing = files.FirstOrDefault(file => !File.Exists(Path.Combine(beside, file)), "");
+    Console.Error.WriteLine($"No {what}: {Path.GetFullPath(Path.Combine(beside, missing))} is missing");
     return null;
 }
 
-if (Found(Path.Combine("art", "ludo", "sprites"), "sprites") is not { } sprites || Found("fonts", "fonts") is not { } fonts)
+if (Found(Path.Combine("art", "ludo", "sprites"), "sprites") is not { } sprites
+    || Found("fonts", "fonts", Understudies.Game.UnderstudiesGame.FaceFiles) is not { } fonts)
 {
     return 1;
 }

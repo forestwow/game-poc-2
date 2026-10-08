@@ -93,15 +93,16 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
     private const float ApplauseCountHeight = 0.7f;
 
     // The game's words are in two faces, read from the repository's own files so that every machine shows the
-    // same (plan decision 30): Pixelify Sans for a heading, a name and a number, Bold for the large ones and
-    // SemiBold for a label and a count, and Atkinson Hyperlegible for a sentence. The files are in the order of
-    // Face, under the fonts' folder.
+    // same (plan decision 30, T40): Pixelify Sans for a card's name, Bold, and for its head strip, SemiBold, and
+    // Atkinson Hyperlegible for a sentence and for every number that is read in a glance (the act, the clock, the
+    // counts, what is held): at the sizes the game has, Pixelify's 5 is read as an S and its 2 as an 8. The files
+    // are in the order of Face, under the fonts' folder; the game does not start without every one of them.
     // ponytail: Pixelify Sans is smoothed at every size. Its static weights are not drawn on one grid of whole
     // pixels: a weight is made by fattening each square over its neighbours (Bold's squares are 127 by 136 font
     // units at a pitch of 88 across and 85 up; Regular's 101 at 90.5), so no size puts every edge on a whole
     // screen pixel, and the text library's rasteriser has no setting that draws without smoothing. A face cut as
     // a bitmap at the sizes the screens use would end it.
-    private static readonly string[] FaceFiles =
+    internal static readonly string[] FaceFiles =
     [
         Path.Combine("pixelify-sans", "PixelifySans-Bold.ttf"),
         Path.Combine("pixelify-sans", "PixelifySans-SemiBold.ttf"),
@@ -109,7 +110,8 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
     ];
 
     // Words on the stage carry an outline in ink, this wide in world units: two screen pixels in a window 1280
-    // wide, never less than one, and never more than one part in SmallestOutlined of the words' height.
+    // wide, and two as well in the 1024 the window opens at, where 1.6 is rounded; never less than one, and
+    // never more than one part in SmallestOutlined of the words' height.
     private static readonly Color OutlineInk = new(30, 22, 30);
     private const float OutlineWidth = 0.075f;
     private const float SmallestOutlined = 12f;
@@ -915,16 +917,18 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
 
         string clock = $"{seconds / 60}:{seconds % 60:00}";
         _spriteBatch.Begin();
-        Write(Face.Heading, WordsHeight, act, new Vector2(1f, line), 0f, Words);
-        Write(Face.Heading, WordsHeight, clock, new Vector2(Tuning.StageSize.X - 1f, line), 1f, Words);
+        Write(Face.Sentence, WordsHeight, act, new Vector2(1f, line), 0f, Words);
+        Write(Face.Sentence, WordsHeight, clock, new Vector2(Tuning.StageSize.X - 1f, line), 1f, Words);
         if (said is not null)
         {
             // The three share one line of the wall, and the middle one has what the other two leave: in the
             // middle of the stage where it has the room, moved aside where it has not, and smaller where it is
             // longer than all that is left, so that it keeps off the act and the clock (to within the rounding of its
             // size to a whole pixel, which the gap beside it takes).
-            float from = 1f + Wide(Face.Heading, WordsHeight, act) + WordsGap;
-            float to = Tuning.StageSize.X - 1f - Wide(Face.Heading, WordsHeight, clock) - WordsGap;
+            // The gap is between the outlines, not the letters: each end has its neighbour's and its own.
+            float outlines = 2f * Outline(Font(Face.Sentence, WordsHeight)) / _scale;
+            float from = 1f + Wide(Face.Sentence, WordsHeight, act) + WordsGap + outlines;
+            float to = Tuning.StageSize.X - 1f - Wide(Face.Sentence, WordsHeight, clock) - WordsGap - outlines;
             float height = WordsHeight * MathF.Min(1f, (to - from) / Wide(Face.Sentence, WordsHeight, said));
             float half = MathF.Min(Wide(Face.Sentence, height, said), to - from) / 2f;
             // Not Math.Clamp: where the line fills its room the two bounds are one number on paper and can cross by a
@@ -935,7 +939,7 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
 
         // Beside the bar's end, what it counts: the pieces toward the next encore, over its cost.
         Write(
-            Face.Label,
+            Face.Sentence,
             ApplauseCountHeight,
             $"{_simulation.EncoreApplause}/{_simulation.EncoreCost}",
             ApplauseBarTopLeft + new Vector2(ApplauseBar.X + 0.3f, ApplauseBar.Y / 2f),
@@ -964,7 +968,7 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
                 keptOnTheStage: true);
         }
 
-        Write(Face.Label, NumberHeight, $"{MathF.Ceiling(_simulation.BoxOfficeHitPoints)}", besideTheBar, 0f, Words);
+        Write(Face.Sentence, NumberHeight, $"{MathF.Ceiling(_simulation.BoxOfficeHitPoints)}", besideTheBar, 0f, Words);
         _spriteBatch.End();
     }
 
@@ -979,35 +983,45 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
         Face face, float height, string text, Vector2 at, float anchor, Color color, bool onPaper = false, bool keptOnTheStage = false)
     {
         SpriteFontBase font = Font(face, height);
+        int outline = onPaper ? 0 : Outline(font);
         var size = new Vector2(font.MeasureString(text).X, font.LineHeight);
         Vector2 topLeft = _corner + (at * _scale) - new Vector2(size.X * anchor, size.Y / 2f);
         if (keptOnTheStage)
         {
-            // The far corner first: a line wider than the stage starts at the stage's left edge.
-            topLeft = Vector2.Max(_corner, Vector2.Min(topLeft, _corner + (Tuning.StageSize * _scale) - size));
+            // The outline is kept on the stage with the words. The far corner first: a line wider than the stage
+            // starts at the stage's left edge.
+            var rim = new Vector2(outline);
+            topLeft = Vector2.Max(_corner + rim, Vector2.Min(topLeft, _corner + (Tuning.StageSize * _scale) - size - rim));
         }
 
+        // The words in ink at every place within the outline's width, and then themselves over that: at the eight
+        // places of its rim alone a stroke thinner than the outline would stand clear of it. The middle is left
+        // out, which the words cover, and the four corners, so the outline is round. The text library's own
+        // stroke (FontSystemEffect.Stroked) is not used: it is black, it eats into the letters and it moves the
+        // line by its width.
+        // ponytail: twenty draws of a line for an outline of two pixels, a dozen lines a frame. A line drawn once
+        // to a texture of its own and kept while its words stand, if the HUD grows to where that is felt.
         var place = new Vector2(MathF.Round(topLeft.X), MathF.Round(topLeft.Y));
-        if (!onPaper)
+        for (int x = -outline; x <= outline; x++)
         {
-            // The words in ink at every place within the outline's width, and then themselves over that: at the
-            // eight places of its rim alone a stroke thinner than the outline would stand clear of it. The text
-            // library's own stroke (FontSystemEffect.Stroked) is not used: it is black, it eats into the letters
-            // and it moves the line by its width.
-            // Small words have a thinner one, a twelfth of their height: the whole width shuts the eyes of
-            // letters under some eighteen pixels tall.
-            int width = Math.Max(1, (int)MathF.Round(MathF.Min(OutlineWidth * _scale, font.FontSize / SmallestOutlined)));
-            for (int x = -width; x <= width; x++)
+            for (int y = -outline; y <= outline; y++)
             {
-                for (int y = -width; y <= width; y++)
+                if ((x != 0 || y != 0) && (Math.Abs(x) < outline || Math.Abs(y) < outline))
                 {
-                    _spriteBatch.DrawString(font, text, place + new Vector2(x, y), OutlineInk * (color.A / 255f));
+                    _spriteBatch.DrawString(font, text, place + new Vector2(x, y), OutlineInk);
                 }
             }
         }
 
         _spriteBatch.DrawString(font, text, place, color);
     }
+
+    /// <summary>
+    /// How wide the outline of words on the stage is in that font, in screen pixels: small words have a thinner
+    /// one, for the whole width shuts the eyes of letters under some eighteen pixels tall.
+    /// </summary>
+    private int Outline(SpriteFontBase font) =>
+        Math.Max(1, (int)MathF.Round(MathF.Min(OutlineWidth * _scale, font.FontSize / SmallestOutlined)));
 
     /// <summary>How wide <see cref="Write"/> draws <paramref name="text"/> in that face at that height, in world units.</summary>
     private float Wide(Face face, float height, string text) => Font(face, height).MeasureString(text).X / _scale;
@@ -1023,13 +1037,13 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
     /// <summary>The faces of the game's words, in the order of <see cref="FaceFiles"/>.</summary>
     private enum Face
     {
-        /// <summary>Pixelify Sans Bold: the large ones, the act, the clock and a card's name.</summary>
+        /// <summary>Pixelify Sans Bold: a card's name.</summary>
         Heading,
 
-        /// <summary>Pixelify Sans SemiBold: a label, a number and a count.</summary>
+        /// <summary>Pixelify Sans SemiBold: a card's head strip.</summary>
         Label,
 
-        /// <summary>Atkinson Hyperlegible: a sentence.</summary>
+        /// <summary>Atkinson Hyperlegible: a sentence, and a number that is read in a glance.</summary>
         Sentence,
     }
 

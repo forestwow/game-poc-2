@@ -210,15 +210,13 @@ internal sealed partial class UnderstudiesGame
 
         // Nine kinds of card do not go in one line: as many lines as it takes, the last where the one line was.
         string[] held = [.. Enum.GetValues<Card>().Where(card => Held(card) > 0).Select(card => $"{Describe(card).Name} x{Held(card)}")];
-        // Names and counts are the label's face, and the one sentence the sentences'.
-        Face holdsFace = held.Length == 0 ? Face.Sentence : Face.Label;
         List<string> holds = held.Length == 0
             ? ["You hold no card yet."]
-            : Wrapped(Face.Label, SmallWordsHeight, ["You hold:", .. held[..^1].Select(card => $"{card},"), held[^1]], Tuning.StageSize.X - 2f);
+            : Wrapped(Face.Sentence, SmallWordsHeight, ["You hold:", .. held[..^1].Select(card => $"{card},"), held[^1]], Tuning.StageSize.X - 2f);
         for (int line = 0; line < holds.Count; line++)
         {
             float up = (holds.Count - 1 - line) * HoldsPitch;
-            Write(holdsFace, SmallWordsHeight, holds[line], new Vector2(middle, Tuning.StageSize.Y - 0.5f - up), 0.5f, Words);
+            Write(Face.Sentence, SmallWordsHeight, holds[line], new Vector2(middle, Tuning.StageSize.Y - 0.5f - up), 0.5f, Words);
         }
 
         if (!ProgramIsShown)
@@ -236,12 +234,12 @@ internal sealed partial class UnderstudiesGame
             Color ink = Ink * Seen(place);
 
             // The band: the card's key at its left end, whose the card is, and at its right end how many of it
-            // are held.
+            // are held, which is a number to be read and so in the sentences' face.
             Write(Face.Label, SmallWordsHeight, $"{place + 1}", topLeft + new Vector2(0.4f, PanelBand / 2f), 0f, ink, onPaper: true);
             if (Held(card) > 0)
             {
                 Write(
-                    Face.Label,
+                    Face.Sentence,
                     SmallWordsHeight,
                     $"x{Held(card)}",
                     topLeft + new Vector2(PanelSize.X - 0.4f, PanelBand / 2f),
@@ -306,7 +304,7 @@ internal sealed partial class UnderstudiesGame
         int seconds = (_simulation.OfferTicksLeft + Simulation.TicksPerSecond - 1) / Simulation.TicksPerSecond;
         bool choice = _offered.Count > 1;
         Write(
-            Face.Label,
+            Face.Sentence,
             CountdownHeight,
             $"{seconds} s left: then {(choice ? "the leftmost card" : "this card")} is taken for you.",
             new Vector2(middle, PanelsBottom + 1.2f),
