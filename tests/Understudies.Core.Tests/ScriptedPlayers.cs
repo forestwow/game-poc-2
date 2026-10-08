@@ -49,12 +49,12 @@ internal readonly record struct ActRecord(
     int KillsWithin5,
     int KillsWithin8,
     ulong StateHash,
-    SelfCards Cards = default,
-    int MostCardsAThrow = 0,
-    int UnderstudyKills = 0,
-    int ShortOffers = 0,
-    int Unspent = 0,
-    int NextCost = 0);
+    SelfCards Cards,
+    int MostCardsAThrow,
+    int UnderstudyKills,
+    int ShortOffers,
+    int Unspent,
+    int NextCost);
 
 /// <summary>A scripted performance played to its end: the ovation or the close.</summary>
 /// <param name="Ended"><see cref="Phase.Ovation"/> or <see cref="Phase.Closed"/>.</param>

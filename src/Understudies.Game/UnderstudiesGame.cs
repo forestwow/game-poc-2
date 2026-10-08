@@ -1387,11 +1387,16 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
             Copy(sheet.Image, Color.White * opacity, depth);
         }
 
-        // A tint can only darken a sprite, so the smoke on the magician and a stunned critic's pallor are washed
-        // over it as the flash is.
-        if ((pale ? CriticStunnedBody : tint) is { } wash)
+        // A tint can only darken a sprite, so the smoke on the magician, a headliner's red and a stunned critic's
+        // pallor are washed over it as the flash is: the pallor over the red, so a stunned headliner is still one.
+        if (tint is { } wash)
         {
             Copy(sheet.White, wash * (0.5f * opacity), over);
+        }
+
+        if (pale)
+        {
+            Copy(sheet.White, CriticStunnedBody * (0.5f * opacity), over);
         }
 
         if (white > 0f)
