@@ -45,6 +45,10 @@ On the committed numbers the script loses, and a capture shows the first act and
 
 A capture is silent: it makes no sound and opens no audio device.
 
+The art spike (plan T07b) adds one argument to a capture: `--art <tool>` draws the magician, the critics and the box office from `art/<tool>/magician.png`, `critic.png` and `box-office.png`, and everything else as shapes. Without it, and whenever the game is played, every figure is a shape. `art/<tool>/manifest.json` has the prompt and the settings of every generation, and `art/frames/` the captured frames the owner picks from.
+
+    dotnet run --project src/Understudies.Game -- --capture /tmp/frame.png --ticks 1890 --art ludo
+
 The script was written on the numbers of before plan T20, on which it played to the ovation: on the committed ones it loses in the second act, so no capture reaches an understudy's Vanish, the third act, the third door or the ovation. A script that plays the committed numbers is a ticket of its own.
 
 ## Tests
