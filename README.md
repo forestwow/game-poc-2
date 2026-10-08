@@ -45,7 +45,7 @@ On the committed numbers the script loses, and a capture shows the first act and
 
 A capture is silent: it makes no sound and opens no audio device.
 
-The figures are pixel-art sprites made with ludo.ai, read from `art/ludo/sprites/` (the repository's own when the game is run from its root, a copy beside the executable otherwise). `art/prompt-guide.md` has the recipe they were made by, and each `manifest.json` under `art/ludo/` the prompt and the settings of every generation.
+The figures and the stage set are pixel-art sprites made with ludo.ai, read from `art/ludo/sprites/` (the repository's own when the game is run from its root, a copy beside the executable otherwise). `art/prompt-guide.md` has the recipe they were made by, and each `manifest.json` under `art/ludo/` the prompt and the settings of every generation.
 
 The script was written on the numbers of before plan T20, on which it played to the ovation: on the committed ones it loses in the second act, so no capture reaches an understudy's Vanish, the third act, the third door or the ovation. A script that plays the committed numbers is a ticket of its own.
 
