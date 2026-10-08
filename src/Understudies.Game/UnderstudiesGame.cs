@@ -261,9 +261,11 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
     private SpriteBatch _spriteBatch = null!;
     private Texture2D _pixel = null!;
 
-    // Where the frame being drawn has the stage: the screen pixels of a world unit, and of the stage's corner.
+    // Where the frame being drawn has the stage: the screen pixels of a world unit, and of the stage's corner,
+    // and the two as what a batch in world units is begun with.
     private float _scale;
     private Vector2 _corner;
+    private Matrix _worldToScreen;
 
     // A card's picture (plan T47), by the card's number: read unsmoothed, a file pixel to a sprite pixel.
     private readonly Texture2D[] _cardPictures = new Texture2D[CardFiles.Length];
@@ -282,6 +284,7 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
         _fontsFolder = fontsFolder;
         _cardsFolder = cardsFolder;
         _simulation = capturePath is null ? NewShow(tuning) : new Simulation(tuning, CaptureSeed);
+        _boxOfficeAtTheActsStart = _simulation.BoxOfficeHitPoints;
         _juice = new Juice(capturePath is null ? Random.Shared : new Random((int)CaptureSeed));
         _sound = new Sound(silent: capturePath is not null);
         _capturePath = capturePath;
@@ -463,6 +466,8 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
         {
             _offered = [];
             _simulation.GoOn();
+            _boxOfficeAtTheActsStart = _simulation.BoxOfficeHitPoints;
+            _actKills.Clear();
         }
     }
 
@@ -484,6 +489,8 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
         _taken = 0;
         _takenLeft = 0f;
         _guardLeft = 0f;
+        _boxOfficeAtTheActsStart = _simulation.BoxOfficeHitPoints;
+        _actKills.Clear();
     }
 
     /// <summary>A show nobody has seen: its seed is the time, which Core never reads.</summary>
@@ -511,6 +518,21 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
         _simulation.Step(input);
         _juice.Feed(_simulation);
         _sound.Feed(_simulation);
+        foreach (TickEvent happened in _simulation.Events)
+        {
+            // The act's books (plan T50): whose card felled a critic, as the event says it.
+            if (happened.Kind == TickEventKind.Kill)
+            {
+                int who = happened.Thrower - TickEvent.TheMagician;
+                while (_actKills.Count <= who)
+                {
+                    _actKills.Add(0);
+                }
+
+                _actKills[who]++;
+            }
+        }
+
         if (IsOffered && !wasOffered)
         {
             // An encore or a program opens: the view keeps its offer, which the simulation empties with the pick.
@@ -589,6 +611,7 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
         _scale = scale;
         _corner = corner;
         Matrix worldToScreen = Matrix.CreateScale(scale, scale, 1f) * Matrix.CreateTranslation(corner.X, corner.Y, 0f);
+        _worldToScreen = worldToScreen;
 
         GraphicsDevice.Clear(Surround);
 
@@ -856,35 +879,34 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
         }
 
         // A closed show goes dark, and an ovation does not: the two are told apart at a glance. Under an offer's
-        // cards the stage is as dark (the design's six tenths): where a crowd stands is still seen, and not what
-        // it is.
+        // cards and the program's panels the stage is as dark (the design's six tenths): where a crowd stands is
+        // still seen, and not what it is.
         if (_simulation.Phase == Phase.Closed)
         {
             Fill(Vector2.Zero, Tuning.StageSize, Color.Black * 0.6f);
         }
-        else if (ProgramIsShown)
+        else if (StageStands)
         {
-            // What is at a figure's feet is under the wash with its figure while cards are shown: the cards lie
-            // over the stage, and a bar that was bright beside one would be read with it.
+            // What is at a figure's feet is under the wash with its figure while the stage stands: the cards and
+            // the panels lie over the stage, and a bar that was bright beside one would be read with it.
             TheBarsAtTheFeet();
             Fill(Vector2.Zero, Tuning.StageSize, Color.Black * ProgramDim);
         }
 
         // The footlights, along the stage's front edge, in front of all that stands on it and of the wash: dimmer
         // while the stage stands.
-        bool stands = IsOffered || _simulation.Phase == Phase.BetweenActs;
-        float footlights = !stands ? 1f : _simulation.Phase == Phase.Encore ? FootlightsInAnEncore : FootlightsBetweenActs;
+        float footlights = !StageStands ? 1f : _simulation.Phase == Phase.Encore ? FootlightsInAnEncore : FootlightsBetweenActs;
         for (float x = FootlightGap / 2f; x < Tuning.StageSize.X; x += FootlightGap)
         {
             DrawFigure(Figure.Footlight, new Vector2(x, Tuning.StageSize.Y), opacity: footlights);
         }
 
-        // The box office's bar is not drawn while cards are shown, nor its number: the row of what is held and
-        // the cards are where they would be (plan T48).
+        // The box office's bar is not drawn while the stage stands, nor its number: the row of what is held, the
+        // cards and the panels are where they would be (plan T48, T50), and the act's books have the number.
         var bar = new Vector2(Tuning.BoxOfficeSize, 0.4f);
         Vector2 barTopLeft = boxOfficeFeet
             - new Vector2(bar.X / 2f, Tuning.BoxOfficeSize + BoxOfficeBarLift + bar.Y);
-        if (!ProgramIsShown)
+        if (!StageStands)
         {
             FillBar(barTopLeft, bar, _simulation.BoxOfficeHitPoints / Tuning.BoxOfficeHitPoints, HitPoints);
             TheBarsAtTheFeet();
@@ -918,8 +940,10 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
     }
 
     /// <summary>The colour of the act an understudy came from.</summary>
-    private static Color TintOf(Understudy understudy) =>
-        UnderstudyTints[(understudy.Act - 1) % UnderstudyTints.Length];
+    private static Color TintOf(Understudy understudy) => TintOfAct(understudy.Act);
+
+    /// <summary>The colour of an act's understudy, the one that is still to join among them.</summary>
+    private static Color TintOfAct(int act) => UnderstudyTints[(act - 1) % UnderstudyTints.Length];
 
     /// <summary>
     /// The first understudy is told once what it is, as the act it first appears in begins (vision 13): through
@@ -1065,10 +1089,10 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
         {
             Phase.Encore => "Encore! Take a card, and the act goes on.",
             Phase.Program => $"Act {_simulation.Act} is over. The program has a card for the chorus.",
-            Phase.BetweenActs when ProgramIsShown => $"{Describe(_offered[_taken]).Name} it is.",
+            Phase.BetweenActs when CardsAreShown => $"{Describe(_offered[_taken]).Name} it is.",
             Phase.BetweenActs when _simulation.ActEncores == 0 =>
-                $"Act {_simulation.Act} is over. No encore, no card for the chorus. Enter or Start goes on.",
-            Phase.BetweenActs => $"Act {_simulation.Act} is over. Press Enter or Start to go on.",
+                $"Act {_simulation.Act} is over. No encore, no card for the chorus.",
+            Phase.BetweenActs => $"Act {_simulation.Act} is over. The chorus has its card.",
             Phase.Ovation => "A standing ovation! R starts a new performance.",
             Phase.Closed => "The box office fell. R starts a new performance.",
             Phase.Act when _simulation.MagicianHasFallen =>
@@ -1088,8 +1112,8 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
         // Those that stand on one spot have theirs in a row, the oldest first, and not on top of each other.
         // A mark is kept on the floor: where its place over the head is in the curtain (at the back door), it
         // is written under the feet.
-        // Not while an offer is read, an encore's or the program's: the words are drawn over the cards, so the
-        // number of an understudy that stands behind a card would be written on the card.
+        // Not while the stage stands for an offer or between two acts: the words are drawn over the cards and the
+        // panels, so the number of an understudy that stands behind one would be written on it.
         // ponytail: one spot is a hard line (a mark jumps aside as two figures cross it),
         // each mark counts the older ones near itself (three in a chain, each near the next alone, are not one
         // row) and the row starts over the head and is not centred on it. A row laid out from groups, if it shows.
@@ -1097,7 +1121,7 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
         Span<Vector2> stands = stackalloc Vector2[cast.Count];
         for (int i = 0; i < cast.Count; i++)
         {
-            if (ProgramIsShown || !cast[i].IsOnStage)
+            if (StageStands || !cast[i].IsOnStage)
             {
                 // Nowhere: no mark of its own, and beside nobody's.
                 stands[i] = new Vector2(float.NaN);
@@ -1148,7 +1172,7 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
                 keptOnTheStage: true);
         }
 
-        if (!ProgramIsShown)
+        if (!StageStands)
         {
             Write(Face.Sentence, NumberHeight, $"{MathF.Ceiling(_simulation.BoxOfficeHitPoints)}", besideTheBar, 0f, Words);
         }

@@ -10,7 +10,9 @@ namespace Understudies.Game;
 
 // The offer's screen (plan T18, laid out by T48): the offer as paper cards on the dimmed stage, the choosing, and
 // the card just taken shown for a moment. An encore's cards and the program's one are offered on the same cards
-// (plan T23). It is a part of the game's one class because it draws with that class's batch and words.
+// (plan T23). When an act is over, in the program and between two acts, four panels stand beside the card's
+// place (plan T50): the act on the books, the understudy that joins, what the next act brings and the cast at
+// the curtain. It is a part of the game's one class because it draws with that class's batch and words.
 internal sealed partial class UnderstudiesGame
 {
     // The offer's screen, from the curtain down (plan T48, S5 of "The screens"): the two lines under the curtain,
@@ -90,6 +92,32 @@ internal sealed partial class UnderstudiesGame
     // The flavour and the foot's line are in a fainter ink than the rest of a card.
     private static readonly Color FaintInk = new(90, 77, 94);
 
+    // The four panels of an act that is over (plan T50, S6 of "The screens"), two at each side of the card's
+    // place, as far from the card as PanelFromTheCard: a side door is clear of them, so the door the next act
+    // opens is seen. Dark, in a cream border; the upper two are PanelUpperTall and the lower two reach down to
+    // PanelsFoot, over the keys' line. The sizes are the design's screen pixels at 1280, in world units.
+    private const float PanelWide = 13.5f;
+    private const float PanelFromTheCard = 1.2f;
+    private const float PanelsTop = 8f;
+    private const float PanelUpperTall = 6.9f;
+    private const float PanelsApart = 0.4f;
+    private const float PanelsFoot = 23.5f;
+    private const float PanelBorder = 0.1125f;
+    private const float PanelPad = 0.6f;
+    private static readonly Color PanelGround = new(24, 18, 28);
+
+    // A panel's heading is a label, a little larger than the HUD's; under it rows of a name and what it counts,
+    // or sentences, or a small note in a fainter cream.
+    private const float PanelHeadingLine = 0.9f;
+    private const float PanelHeadingHeight = 0.6f;
+    private const float PanelFirstLine = 1.95f;
+    private const float PanelRowPitch = 0.87f;
+    private const float PanelWordsHeight = 0.65f;
+    private const float PanelNoteHeight = 0.5625f;
+    private const float PanelNotePitch = 0.72f;
+    private static readonly Color PanelNote = new(200, 191, 204);
+    private static readonly Color ApplauseCount = new(255, 138, 216);
+
     // The offer that is up, an encore's or the program's, or the one last taken from: the simulation empties its
     // own with the pick.
     private IReadOnlyList<Card> _offered = [];
@@ -98,11 +126,27 @@ internal sealed partial class UnderstudiesGame
     private float _takenLeft;
     private float _guardLeft;
 
+    // The act's books (plan T50), which are the view's to keep: what the box office had when the act began, and
+    // how many critics fell to whose cards in it, as the Kill events said: the magician's first, and then each
+    // understudy's by its place. Both are set back when the next act begins.
+    private float _boxOfficeAtTheActsStart;
+    private readonly List<int> _actKills = [];
+
     /// <summary>Cards are on offer: an encore is read, or the program.</summary>
     private bool IsOffered => _simulation.Phase is Phase.Encore or Phase.Program;
 
     /// <summary>The cards are on the screen: they are on offer, or the program's card was taken a moment ago.</summary>
-    private bool ProgramIsShown => IsOffered || (_simulation.Phase == Phase.BetweenActs && _takenLeft > 0f);
+    private bool CardsAreShown => IsOffered || (_simulation.Phase == Phase.BetweenActs && _takenLeft > 0f);
+
+    /// <summary>
+    /// The stage stands under its wash for a screen: an encore's cards, or the panels of an act that is over,
+    /// which are up in the program and between two acts, until the next act is gone on to.
+    /// </summary>
+    private bool StageStands => IsOffered || _simulation.Phase == Phase.BetweenActs;
+
+    /// <summary>How many critics fell in this act to the cards of a thrower, as a <see cref="TickEvent"/> names one.</summary>
+    private int KillsOf(int thrower) =>
+        thrower - TickEvent.TheMagician < _actKills.Count ? _actKills[thrower - TickEvent.TheMagician] : 0;
 
     /// <summary>
     /// A frame's presses in the program, and in an encore. Left and right (the arrows, A and D, a gamepad's d-pad or its left stick)
@@ -185,30 +229,35 @@ internal sealed partial class UnderstudiesGame
     private float Pixels(float units) => MathF.Max(1f, MathF.Round(units * _scale));
 
     /// <summary>
-    /// The offer's screen, in the batch of the words (plan T48): how many encores were taken, under the line that
-    /// announces, which the stage between two acts has as well; and while the cards are shown the cards, with the
-    /// countdown and the keys under them while they are offered. What the magician holds is the HUD's, in a row
-    /// over the cards (<see cref="DrawTheHeld"/>).
+    /// The offer's screen, in the batch of the words (plan T48, T50): in an encore how many encores were taken,
+    /// under the line that announces, and when an act is over its four panels; and while the cards are shown the
+    /// cards, with the countdown and the keys under them while they are offered. What the magician holds is the
+    /// HUD's, in a row over the cards (<see cref="DrawTheHeld"/>).
     /// </summary>
     private void DrawTheOffer()
     {
         float middle = Tuning.StageSize.X / 2f;
-
-        // While an encore is read its cost is still the one it was earned at: "the next" would be this very one.
-        int encores = _simulation.EncoresTaken;
-        string soFar = $"{(encores == 1 ? "1 encore" : $"{encores} encores")} so far.";
-        Write(
-            Face.Sentence,
-            SmallWordsHeight,
-            _simulation.Phase == Phase.Encore
-                ? $"{soFar} This one was earned with {_simulation.EncoreCost} pieces of applause."
-                : $"{soFar} The next costs {_simulation.EncoreCost} pieces of applause in one act.",
-            new Vector2(middle, Tuning.StageFloorTop + EncoresLineDrop),
-            0.5f,
-            ApplauseHeart);
-
-        if (!ProgramIsShown)
+        if (_simulation.Phase == Phase.Encore)
         {
+            // While an encore is read its cost is still the one it was earned at: "the next" would be this very one.
+            int encores = _simulation.EncoresTaken;
+            Write(
+                Face.Sentence,
+                SmallWordsHeight,
+                $"{(encores == 1 ? "1 encore" : $"{encores} encores")} so far. This one was earned with {_simulation.EncoreCost} pieces of applause.",
+                new Vector2(middle, Tuning.StageFloorTop + EncoresLineDrop),
+                0.5f,
+                ApplauseHeart);
+        }
+        else
+        {
+            DrawThePanels();
+        }
+
+        if (!CardsAreShown)
+        {
+            // Between two acts, with no card on the screen: the one key there is.
+            DrawTheKeys([("Enter", true), ("or Start raises the curtain", false)]);
             return;
         }
 
@@ -257,6 +306,158 @@ internal sealed partial class UnderstudiesGame
 
         keys.Add((choice ? "·  gamepad: the stick and A" : "·  gamepad: A", false));
         DrawTheKeys(keys);
+    }
+
+    /// <summary>
+    /// The four panels of the act that is over (plan T50), in the batch of the words. Every number is the
+    /// simulation's as it stands, but two that the view keeps of what the simulation told it: what the box office
+    /// had when the act began, and the Kill events counted by whose card it was. Nothing is worked out that a
+    /// rule works out: what the understudy holds is what the magician holds now, since the act's last tick is the
+    /// one its recording ends with (or the tick of the fall, after which no card is taken).
+    /// </summary>
+    private void DrawThePanels()
+    {
+        int act = _simulation.Act;
+        float cardLeft = (Tuning.StageSize.X - CardSize.X) / 2f;
+        float leftColumn = cardLeft - PanelFromTheCard - PanelWide;
+        float rightColumn = cardLeft + CardSize.X + PanelFromTheCard;
+        float lowerTop = PanelsTop + PanelUpperTall + PanelsApart;
+        float room = PanelWide - (2f * PanelPad);
+        Color joins = TintOfAct(act);
+
+        // A panel and its heading; the answer is its top left corner inside the pad.
+        Vector2 Panel(float left, float top, float tall, string heading, Color colour)
+        {
+            Vector2 at = OnAPixel(new Vector2(left, top));
+            Vector2 size = Vector2.Round(new Vector2(PanelWide, tall) * _scale);
+            float border = Pixels(PanelBorder);
+            Fill(at, size, Words);
+            Fill(at + new Vector2(border), size - new Vector2(2f * border), PanelGround);
+            Write(
+                Face.Sentence,
+                PanelHeadingHeight * MathF.Min(1f, room / Wide(Face.Sentence, PanelHeadingHeight, heading, LabelSpacing)),
+                heading,
+                new Vector2(left + PanelPad, top + PanelHeadingLine),
+                0f,
+                colour,
+                onPaper: true,
+                spacing: LabelSpacing);
+            return new Vector2(left + PanelPad, top);
+        }
+
+        // Sentences under one another from a line of a panel, each begun on a line of its own and broken to a
+        // width; the answer is the line after.
+        float Sentences(Vector2 at, float width, float height, float pitch, Color colour, params string[] sentences)
+        {
+            foreach (string line in sentences.SelectMany(sentence => Wrapped(Face.Sentence, height, sentence.Split(' '), width)))
+            {
+                Write(Face.Sentence, height, line, at, 0f, colour, onPaper: true);
+                at.Y += pitch;
+            }
+
+            return at.Y;
+        }
+
+        // The act on the books: a name at the left and what it counts at the right. These are the notices of the
+        // road's T30, as far as the game has a number for them.
+        Vector2 books = Panel(leftColumn, PanelsTop, PanelUpperTall, $"ACT {act} ON THE BOOKS", Magician);
+        float line = PanelsTop + PanelFirstLine;
+        void Row(string name, string counts, Color colour)
+        {
+            Write(Face.Sentence, PanelWordsHeight, name, new Vector2(books.X, line), 0f, Words, onPaper: true);
+            Write(Face.Sentence, PanelWordsHeight, counts, new Vector2(books.X + room, line), 1f, colour, onPaper: true);
+            line += PanelRowPitch;
+        }
+
+        // The box office as its number is written beside its bar: a part of a hit point lost is a whole one.
+        float left = MathF.Ceiling(_simulation.BoxOfficeHitPoints);
+        float lost = MathF.Ceiling(_boxOfficeAtTheActsStart) - left;
+        Row("Applause picked up", $"{_simulation.ActApplause}", ApplauseCount);
+        Row("Encores taken", $"{_simulation.ActEncores}, and {_simulation.EncoresTaken} tonight", Words);
+        Row("Critics your own cards felled", $"{KillsOf(TickEvent.TheMagician)}", Magician);
+        Row("Box office left", $"{left} / {Tuning.BoxOfficeHitPoints}", HitPoints);
+        Row("Box office lost in this act", lost > 0f ? $"{lost}" : "nothing", lost > 0f ? HeadlinerWash : Words);
+        Row("The magician", _simulation.MagicianHasFallen ? "fell" : "stood to the end", _simulation.MagicianHasFallen ? HeadlinerWash : Words);
+
+        // The understudy that joins: the magician's figure in the act's tint, as every understudy is drawn, with
+        // what it does from now on beside it and the cards it holds when its act ends.
+        float lowerTall = PanelsFoot - lowerTop;
+        Vector2 joining = Panel(leftColumn, lowerTop, lowerTall, $"UNDERSTUDY {act} JOINS THE CAST", joins);
+        float figureWide = _sheets[(int)Figure.Magician][0].First.Width * FigurePixel;
+        var feet = new Vector2(joining.X + (figureWide / 2f), lowerTop + lowerTall - PanelPad);
+
+        // A figure is drawn in world units, and this batch is in screen pixels: it is the stage's for the figure.
+        _spriteBatch.End();
+        _spriteBatch.Begin(samplerState: SamplerState.PointClamp, transformMatrix: _worldToScreen);
+        DrawFigure(Figure.Magician, feet, opacity: UnderstudyOpacity, cardboard: joins);
+        _spriteBatch.End();
+        _spriteBatch.Begin(samplerState: SamplerState.PointClamp);
+
+        var beside = new Vector2(joining.X + figureWide + PanelPad, lowerTop + PanelFirstLine);
+        float besideRoom = room - figureWide - PanelPad;
+        List<string> cards = [.. Enum.GetValues<Card>()
+            .Where(card => card != Card.ChorusDamage && Held(card) > 0)
+            .Select(card => $"{Describe(card).Name} ×{Held(card)}")];
+        beside.Y = Sentences(
+            beside,
+            besideRoom,
+            PanelWordsHeight,
+            PanelRowPitch,
+            Words,
+            _simulation.MagicianHasFallen
+                ? "It runs this route to where you fell and leaves the stage there, in every act to come."
+                : "It runs this route in every act to come.",
+            cards.Count > 0 ? "At its end it holds what you hold:" : "It holds no card.");
+
+        // A card's name and its count are never parted: a line is as many of them as fit.
+        foreach (string held in Wrapped(
+            Face.Sentence, PanelNoteHeight, cards.Select((card, i) => i == cards.Count - 1 ? card : $"{card},"), besideRoom))
+        {
+            Write(Face.Sentence, PanelNoteHeight, held, beside, 0f, joins, onPaper: true);
+            beside.Y += PanelNotePitch;
+        }
+
+        // What the next act brings, read from its plan, the doors and the encore's cost: who enters, by the
+        // kinds' own names in the tuning, which door opens and what the first encore costs.
+        int next = act + 1;
+        Vector2 brings = Panel(rightColumn, PanelsTop, PanelUpperTall, $"NEXT: ACT {next} OF {Tuning.ActsInPerformance}", Magician);
+        IReadOnlyList<PlannedEntry> entries = act < _simulation.Plan.Count ? _simulation.Plan[act] : [];
+        IEnumerable<string> kinds = entries
+            .GroupBy(entry => Math.Min(entry.Kind, Tuning.EnemyKinds.Count - 1))
+            .OrderBy(kind => kind.Key)
+            .Select(kind => $"{kind.Count()} {Tuning.EnemyKinds[kind.Key].Name}{(kind.Count() == 1 ? string.Empty : "s")}");
+
+        // ponytail: a door is named by where it stands, in the top edge or in a half of the stage. Names of
+        // their own in the tuning, when a fourth door or one elsewhere is added.
+        IEnumerable<string> opening = Tuning.StageDoors
+            .Where(door => door.OpensInAct == next)
+            .Select(door => door.Position.Y <= Tuning.StageFloorTop ? "back" : door.Position.X < Tuning.StageSize.X / 2f ? "left" : "right");
+        int doors = Tuning.StageDoors.Count;
+        int open = Tuning.StageDoors.Count(door => door.OpensInAct <= next);
+        Sentences(
+            new Vector2(brings.X, PanelsTop + PanelFirstLine),
+            room,
+            PanelWordsHeight,
+            PanelRowPitch,
+            Words,
+            $"{entries.Count} enter: {string.Join(", ", kinds)}.",
+            $"{(opening.Any() ? $"The {string.Join(" and the ", opening)} door opens" : "No new door opens")}: {open} of {doors} open.",
+            $"Next encore: {_simulation.EncoreCost} pieces of applause in one act.");
+
+        // The cast at the curtain: the HUD's squares, the one that joins among them, and under each what its
+        // cards felled in the act just over, which is what the notices name every understudy by.
+        Vector2 curtain = Panel(rightColumn, lowerTop, lowerTall, "THE CAST AT THE CURTAIN", Magician);
+        float squares = ((_simulation.Understudies.Count + 1) * (CastSquare + CastApart)) - CastApart;
+        float squaresTop = lowerTop + PanelFirstLine - 0.35f;
+        DrawTheCast(new Vector2(curtain.X + squares, squaresTop + CastSquare), atTheCurtain: true);
+        Sentences(
+            new Vector2(curtain.X, squaresTop + CastSquare + CastKillsDrop + 1.1f),
+            room,
+            PanelNoteHeight,
+            PanelNotePitch,
+            PanelNote,
+            "Under each, the critics its cards felled in this act.",
+            "Every understudy is back on its mark when the curtain rises.");
     }
 
     /// <summary>
