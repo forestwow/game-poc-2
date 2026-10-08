@@ -97,16 +97,19 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
 
     // An understudy is a coloured cardboard figure (plan T43, the design's numbers): the magician's shape filled
     // with its act's tint, the magician's own picture over that at UnderstudyPicture, and the whole this much
-    // there. One that stands still within UnderstudyOnTheMark of the magician is there less: the magician is
-    // the one to be found on its own spot.
+    // there. One that is on the magician's spot is there less, since the magician is the one to be found there:
+    // UnderstudyOpacityOnTheSpot within UnderstudyDimmedWithin of the magician's feet, and more with every step
+    // away, itself again UnderstudyDimmedOver further out. It is read off the two places, and is no state.
     private const float UnderstudyOpacity = 0.85f;
     private const float UnderstudyPicture = 0.45f;
-    private const float UnderstudyOnTheMark = 1f;
-    private const float UnderstudyOpacityOnTheMark = 0.4f;
+    private const float UnderstudyOpacityOnTheSpot = 0.55f;
+    private const float UnderstudyDimmedWithin = 0.5f;
+    private const float UnderstudyDimmedOver = 1f;
 
-    // The magician is drawn as if it stood this far nearer the viewer, so an understudy on its very line, or a
-    // step in front of it, is behind it; and so is a critic that close.
-    private const float MagicianAhead = 0.25f;
+    // The magician is drawn as if it stood this far nearer the viewer, so an understudy on its very line is
+    // behind it, and a critic that close as well. The smallest that does it: nine understudies' own hairs
+    // (UnderstudyAhead) are 0.036, and a picture's hair over its fill is a little more.
+    private const float MagicianAhead = 0.05f;
 
     // Understudies that stand on one line are drawn one whole figure over the other, the newest act's in front:
     // each is this far nearer the viewer than the act's before. Two at one depth would have their fills laid
@@ -116,7 +119,9 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
     // Where an understudy is about to go: the next RouteAhead seconds of its route as a broken line on the floor
     // in its tint, RouteOpacity at its feet and fading to nothing at the far end. The design's line: three screen
     // pixels wide in a window 1280 wide, four on and ten off. It is measured along every sixth place of the
-    // route: a tenth of a second, under a unit at the magician's speed.
+    // route: a tenth of a second, under a unit at the magician's speed. While the stage stands between two acts,
+    // and under the curtain, it is the first RouteAhead seconds of the route: where it will go when the
+    // next act begins.
     private const float RouteAhead = 2.5f;
     private const float RouteOpacity = 0.4f;
     private const float RouteWidth = 3f / 26.667f;
@@ -128,6 +133,14 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
     // have theirs side by side, MarkApart from one to the next.
     private const float MarkHeight = 0.9f;
     private const float MarkLift = 0.45f;
+
+    // The mark of an understudy that stands on the magician's spot is this far over the head instead: clear of
+    // the Vanish's bar, which is 0.3 over the head and a quarter of the figures' measure thick.
+    private const float MarkLiftOverTheBar = MarkLift + 0.4f + (0.25f * FiguresMeasure);
+
+    // Where there is no floor over the head for a mark (at the back door), it is this far under the feet: under
+    // the bar of the magician's hit points, which is 0.3 under the feet and as thick as the Vanish's.
+    private const float MarkUnderTheFeet = 0.85f + (0.25f * FiguresMeasure);
     private const float MarkApart = 0.6f;
     private const float MarkSameSpot = 0.5f;
 
@@ -611,10 +624,7 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
 
         foreach (Understudy understudy in _simulation.Understudies)
         {
-            if (understudy.IsOnStage)
-            {
-                DrawRouteAhead(understudy);
-            }
+            DrawRouteAhead(understudy);
         }
 
         foreach (Cloud cloud in _simulation.Clouds)
@@ -672,15 +682,19 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
             {
                 Vector2 step = understudy.Position - understudy.PreviousPosition;
                 Vector2 feet = Feet(understudy, alpha);
-                bool onTheMark = step == Vector2.Zero
-                    && _simulation.Phase != Phase.Curtain
-                    && Vector2.Distance(feet, magicianFeet) < UnderstudyOnTheMark;
+
+                // The one that is being told what it is (the caption's) is neither dimmed nor behind the
+                // magician: it is what the words point at, and it must be seen where the two stand together.
+                bool captioned = CaptionIsUp && understudy.Act == 1;
+                float away = (Vector2.Distance(feet, magicianFeet) - UnderstudyDimmedWithin) / UnderstudyDimmedOver;
                 DrawFigure(
                     Figure.Magician,
                     feet,
-                    opacity: onTheMark ? UnderstudyOpacityOnTheMark : UnderstudyOpacity,
+                    opacity: captioned
+                        ? UnderstudyOpacity
+                        : MathHelper.Lerp(UnderstudyOpacityOnTheSpot, UnderstudyOpacity, Math.Clamp(away, 0f, 1f)),
                     cardboard: TintOf(understudy),
-                    ahead: understudy.Act * UnderstudyAhead,
+                    ahead: (understudy.Act * UnderstudyAhead) + (captioned ? 2f * MagicianAhead : 0f),
                     toward: step,
                     walking: step != Vector2.Zero,
                     speed: Tuning.MagicianSpeed,
@@ -904,22 +918,44 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
         UnderstudyTints[(understudy.Act - 1) % UnderstudyTints.Length];
 
     /// <summary>
-    /// Where an understudy is about to go: the stretch of its route it walks in the next
-    /// <see cref="RouteAhead"/> seconds, a broken line on the floor that fades with how far ahead it is. Under
-    /// the curtain that is the first of the route, from the mark. A stretch it stands through has no length and
-    /// no line.
+    /// The first understudy is told once what it is, as the act it first appears in begins (vision 13): through
+    /// the curtain of the second act and the first seconds of that act. How long is read off the act's time
+    /// left: it is no rule and no state.
+    /// </summary>
+    private bool CaptionIsUp =>
+        _simulation is { Act: 2, Phase: Phase.Curtain or Phase.Act, Understudies: [{ IsOnStage: true }, ..] }
+        && _simulation.ActTicksLeft > (Tuning.ActLength - CaptionTimeInTheAct) * Simulation.TicksPerSecond;
+
+    /// <summary>
+    /// Where an understudy is about to go, a broken line on the floor that fades with how far ahead it is. In
+    /// an act, the stretch of its route it walks in the next <see cref="RouteAhead"/> seconds. While the stage
+    /// stands between two acts, in the program and under the curtain, the first of the route as long, from the mark, which is where every understudy
+    /// begins the next act: the line is there before the understudy is back on it. At the ovation and on a
+    /// closed stage there is no next act and no line. A stretch it stands through has no length and no line, and
+    /// a Vanish has none either: the dashes stop where it vanishes and start again where it comes out.
     /// </summary>
     // ponytail: the route is measured from its start every frame, so that the dashes lie still on the floor
     // while the understudy walks over them: a square root for every sixth place up to the far end of what is
     // shown, 750 an understudy at most and nine understudies. Keep each route's lengths when a frame feels it.
-    // ponytail: a Vanish is a stretch like any other, so the line goes straight across it. The recording's
-    // Vanishes are not public; a gap there needs them, or a stretch too long to have been walked left out.
+    // ponytail: a Vanish is told by its length, since the recording's Vanishes are not public: a stretch more
+    // than twice what six ticks' walk can be (1.8 units on the committed numbers, against a Vanish of 6). No card
+    // makes the walk faster today (the simulation's step is magicianSpeed alone); one that does must be counted
+    // here. A Vanish that a wall cut shorter than that is drawn as a walk.
     private void DrawRouteAhead(Understudy understudy)
     {
+        bool fromTheMark = _simulation.Phase is Phase.BetweenActs or Phase.Program or Phase.Curtain;
+        if (!fromTheMark && !(_simulation.Phase is Phase.Act or Phase.Encore && understudy.IsOnStage))
+        {
+            return;
+        }
+
         // The route's place of this tick: what the act has played. Read off the act's time left, like the
         // caption's time: an act whose length F5 changed while it was played is out by the change.
-        int now = (int)MathF.Round(Tuning.ActLength * Simulation.TicksPerSecond) - _simulation.ActTicksLeft;
+        int now = fromTheMark
+            ? 0
+            : (int)MathF.Round(Tuning.ActLength * Simulation.TicksPerSecond) - _simulation.ActTicksLeft;
         float shown = RouteAhead * Simulation.TicksPerSecond;
+        float longestWalk = 2f * RouteStride * Tuning.MagicianSpeed / Simulation.TicksPerSecond;
         IReadOnlyList<Vector2> route = understudy.Route;
         int last = Math.Min(route.Count - 1, now + (int)shown);
         Color tint = TintOf(understudy);
@@ -934,19 +970,24 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
                 continue;
             }
 
-            if (i > now)
+            if (i > now && length <= longestWalk)
             {
-                // The dashes that begin on this stretch, each laid along it.
+                // The dashes that begin on this stretch, each laid along it; of the stretch the understudy is
+                // on, those ahead of its feet.
+                float behind = length * Math.Max(0, now - (i - RouteStride)) / RouteStride;
                 Color color = tint * (RouteOpacity * (1f - ((i - now) / shown)));
                 float turn = MathF.Atan2(along.Y, along.X);
                 const float pitch = RouteDash + RouteGap;
                 for (float at = (pitch - (gone % pitch)) % pitch; at < length; at += pitch)
                 {
-                    FillTurned(
-                        from + (along * ((at + (RouteDash / 2f)) / length)),
-                        new Vector2(RouteDash, RouteWidth),
-                        turn,
-                        color);
+                    if (at >= behind)
+                    {
+                        FillTurned(
+                            from + (along * ((at + (RouteDash / 2f)) / length)),
+                            new Vector2(RouteDash, RouteWidth),
+                            turn,
+                            color);
+                    }
                 }
             }
 
@@ -1081,7 +1122,15 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
 
         // Which act's understudy this is, on the figure itself: its act's number over its head, in its tint.
         // Those that stand on one spot have theirs in a row, the oldest first, and not on top of each other.
-        // Not while an offer is read: the stage is dark behind its cards then, and the words are drawn over both.
+        // One on the magician's spot has its mark over the Vanish's bar and not in it. A mark is kept on the
+        // floor: where its place over the head is in the curtain (at the back door, where the applause bar is),
+        // it is written under the feet.
+        // Not while an offer is read, an encore's or the program's: the words are drawn over the cards, so the
+        // number of an understudy that stands behind a card would be written on the card.
+        // ponytail: one spot is a hard line (a mark jumps aside, or up over the bar, as two figures cross it),
+        // each mark counts the older ones near itself (three in a chain, each near the next alone, are not one
+        // row) and the row starts over the head and is not centred on it. A row laid out from groups, if it shows.
+        Vector2 magicianStands = Vector2.Lerp(_simulation.MagicianPreviousPosition, _simulation.MagicianPosition, alpha);
         IReadOnlyList<Understudy> cast = _simulation.Understudies;
         Span<Vector2> stands = stackalloc Vector2[cast.Count];
         for (int i = 0; i < cast.Count; i++)
@@ -1094,6 +1143,14 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
             }
 
             stands[i] = Feet(cast[i], alpha);
+
+            // The first understudy has the caption for its label while that is up.
+            if (i == 0 && CaptionIsUp)
+            {
+                continue;
+            }
+
+            float lift = Vector2.Distance(stands[i], magicianStands) < MarkSameSpot ? MarkLiftOverTheBar : MarkLift;
             int before = 0;
             for (int j = 0; j < i; j++)
             {
@@ -1103,22 +1160,22 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
                 }
             }
 
+            float over = stands[i].Y - MagicianTall - lift;
             Write(
                 Face.Sentence,
                 MarkHeight,
                 $"{cast[i].Act}",
-                stands[i] + new Vector2(before * MarkApart, -(MagicianTall + MarkLift)),
+                new Vector2(
+                    stands[i].X + (before * MarkApart),
+                    over < Tuning.StageFloorTop + GoldLine + (MarkHeight / 2f) ? stands[i].Y + MarkUnderTheFeet : over),
                 0.5f,
-                TintOf(cast[i]));
+                TintOf(cast[i]),
+                keptOnTheStage: true);
         }
 
-        // The first understudy is told once what it is, as the act it first appears in begins (vision 13): the
-        // words are in its colour and over its head, wherever it is drawn, so they are its label and nobody
-        // else's. How long they stay is read off the act's time left: it is no rule and no state.
-        bool actHasJustBegun =
-            _simulation.ActTicksLeft > (Tuning.ActLength - CaptionTimeInTheAct) * Simulation.TicksPerSecond;
-        if (_simulation is { Act: 2, Phase: Phase.Curtain or Phase.Act, Understudies: [{ IsOnStage: true }, ..] }
-            && actHasJustBegun)
+        // The first understudy is told once what it is (CaptionIsUp): the words are in its colour and over its
+        // head, wherever it is drawn, so they are its label and nobody else's.
+        if (CaptionIsUp)
         {
             Write(
                 Face.Sentence,
@@ -1305,7 +1362,8 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
 
         // A sorted batch keeps no order between two textures at one depth: what is drawn over a figure stands a
         // hair in front of it. ponytail: a neighbour whose feet are within that hair below comes between a figure
-        // and its wash for a frame; a wash made in a shader would be the figure's own.
+        // and its wash for a frame, and between an understudy's fill and its picture; a wash made in a shader, or
+        // an understudy drawn to a target of its own, would be the figure's own.
         float depth = Depth(feet + new Vector2(0f, ahead));
         float over = MathF.Min(1f, depth + 0.0001f);
         if (cardboard is { } fill)
