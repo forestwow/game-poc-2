@@ -83,13 +83,10 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
     private const float WordsHeight = 1.2f;
     private const float NumberHeight = 0.8f;
 
-    // The back wall's middle line keeps this far from the act's line on its left and the clock on its right.
-    private const float WordsGap = 1f;
-
     // The one caption of a performance, over the head of the first understudy and going where it goes: through
     // the curtain of the second act and for the first seconds of that act, long enough to be read. Where the
-    // understudy stands beside the magician the words are clear of the bar over the magician's head: their
-    // middle is CaptionLift above the head.
+    // understudy stands beside the magician the words are clear of the magician's head: their middle is
+    // CaptionLift above the head.
     private const string Caption = "Your understudy. It repeats your act one, every act.";
     private const float CaptionHeight = 1f;
     private const float CaptionLift = 1.4f;
@@ -134,13 +131,9 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
     private const float MarkHeight = 0.9f;
     private const float MarkLift = 0.45f;
 
-    // The mark of an understudy that stands on the magician's spot is this far over the head instead: clear of
-    // the Vanish's bar, which is 0.3 over the head and a quarter of the figures' measure thick.
-    private const float MarkLiftOverTheBar = MarkLift + 0.4f + (0.25f * FiguresMeasure);
-
     // Where there is no floor over the head for a mark (at the back door), it is this far under the feet: under
-    // the bar of the magician's hit points, which is 0.3 under the feet and as thick as the Vanish's.
-    private const float MarkUnderTheFeet = 0.85f + (0.25f * FiguresMeasure);
+    // the magician's pips and the Vanish's bar under those.
+    private const float MarkUnderTheFeet = PipsDrop + PipSize + VanishBarGap + VanishBarHeight + 0.55f;
     private const float MarkApart = 0.6f;
     private const float MarkSameSpot = 0.5f;
 
@@ -154,12 +147,6 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
     private const float ApplauseSize = 0.75f;
     private const float ApplauseLift = ApplauseSize * 0.7f;
     private const float ApplauseFaintest = 0.25f;
-
-    // The way to the next encore is a bar in the middle of the back wall, ApplauseBarGap above its foot: full when
-    // the act's applause pays for one.
-    private static readonly Vector2 ApplauseBar = new(14f, 0.45f);
-    private const float ApplauseBarGap = 0.2f;
-    private const float ApplauseCountHeight = 0.7f;
 
     // The game's words are in two faces, read from the repository's own files so that every machine shows the
     // same (plan decision 30, T40): Pixelify Sans for a card's name, Bold, and for its head strip, SemiBold, and
@@ -862,16 +849,17 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
         }
 
         // The footlights, along the stage's front edge, in front of all that stands on it and of the wash: dimmer
-        // while the stage stands. There the line of what is held is written along that edge, and the lamps it is
-        // written over are out: the words stand in a gap of the row.
-        // ponytail: a gap that is as wide as the words. The line has a place of its own above the lamps when the
-        // HUD is laid out again (plan S3).
+        // while the stage stands. While cards are shown the chips of what is held are in the lamps' row, and the
+        // lamps under them are out: the chips stand in a gap of the row (the ponytail: in DrawTheHud).
         bool stands = IsOffered || _simulation.Phase == Phase.BetweenActs;
         float footlights = !stands ? 1f : _simulation.Phase == Phase.Encore ? FootlightsInAnEncore : FootlightsBetweenActs;
-        float wordsHalf = stands ? HeldLines().Max(line => Wide(Face.Sentence, SmallWordsHeight, line)) / 2f : 0f;
+        List<List<Chip>> inTheRow = ProgramIsShown ? HeldRows(HeldWidthInAnOffer) : [];
+        float chipsHalf = inTheRow.Count == 0
+            ? 0f
+            : MathF.Max(inTheRow.Max(RowWide), Wide(Face.Sentence, LabelHeight, HeldLabel, LabelSpacing)) / 2f;
         for (float x = FootlightGap / 2f; x < Tuning.StageSize.X; x += FootlightGap)
         {
-            if (!stands || MathF.Abs(x - (Tuning.StageSize.X / 2f)) > wordsHalf + (FootlightGap / 4f))
+            if (inTheRow.Count == 0 || MathF.Abs(x - (Tuning.StageSize.X / 2f)) > chipsHalf + (FootlightGap / 4f))
             {
                 DrawFigure(Figure.Footlight, new Vector2(x, Tuning.StageSize.Y), opacity: footlights);
             }
@@ -882,46 +870,25 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
             - new Vector2(bar.X / 2f, Tuning.BoxOfficeSize + BoxOfficeBarLift + bar.Y);
         FillBar(barTopLeft, bar, _simulation.BoxOfficeHitPoints / Tuning.BoxOfficeHitPoints, HitPoints);
 
-        // The magician has two small bars, told apart by place and by colour. Its hit points are under its feet, in
-        // the colour of the box office's. The Vanish's is over its head: it fills as the Vanish comes back, and a
-        // full bar is a Vanish that is ready. A fallen magician has no Vanish to wait for.
-        var smallBar = new Vector2(1.6f, 0.25f) * FiguresMeasure;
-        Vector2 atTheFeet = magicianFeet - new Vector2(smallBar.X / 2f, 0f);
-        FillBar(
-            atTheFeet + new Vector2(0f, 0.3f),
-            smallBar,
-            _simulation.MagicianHitPoints / Tuning.MagicianHitPoints,
-            HitPoints);
-        if (!_simulation.MagicianHasFallen)
-        {
-            // Kept on the stage: a magician at the foot of the back wall has its head above the stage's top edge.
-            FillBar(
-                atTheFeet with { Y = MathF.Max(0.1f, magicianFeet.Y - MagicianTall - 0.3f - smallBar.Y) },
-                smallBar,
-                1f - _simulation.VanishCooldownLeft,
-                VanishBar);
-        }
+        // The HUD's shapes (plan T45): the magician's pips and its Vanish under its feet, and on the curtain the
+        // way to the next encore.
+        DrawTheMagiciansBars(magicianFeet);
+        DrawTheApplauseBar();
 
-        // A headliner (plan T46) is the one enemy whose hit points the player counts: the magician's small bar
-        // under its feet, in its own red.
+        // A headliner (plan T46) is the one enemy whose hit points the player counts: a small bar under its
+        // feet, in its own red.
         // ponytail: full is what one enters with in this act, so one left from the act before is never shown
         // full. Keep what it entered with on the critic when that is seen.
+        var headlinerBar = new Vector2(1.6f, 0.25f) * FiguresMeasure;
         foreach (Critic critic in _simulation.Critics.Where(critic => critic.Kind == 3))
         {
             EnemyKind headliner = Tuning.EnemyKinds[Math.Min(critic.Kind, Tuning.EnemyKinds.Count - 1)];
             FillBar(
-                Vector2.Lerp(critic.PreviousPosition, critic.Position, alpha) + new Vector2(-smallBar.X / 2f, 0.3f),
-                smallBar,
+                Vector2.Lerp(critic.PreviousPosition, critic.Position, alpha) + new Vector2(-headlinerBar.X / 2f, 0.3f),
+                headlinerBar,
                 critic.HitPoints / (headliner.HitPoints + (headliner.HitPointsPerAct * (_simulation.Act - headliner.FromAct))),
                 HeadlinerWash);
         }
-
-        // The way to the next encore: the act's applause that no encore was paid with, over what the next costs.
-        FillBar(
-            ApplauseBarTopLeft,
-            ApplauseBar,
-            (float)_simulation.EncoreApplause / Math.Max(1, _simulation.EncoreCost),
-            ApplauseGlow);
 
         // The program's cards lie over everything but the words.
         if (ProgramIsShown)
@@ -1068,20 +1035,15 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
     }
 
     /// <summary>
-    /// The words of the screen: along the back wall the act, a line when no act is played or the magician has
-    /// fallen in the one that is, and the act's time left; as the second act begins the one caption, over the
-    /// understudy that is drawn <paramref name="alpha"/> between its last two ticks; and the box office's hit
-    /// points as a number at <paramref name="besideTheBar"/>, the point just to the right of the middle of its
-    /// bar's end. They are drawn in screen pixels, so they stay sharp: the font is asked for at the size the window
-    /// makes of it (see <see cref="Write"/>).
+    /// The words of the screen: the HUD's, with the line that announces when no act is played or the magician has
+    /// fallen in the one that is; as the second act begins the one caption, over the understudy that is drawn
+    /// <paramref name="alpha"/> between its last two ticks; and the box office's hit points as a number at
+    /// <paramref name="besideTheBar"/>, the point just to the right of the middle of its bar's end. They are
+    /// drawn in screen pixels, so they stay sharp: the font is asked for at the size the window makes of it (see
+    /// <see cref="Write"/>).
     /// </summary>
     private void DrawWords(float alpha, Vector2 besideTheBar)
     {
-        // Halfway up the back wall, and on a stage with no wall just clear of the top edge.
-        float line = MathF.Max(Tuning.StageFloorTop, WordsHeight + 0.4f) / 2f;
-
-        // A second that has begun still shows: the time reads 0:00 only when the act is over.
-        int seconds = (_simulation.ActTicksLeft + Simulation.TicksPerSecond - 1) / Simulation.TicksPerSecond;
         string? said = _simulation.Phase switch
         {
             Phase.Encore => "Encore! Take a card, and the act goes on.",
@@ -1097,44 +1059,7 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
             _ => null,
         };
 
-        // Beside the act's number, how many of its critics are still to enter: from the curtain on.
-        int toCome = _simulation.ActEntries.Count - _simulation.ActEntriesMade;
-        string act = $"Act {_simulation.Act} of {Tuning.ActsInPerformance}";
-        if (_simulation.Phase is Phase.Act or Phase.Encore or Phase.Curtain)
-        {
-            act += $": {toCome} to come";
-        }
-
-        string clock = $"{seconds / 60}:{seconds % 60:00}";
         _spriteBatch.Begin();
-        Write(Face.Sentence, WordsHeight, act, new Vector2(1f, line), 0f, Words);
-        Write(Face.Sentence, WordsHeight, clock, new Vector2(Tuning.StageSize.X - 1f, line), 1f, Words);
-        if (said is not null)
-        {
-            // The three share one line of the wall, and the middle one has what the other two leave: in the
-            // middle of the stage where it has the room, moved aside where it has not, and smaller where it is
-            // longer than all that is left, so that it keeps off the act and the clock (to within the rounding of its
-            // size to a whole pixel, which the gap beside it takes).
-            // The gap is between the outlines, not the letters: each end has its neighbour's and its own.
-            float outlines = 2f * Outline(Font(Face.Sentence, WordsHeight)) / _scale;
-            float from = 1f + Wide(Face.Sentence, WordsHeight, act) + WordsGap + outlines;
-            float to = Tuning.StageSize.X - 1f - Wide(Face.Sentence, WordsHeight, clock) - WordsGap - outlines;
-            float height = WordsHeight * MathF.Min(1f, (to - from) / Wide(Face.Sentence, WordsHeight, said));
-            float half = MathF.Min(Wide(Face.Sentence, height, said), to - from) / 2f;
-            // Not Math.Clamp: where the line fills its room the two bounds are one number on paper and can cross by a
-            // hair in float, and a clamp between crossed bounds throws.
-            float middle = MathF.Max(from + half, MathF.Min(Tuning.StageSize.X / 2f, to - half));
-            Write(Face.Sentence, height, said, new Vector2(middle, line), 0.5f, Magician);
-        }
-
-        // Beside the bar's end, what it counts: the pieces toward the next encore, over its cost.
-        Write(
-            Face.Sentence,
-            ApplauseCountHeight,
-            $"{_simulation.EncoreApplause}/{_simulation.EncoreCost}",
-            ApplauseBarTopLeft + new Vector2(ApplauseBar.X + 0.3f, ApplauseBar.Y / 2f),
-            0f,
-            Words);
         if (_simulation.Phase is Phase.Encore or Phase.Program or Phase.BetweenActs)
         {
             DrawProgramWords();
@@ -1142,15 +1067,13 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
 
         // Which act's understudy this is, on the figure itself: its act's number over its head, in its tint.
         // Those that stand on one spot have theirs in a row, the oldest first, and not on top of each other.
-        // One on the magician's spot has its mark over the Vanish's bar and not in it. A mark is kept on the
-        // floor: where its place over the head is in the curtain (at the back door, where the applause bar is),
-        // it is written under the feet.
+        // A mark is kept on the floor: where its place over the head is in the curtain (at the back door), it
+        // is written under the feet.
         // Not while an offer is read, an encore's or the program's: the words are drawn over the cards, so the
         // number of an understudy that stands behind a card would be written on the card.
-        // ponytail: one spot is a hard line (a mark jumps aside, or up over the bar, as two figures cross it),
+        // ponytail: one spot is a hard line (a mark jumps aside as two figures cross it),
         // each mark counts the older ones near itself (three in a chain, each near the next alone, are not one
         // row) and the row starts over the head and is not centred on it. A row laid out from groups, if it shows.
-        Vector2 magicianStands = Vector2.Lerp(_simulation.MagicianPreviousPosition, _simulation.MagicianPosition, alpha);
         IReadOnlyList<Understudy> cast = _simulation.Understudies;
         Span<Vector2> stands = stackalloc Vector2[cast.Count];
         for (int i = 0; i < cast.Count; i++)
@@ -1170,7 +1093,6 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
                 continue;
             }
 
-            float lift = Vector2.Distance(stands[i], magicianStands) < MarkSameSpot ? MarkLiftOverTheBar : MarkLift;
             int before = 0;
             for (int j = 0; j < i; j++)
             {
@@ -1180,7 +1102,7 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
                 }
             }
 
-            float over = stands[i].Y - MagicianTall - lift;
+            float over = stands[i].Y - MagicianTall - MarkLift;
             Write(
                 Face.Sentence,
                 MarkHeight,
@@ -1208,6 +1130,9 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
         }
 
         Write(Face.Sentence, NumberHeight, $"{MathF.Ceiling(_simulation.BoxOfficeHitPoints)}", besideTheBar, 0f, Words);
+
+        // The HUD last: its paper lies over whatever word stands where it is.
+        DrawTheHud(said);
         _spriteBatch.End();
     }
 
@@ -1216,14 +1141,24 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
     /// <paramref name="at"/>, a point of the stage, with its left end there, its middle (<paramref name="anchor"/>
     /// 0.5) or its right end (1). Words on the stage carry the outline; words <paramref name="onPaper"/>, dark on
     /// a light ground, have none. Words <paramref name="keptOnTheStage"/> are moved by as much as it takes to have
-    /// the whole line on the stage. Called between the Begin and the End of a batch with no transform.
+    /// the whole line on the stage, and a label's letters are <paramref name="spacing"/> apart, in world units.
+    /// Called between the Begin and the End of a batch with no transform.
     /// </summary>
     private void Write(
-        Face face, float height, string text, Vector2 at, float anchor, Color color, bool onPaper = false, bool keptOnTheStage = false)
+        Face face,
+        float height,
+        string text,
+        Vector2 at,
+        float anchor,
+        Color color,
+        bool onPaper = false,
+        bool keptOnTheStage = false,
+        float spacing = 0f)
     {
         SpriteFontBase font = Font(face, height);
         int outline = onPaper ? 0 : Outline(font);
-        var size = new Vector2(font.MeasureString(text).X, font.LineHeight);
+        float apart = MathF.Round(spacing * _scale);
+        var size = new Vector2(font.MeasureString(text, characterSpacing: apart).X, font.LineHeight);
         Vector2 topLeft = _corner + (at * _scale) - new Vector2(size.X * anchor, size.Y / 2f);
         if (keptOnTheStage)
         {
@@ -1247,12 +1182,12 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
             {
                 if ((x != 0 || y != 0) && (Math.Abs(x) < outline || Math.Abs(y) < outline))
                 {
-                    _spriteBatch.DrawString(font, text, place + new Vector2(x, y), OutlineInk);
+                    _spriteBatch.DrawString(font, text, place + new Vector2(x, y), OutlineInk, characterSpacing: apart);
                 }
             }
         }
 
-        _spriteBatch.DrawString(font, text, place, color);
+        _spriteBatch.DrawString(font, text, place, color, characterSpacing: apart);
     }
 
     /// <summary>
@@ -1262,8 +1197,12 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
     private int Outline(SpriteFontBase font) =>
         Math.Max(1, (int)MathF.Round(MathF.Min(OutlineWidth * _scale, font.FontSize / SmallestOutlined)));
 
-    /// <summary>How wide <see cref="Write"/> draws <paramref name="text"/> in that face at that height, in world units.</summary>
-    private float Wide(Face face, float height, string text) => Font(face, height).MeasureString(text).X / _scale;
+    /// <summary>
+    /// How wide <see cref="Write"/> draws <paramref name="text"/> in that face at that height, its letters
+    /// <paramref name="spacing"/> apart, in world units.
+    /// </summary>
+    private float Wide(Face face, float height, string text, float spacing = 0f) =>
+        Font(face, height).MeasureString(text, characterSpacing: MathF.Round(spacing * _scale)).X / _scale;
 
     /// <summary>
     /// A face at the size the window makes of a height in world units. A whole number of pixels tall, and drawn
@@ -1279,17 +1218,12 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
         /// <summary>Pixelify Sans Bold: a card's name.</summary>
         Heading,
 
-        /// <summary>Pixelify Sans SemiBold: a card's head strip.</summary>
+        /// <summary>Pixelify Sans SemiBold: a card's head strip, and nothing else (the HUD's labels are sentences' face).</summary>
         Label,
 
         /// <summary>Atkinson Hyperlegible: a sentence, and a number that is read in a glance.</summary>
         Sentence,
     }
-
-    private Vector2 ApplauseBarTopLeft => new(
-        (Tuning.StageSize.X - ApplauseBar.X) / 2f,
-        MathF.Max(Tuning.StageFloorTop, WordsHeight + 0.4f + ApplauseBar.Y + (2f * ApplauseBarGap))
-            - ApplauseBarGap - ApplauseBar.Y);
 
     /// <summary>A bar that is <paramref name="share"/> full, from its left end.</summary>
     private void FillBar(Vector2 topLeft, Vector2 size, float share, Color color)
