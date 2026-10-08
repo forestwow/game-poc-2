@@ -52,6 +52,14 @@ internal sealed class Juice(Random random)
     private const float KillBurstTime = 0.5f;
 
     /// <summary>
+    /// The splash is black ink and grey newsprint, and the boards are dark: under it, for the first
+    /// <see cref="KillFlashShare"/> of its time, a pale disc this wide and this thick at first, going out.
+    /// </summary>
+    public const float KillFlashRadius = 1.1f;
+    public const float KillFlashOpacity = 0.75f;
+    public const float KillFlashShare = 0.5f;
+
+    /// <summary>
     /// An understudy's flick is the past's and not the present's: this much of the magician's in size and in
     /// brightness, and in the dull face of an understudy's card.
     /// </summary>

@@ -65,7 +65,7 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
 
     // The moment after a Vanish in which nothing hurts the magician is seen: the magician is this much there and
     // washed with the smoke of its cloud, and is itself again when a touch counts again.
-    private const float InvulnerableOpacity = 0.55f;
+    private const float InvulnerableOpacity = 0.7f;
     private const float RouteWidth = 0.12f;
     private const int RouteStride = 6;
 
@@ -669,6 +669,13 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
             }
 
             bool hit = effect.Kind == Juice.Effect.HitBurst;
+            if (!hit && effect.Through < Juice.KillFlashShare)
+            {
+                // Black ink on dark boards is not seen: the splash has a pale flash under it as it opens.
+                float left = 1f - (effect.Through / Juice.KillFlashShare);
+                FillDisc(effect.Middle, Juice.KillFlashRadius, ScrapOfPaper * (Juice.KillFlashOpacity * left));
+            }
+
             Sheet sheet = hit ? _hitBurst : _killBurst;
             int frames = sheet.Columns * sheet.Columns;
             int frame = Math.Min(frames - 1, (int)(effect.Through * frames));
