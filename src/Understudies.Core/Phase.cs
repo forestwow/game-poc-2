@@ -3,6 +3,12 @@ namespace Understudies.Core;
 /// <summary>Where a performance stands.</summary>
 public enum Phase
 {
+    /// <summary>
+    /// The curtain is up: the moment every act begins with, in which the stage stands and only the curtain's own
+    /// time goes by.
+    /// </summary>
+    Curtain,
+
     /// <summary>An act is being played.</summary>
     Act,
 

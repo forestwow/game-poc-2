@@ -11,6 +11,10 @@ namespace Understudies.Core;
 /// </summary>
 /// <param name="ActLength">Seconds an act is played for: its timer ends it, whatever is on the stage.</param>
 /// <param name="ActsInPerformance">How many acts a performance is: the last ends in the standing ovation.</param>
+/// <param name="CurtainTime">
+/// Seconds the curtain is up for at the start of every act, with the stage standing. With no time there is no
+/// curtain.
+/// </param>
 /// <param name="StageSize">
 /// The whole stage, the back wall at its top and the floor below it: (0, 0) is its top-left corner and y grows
 /// downward.
@@ -63,6 +67,7 @@ namespace Understudies.Core;
 public sealed record Tuning(
     float ActLength,
     int ActsInPerformance,
+    float CurtainTime,
     Vector2 StageSize,
     float StageFloorTop,
     IReadOnlyList<StageDoor> StageDoors,
@@ -129,7 +134,7 @@ public sealed record Tuning(
     {
         Tuning tuning = JsonSerializer.Deserialize<Tuning>(json, Options) ?? throw new JsonException("The tuning is null.");
 
-        // ponytail: no number is checked for making sense. An act of no length starts between two acts, and a
+        // ponytail: no number is checked for making sense. An act of no length is over when its curtain is, and a
         // performance of no acts or fewer plays one. Check ranges here when a file is edited by more than its owner.
         if (tuning.StageDoors is not { Count: > 0 })
         {

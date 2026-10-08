@@ -27,9 +27,11 @@ public class WaveTests
     /// <summary>
     /// The committed stage with acts of ten seconds, the last of them quiet, and critics left to themselves: nobody
     /// throws at them, they turn on nobody and their strikes take nothing, so every one that enters is still there.
+    /// The curtain has no length, which is no curtain: these tests count their ticks from the first tick of an act.
     /// </summary>
     private Tuning ShortActs => Tuning with
     {
+        CurtainTime = 0f,
         ActLength = 10f,
         ActQuietEnd = 1f,
         ThrowRange = 0f,
@@ -224,10 +226,32 @@ public class WaveTests
     }
 
     [Test]
+    public void Step_WhileTheCurtainIsUp_NobodyEnters_AndTheEntriesAreCountedFromTheActsFirstPlayedTick()
+    {
+        // A curtain of one second, and critics on the first and the third tick of the act.
+        Simulation simulation = Shows.WithCriticsOnTicks(ShortActs with { CurtainTime = 1f }, 0, 2);
+
+        for (int i = 0; i < Simulation.TicksPerSecond; i++)
+        {
+            simulation.Step(default);
+            Assert.That(simulation.Critics, Is.Empty);
+        }
+
+        simulation.Step(default);
+        Assert.That(simulation.Critics, Has.Count.EqualTo(1));
+
+        simulation.Step(default);
+        Assert.That(simulation.Critics, Has.Count.EqualTo(1));
+
+        simulation.Step(default);
+        Assert.That(simulation.Critics, Has.Count.EqualTo(2));
+    }
+
+    [Test]
     public void DoorIsOpen_FollowsTheActsTheDoorsOpenIn()
     {
         // Nobody enters: acts of one tick, and the committed doors, which open in acts 1, 3 and 6.
-        Simulation simulation = Shows.WithCriticsOnTicks(Tuning with { ActLength = 1f / Simulation.TicksPerSecond });
+        Simulation simulation = Shows.WithCriticsOnTicks(ShortActs with { ActLength = 1f / Simulation.TicksPerSecond });
         var open = new List<bool[]>();
         for (int act = 1; act <= 6; act++)
         {

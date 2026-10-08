@@ -34,6 +34,14 @@ internal sealed class UnderstudiesGame : Microsoft.Xna.Framework.Game
     private const float WordsHeight = 1.2f;
     private const float NumberHeight = 0.8f;
 
+    // The one caption of a performance, over the head of the first understudy and going where it goes: through
+    // the curtain of the second act and for the first seconds of that act, long enough to be read. Where the
+    // understudy stands beside the magician the words are clear of the bar over the magician's head.
+    private const string Caption = "Your understudy. It repeats your act one, every act.";
+    private const float CaptionHeight = 1f;
+    private const float CaptionLift = MagicianHeight + 1.2f;
+    private const float CaptionTimeInTheAct = 3f;
+
     // An understudy is half there, and the line of its route on the floor is fainter still. The line is laid from
     // every sixth place of the route to the next: a tenth of a second, under a unit at the magician's speed.
     private const float UnderstudyOpacity = 0.5f;
@@ -228,8 +236,8 @@ internal sealed class UnderstudiesGame : Microsoft.Xna.Framework.Game
 
     protected override void Draw(GameTime gameTime)
     {
-        // Only an act has a next tick to draw towards.
-        DrawStage(_simulation.Phase == Phase.Act ? _clock.Alpha : 1f);
+        // Only an act has a next tick to draw towards, and the curtain, whose rewind goes on between its ticks.
+        DrawStage(_simulation.Phase is Phase.Act or Phase.Curtain ? _clock.Alpha : 1f);
         base.Draw(gameTime);
     }
 
@@ -270,9 +278,12 @@ internal sealed class UnderstudiesGame : Microsoft.Xna.Framework.Game
         // bar part full. There the magician stands for the rest of the act, out of the crowd's reach and with the
         // crowd in its own: it throws until few are left.
         // The three acts go three ways, so that their understudies do not stand in one pile. The second act: out
-        // to the first door, the only one open, to a place below the critics' way that has the door in range and is out of their reach,
-        // and every critic that enters falls there. The third: up, across behind the box office and down its far
-        // side. In every later act the magician stands on its mark, and the performance is played to its ovation.
+        // to the first door, the only one open, to a place below the critics' way that has the door in range and
+        // is out of their reach, and every critic that enters falls there. The third: up, across behind the box
+        // office and down its far side. In every later act the magician stands on its mark, and the performance
+        // is played to its ovation.
+        // Every act opens with its curtain, whose ticks are counted here with the rest: the simulation takes no
+        // input in them, and the script's own count, of an act's ticks, starts when the curtain is over.
         const int second = Simulation.TicksPerSecond;
         for (int i = 0; i < _captureTicks; i++)
         {
@@ -399,7 +410,7 @@ internal sealed class UnderstudiesGame : Microsoft.Xna.Framework.Game
             {
                 DrawFigure(
                     Figure.Magician,
-                    Vector2.Lerp(understudy.PreviousPosition, understudy.Position, alpha),
+                    Feet(understudy, alpha),
                     opacity: UnderstudyOpacity,
                     tint: UnderstudyTints[(understudy.Act - 1) % UnderstudyTints.Length]);
             }
@@ -480,17 +491,70 @@ internal sealed class UnderstudiesGame : Microsoft.Xna.Framework.Game
         }
 
         _spriteBatch.End();
-        DrawWords(scale, corner, besideTheBar: barTopLeft + new Vector2(bar.X + 0.3f, bar.Y / 2f));
+        DrawWords(scale, corner, alpha, besideTheBar: barTopLeft + new Vector2(bar.X + 0.3f, bar.Y / 2f));
+    }
+
+    /// <summary>Where an understudy is drawn: in the curtain's rewind, or between its last two ticks.</summary>
+    private Vector2 Feet(Understudy understudy, float alpha) =>
+        _simulation.Phase == Phase.Curtain
+            ? Rewound(understudy, alpha)
+            : Vector2.Lerp(understudy.PreviousPosition, understudy.Position, alpha);
+
+    /// <summary>
+    /// The curtain's rewind: where an understudy is drawn while the curtain is up. It slides back along its own
+    /// route, from where it stood when the last act ended to the first place of the route, where the simulation
+    /// has had it since going on: nothing in the simulation moves for this.
+    /// </summary>
+    // ponytail: every stretch of the route is measured twice a frame, 9,000 square roots an understudy and nine
+    // understudies at most, for the curtain's one second. Keep each route's lengths when a frame feels it.
+    private Vector2 Rewound(Understudy understudy, float alpha)
+    {
+        // The act just over is the newest understudy's: an older route that is longer than that act was left at
+        // the act's last tick, and a shorter one at its own last place.
+        // ponytail: the newest route's length is taken for the last act's length, which holds while every act is
+        // recorded to its end. When a fall cuts a recording short (T13) the act went on for longer than its
+        // route, and an older understudy would start its rewind from too early a place: the simulation then has
+        // to say how many ticks the last act was played for.
+        IReadOnlyList<Vector2> route = understudy.Route;
+        int end = Math.Min(route.Count, _simulation.Understudies[^1].Route.Count) - 1;
+
+        // The frame is drawn a part of a tick behind the last tick, like everything else.
+        float curtainTicks = MathF.Max(1f, Tuning.CurtainTime * Simulation.TicksPerSecond);
+        float left = MathF.Min(1f, _simulation.CurtainLeft + ((1f - alpha) / curtainTicks));
+
+        // The route is run back by its length and not by its ticks, so an understudy that stood for most of its
+        // act slides all through the curtain as one that ran does.
+        float whole = 0f;
+        for (int i = 1; i <= end; i++)
+        {
+            whole += Vector2.Distance(route[i - 1], route[i]);
+        }
+
+        // Fast at first and settling: with half of the curtain's time left, an eighth of the way is.
+        float toGo = whole * left * left * left;
+        for (int i = 1; i <= end; i++)
+        {
+            float stretch = Vector2.Distance(route[i - 1], route[i]);
+            if (stretch > 0f && toGo <= stretch)
+            {
+                return Vector2.Lerp(route[i - 1], route[i], toGo / stretch);
+            }
+
+            toGo -= stretch;
+        }
+
+        return route[end];
     }
 
     /// <summary>
     /// The words of the screen: along the back wall the act, a line when no act is played, and the act's time
-    /// left; and the box office's hit points as a number at <paramref name="besideTheBar"/>, the point just to the
-    /// right of the middle of its bar's end. They are drawn in screen pixels, so they stay sharp: the font is asked
-    /// for at the size the window makes of it, and <paramref name="scale"/> and <paramref name="corner"/> only say
-    /// where on the screen a point of the stage is.
+    /// left; as the second act begins the one caption, over the understudy that is drawn <paramref name="alpha"/>
+    /// between its last two ticks; and the box office's hit points as a number at
+    /// <paramref name="besideTheBar"/>, the point just to the right of the middle of its bar's end. They are drawn
+    /// in screen pixels, so they stay sharp: the font is asked for at the size the window makes of it, and
+    /// <paramref name="scale"/> and <paramref name="corner"/> only say where on the screen a point of the stage is.
     /// </summary>
-    private void DrawWords(float scale, Vector2 corner, Vector2 besideTheBar)
+    private void DrawWords(float scale, Vector2 corner, float alpha, Vector2 besideTheBar)
     {
         if (_fonts is null)
         {
@@ -498,14 +562,21 @@ internal sealed class UnderstudiesGame : Microsoft.Xna.Framework.Game
         }
 
         // The text's line is centred on the height of `at`, a point of the stage, with its left end there, its
-        // middle (`anchor` 0.5) or its right end (1).
-        void Write(float height, string text, Vector2 at, float anchor, Color color)
+        // middle (`anchor` 0.5) or its right end (1). Words `keptOnTheStage` are moved by as much as it takes to
+        // have the whole line on the stage.
+        void Write(float height, string text, Vector2 at, float anchor, Color color, bool keptOnTheStage = false)
         {
             // A whole number of pixels tall and on whole pixels: a glyph drawn between two pixels is smeared over
             // both. A window too small for words still has a pixel's worth.
             SpriteFontBase font = _fonts.GetFont(MathF.Max(1f, MathF.Round(height * scale)));
-            Vector2 topLeft = corner + (at * scale)
-                - new Vector2(font.MeasureString(text).X * anchor, font.LineHeight / 2f);
+            var size = new Vector2(font.MeasureString(text).X, font.LineHeight);
+            Vector2 topLeft = corner + (at * scale) - new Vector2(size.X * anchor, size.Y / 2f);
+            if (keptOnTheStage)
+            {
+                // The far corner first: a line wider than the stage starts at the stage's left edge.
+                topLeft = Vector2.Max(corner, Vector2.Min(topLeft, corner + (Tuning.StageSize * scale) - size));
+            }
+
             _spriteBatch.DrawString(font, text, new Vector2(MathF.Round(topLeft.X), MathF.Round(topLeft.Y)), color);
         }
 
@@ -523,15 +594,37 @@ internal sealed class UnderstudiesGame : Microsoft.Xna.Framework.Game
             _ => null,
         };
 
-        // Beside the act's number, how many of its critics are still to enter.
+        // Beside the act's number, how many of its critics are still to enter: from the curtain on.
         int toCome = _simulation.ActEntries.Count - _simulation.ActEntriesMade;
         string act = $"Act {_simulation.Act} of {Tuning.ActsInPerformance}";
+        if (_simulation.Phase is Phase.Act or Phase.Curtain)
+        {
+            act += $": {toCome} to come";
+        }
+
         _spriteBatch.Begin();
-        Write(WordsHeight, _simulation.Phase == Phase.Act ? $"{act}: {toCome} to come" : act, new Vector2(1f, line), 0f, Words);
+        Write(WordsHeight, act, new Vector2(1f, line), 0f, Words);
         Write(WordsHeight, $"{seconds / 60}:{seconds % 60:00}", new Vector2(Tuning.StageSize.X - 1f, line), 1f, Words);
         if (said is not null)
         {
             Write(WordsHeight, said, new Vector2(Tuning.StageSize.X / 2f, line), 0.5f, Magician);
+        }
+
+        // The first understudy is told once what it is, as the act it first appears in begins (vision 13): the
+        // words are in its colour and over its head, wherever it is drawn, so they are its label and nobody
+        // else's. How long they stay is read off the act's time left: it is no rule and no state.
+        bool actHasJustBegun =
+            _simulation.ActTicksLeft > (Tuning.ActLength - CaptionTimeInTheAct) * Simulation.TicksPerSecond;
+        if (_simulation is { Act: 2, Phase: Phase.Curtain or Phase.Act, Understudies: [{ IsOnStage: true } first, ..] }
+            && actHasJustBegun)
+        {
+            Write(
+                CaptionHeight,
+                Caption,
+                Feet(first, alpha) - new Vector2(0f, CaptionLift),
+                0.5f,
+                UnderstudyTints[0],
+                keptOnTheStage: true);
         }
 
         Write(NumberHeight, $"{MathF.Ceiling(_simulation.BoxOfficeHitPoints)}", besideTheBar, 0f, Words);

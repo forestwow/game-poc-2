@@ -22,9 +22,12 @@ public class CriticsTurnTests
     /// magician is one and a half to the side and two further down, two and a half away. Each of the two circles is
     /// half a unit, so they touch on the sixth tick. A touch takes two of the magician's ten hit points and a strike
     /// one of the box office's hundred, and a critic deals a blow every half second.
+    /// The curtain has no length, which is no curtain: these tests count their ticks from the first
+    /// tick of an act, and the curtain has tests of its own.
     /// </summary>
     private Tuning Scene { get; } = CommittedTuning.Parse().WithCritic(critic => critic with { Speed = 60f, Radius = 0.5f }) with
     {
+        CurtainTime = 0f,
         StageDoors = [new StageDoor(Door, 1)],
         StageDoorWidth = 0f,
         BoxOfficePosition = Door + new Vector2(0f, 20f),
@@ -228,8 +231,10 @@ public class CriticsTurnTests
         // critics crowd round the magician on its mark beside the box office, and push one another into the box
         // office, where one that has turned is left. The Vanish goes nowhere, so its cloud lies on them with the
         // magician still in their midst. A stunned critic has not turned: it is put back out of the box office.
+        // No curtain: the forty seconds are counted from the first tick of the act.
         Tuning tuning = CommittedTuning.Parse() with
         {
+            CurtainTime = 0f,
             ThrowRange = 0f,
             VanishDistance = 0f,
             CriticStrikeDamage = 0f,
