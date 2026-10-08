@@ -488,13 +488,7 @@ internal sealed partial class UnderstudiesGame
         // applause bar's is not. A picture of a glow, if the ring alone is not seen.
         if (lit)
         {
-            float ring = Pixels(CardRing);
-            Vector2 at = OnAPixel(topLeft) - new Vector2(ring);
-            Vector2 size = Vector2.Round(CardSize * _scale) + new Vector2(2f * ring);
-            Fill(at, size with { Y = ring }, accent);
-            Fill(at + new Vector2(0f, size.Y - ring), size with { Y = ring }, accent);
-            Fill(at, size with { X = ring }, accent);
-            Fill(at + new Vector2(size.X - ring, 0f), size with { X = ring }, accent);
+            RingAbout(topLeft, CardSize, accent);
         }
 
         // The head strip, which flashes on a card just taken: white at first, and back to its colour. A self
@@ -588,6 +582,18 @@ internal sealed partial class UnderstudiesGame
             0.5f,
             FaintInk,
             onPaper: true);
+    }
+
+    /// <summary>The ring of what is chosen, a card or the menu's entry: about its paper, in the batch of the words.</summary>
+    private void RingAbout(Vector2 topLeft, Vector2 paper, Color accent)
+    {
+        float ring = Pixels(CardRing);
+        Vector2 at = OnAPixel(topLeft) - new Vector2(ring);
+        Vector2 size = Vector2.Round(paper * _scale) + new Vector2(2f * ring);
+        Fill(at, size with { Y = ring }, accent);
+        Fill(at + new Vector2(0f, size.Y - ring), size with { Y = ring }, accent);
+        Fill(at, size with { X = ring }, accent);
+        Fill(at + new Vector2(size.X - ring, 0f), size with { X = ring }, accent);
     }
 
     /// <summary>
