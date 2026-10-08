@@ -34,11 +34,13 @@ internal sealed class UnderstudiesGame : Microsoft.Xna.Framework.Game
     private const float WordsHeight = 1.2f;
     private const float NumberHeight = 0.8f;
 
-    // The one caption of a performance, on the stage over the first understudy's first place: clear of the bar
-    // over the head of the magician, which stands on its mark right beside that place.
+    // The one caption of a performance, over the head of the first understudy and going where it goes: through
+    // the curtain of the second act and for the first seconds of that act, long enough to be read. Where the
+    // understudy stands beside the magician the words are clear of the bar over the magician's head.
     private const string Caption = "Your understudy. It repeats your act one, every act.";
     private const float CaptionHeight = 1f;
-    private const float CaptionLift = MagicianHeight + 1.5f;
+    private const float CaptionLift = MagicianHeight + 1.2f;
+    private const float CaptionTimeInTheAct = 3f;
 
     // An understudy is half there, and the line of its route on the floor is fainter still. The line is laid from
     // every sixth place of the route to the next: a tenth of a second, under a unit at the magician's speed.
@@ -406,9 +408,7 @@ internal sealed class UnderstudiesGame : Microsoft.Xna.Framework.Game
             {
                 DrawFigure(
                     Figure.Magician,
-                    _simulation.Phase == Phase.Curtain
-                        ? Rewound(understudy, alpha)
-                        : Vector2.Lerp(understudy.PreviousPosition, understudy.Position, alpha),
+                    Feet(understudy, alpha),
                     opacity: UnderstudyOpacity,
                     tint: UnderstudyTints[(understudy.Act - 1) % UnderstudyTints.Length]);
             }
@@ -489,8 +489,14 @@ internal sealed class UnderstudiesGame : Microsoft.Xna.Framework.Game
         }
 
         _spriteBatch.End();
-        DrawWords(scale, corner, besideTheBar: barTopLeft + new Vector2(bar.X + 0.3f, bar.Y / 2f));
+        DrawWords(scale, corner, alpha, besideTheBar: barTopLeft + new Vector2(bar.X + 0.3f, bar.Y / 2f));
     }
+
+    /// <summary>Where an understudy is drawn: in the curtain's rewind, or between its last two ticks.</summary>
+    private Vector2 Feet(Understudy understudy, float alpha) =>
+        _simulation.Phase == Phase.Curtain
+            ? Rewound(understudy, alpha)
+            : Vector2.Lerp(understudy.PreviousPosition, understudy.Position, alpha);
 
     /// <summary>
     /// The curtain's rewind: where an understudy is drawn while the curtain is up. It slides back along its own
@@ -503,6 +509,10 @@ internal sealed class UnderstudiesGame : Microsoft.Xna.Framework.Game
     {
         // The act just over is the newest understudy's: an older route that is longer than that act was left at
         // the act's last tick, and a shorter one at its own last place.
+        // ponytail: the newest route's length is taken for the last act's length, which holds while every act is
+        // recorded to its end. When a fall cuts a recording short (T13) the act went on for longer than its
+        // route, and an older understudy would start its rewind from too early a place: the simulation then has
+        // to say how many ticks the last act was played for.
         IReadOnlyList<Vector2> route = understudy.Route;
         int end = Math.Min(route.Count, _simulation.Understudies[^1].Route.Count) - 1;
 
@@ -536,12 +546,13 @@ internal sealed class UnderstudiesGame : Microsoft.Xna.Framework.Game
 
     /// <summary>
     /// The words of the screen: along the back wall the act, a line when no act is played, and the act's time
-    /// left; in the curtain of the second act the one caption; and the box office's hit points as a number at
-    /// <paramref name="besideTheBar"/>, the point just to the right of the middle of its bar's end. They are drawn in screen pixels, so they stay sharp: the font is asked
-    /// for at the size the window makes of it, and <paramref name="scale"/> and <paramref name="corner"/> only say
-    /// where on the screen a point of the stage is.
+    /// left; as the second act begins the one caption, over the understudy that is drawn <paramref name="alpha"/>
+    /// between its last two ticks; and the box office's hit points as a number at
+    /// <paramref name="besideTheBar"/>, the point just to the right of the middle of its bar's end. They are drawn
+    /// in screen pixels, so they stay sharp: the font is asked for at the size the window makes of it, and
+    /// <paramref name="scale"/> and <paramref name="corner"/> only say where on the screen a point of the stage is.
     /// </summary>
-    private void DrawWords(float scale, Vector2 corner, Vector2 besideTheBar)
+    private void DrawWords(float scale, Vector2 corner, float alpha, Vector2 besideTheBar)
     {
         if (_fonts is null)
         {
@@ -549,14 +560,21 @@ internal sealed class UnderstudiesGame : Microsoft.Xna.Framework.Game
         }
 
         // The text's line is centred on the height of `at`, a point of the stage, with its left end there, its
-        // middle (`anchor` 0.5) or its right end (1).
-        void Write(float height, string text, Vector2 at, float anchor, Color color)
+        // middle (`anchor` 0.5) or its right end (1). Words `keptOnTheStage` are moved by as much as it takes to
+        // have the whole line on the stage.
+        void Write(float height, string text, Vector2 at, float anchor, Color color, bool keptOnTheStage = false)
         {
             // A whole number of pixels tall and on whole pixels: a glyph drawn between two pixels is smeared over
             // both. A window too small for words still has a pixel's worth.
             SpriteFontBase font = _fonts.GetFont(MathF.Max(1f, MathF.Round(height * scale)));
-            Vector2 topLeft = corner + (at * scale)
-                - new Vector2(font.MeasureString(text).X * anchor, font.LineHeight / 2f);
+            var size = new Vector2(font.MeasureString(text).X, font.LineHeight);
+            Vector2 topLeft = corner + (at * scale) - new Vector2(size.X * anchor, size.Y / 2f);
+            if (keptOnTheStage)
+            {
+                // The far corner first: a line wider than the stage starts at the stage's left edge.
+                topLeft = Vector2.Max(corner, Vector2.Min(topLeft, corner + (Tuning.StageSize * scale) - size));
+            }
+
             _spriteBatch.DrawString(font, text, new Vector2(MathF.Round(topLeft.X), MathF.Round(topLeft.Y)), color);
         }
 
@@ -582,13 +600,21 @@ internal sealed class UnderstudiesGame : Microsoft.Xna.Framework.Game
             Write(WordsHeight, said, new Vector2(Tuning.StageSize.X / 2f, line), 0.5f, Magician);
         }
 
-        // The first understudy is told once what it is, while the curtain of the act it first appears in is up
-        // (vision 13). The words are in its colour and stand where it comes to rest, not on the figure as it slides.
-        // ponytail: the line is centred on that place and not kept on the stage: a mark near a side edge runs it
-        // off the stage. Measure it and clamp it when the mark moves there.
-        if (_simulation is { Phase: Phase.Curtain, Act: 2, Understudies: [{ IsOnStage: true } first, ..] })
+        // The first understudy is told once what it is, as the act it first appears in begins (vision 13): the
+        // words are in its colour and over its head, wherever it is drawn, so they are its label and nobody
+        // else's. How long they stay is read off the act's time left: it is no rule and no state.
+        bool actHasJustBegun =
+            _simulation.ActTicksLeft > (Tuning.ActLength - CaptionTimeInTheAct) * Simulation.TicksPerSecond;
+        if (_simulation is { Act: 2, Phase: Phase.Curtain or Phase.Act, Understudies: [{ IsOnStage: true } first, ..] }
+            && actHasJustBegun)
         {
-            Write(CaptionHeight, Caption, first.Route[0] - new Vector2(0f, CaptionLift), 0.5f, UnderstudyTints[0]);
+            Write(
+                CaptionHeight,
+                Caption,
+                Feet(first, alpha) - new Vector2(0f, CaptionLift),
+                0.5f,
+                UnderstudyTints[0],
+                keptOnTheStage: true);
         }
 
         Write(NumberHeight, $"{MathF.Ceiling(_simulation.BoxOfficeHitPoints)}", besideTheBar, 0f, Words);

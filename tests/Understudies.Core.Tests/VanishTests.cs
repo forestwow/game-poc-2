@@ -17,7 +17,8 @@ public class VanishTests
     /// <summary>
     /// The committed numbers with a magician that throws at nobody and that no critic turns on, and a Vanish of six
     /// units, ready again two seconds later, with a quarter of a second in which nothing hurts and a cloud that is
-    /// there for half a second. The curtain has no length, which is no curtain: these tests count their ticks from the first
+    /// there for half a second.
+    /// The curtain has no length, which is no curtain: these tests count their ticks from the first
     /// tick of an act, and the curtain has tests of its own.
     /// </summary>
     private Tuning Scene { get; } = CommittedTuning.Parse() with
