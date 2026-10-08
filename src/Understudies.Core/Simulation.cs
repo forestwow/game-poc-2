@@ -1063,6 +1063,14 @@ public sealed class Simulation(Tuning tuning, ulong seed, IReadOnlyList<IReadOnl
             float walk = MathF.Min(gap, step);
             critic.Position += toTarget * (turned ? MathF.Max(0f, walk) : walk);
 
+            // And it is kept on the stage (plan T49), here where its place is last changed in a tick: its whole
+            // circle within the two sides, and its middle on the floor, no higher than the foot of the back wall
+            // (where the door there lets it in) and no lower than the stage's bottom edge. What the push-apart
+            // threw out of a crowd at a door stands against the edge.
+            critic.Position = new Vector2(
+                MathF.Max(kind.Radius, MathF.Min(Tuning.StageSize.X - kind.Radius, critic.Position.X)),
+                MathF.Max(Tuning.StageFloorTop, MathF.Min(Tuning.StageSize.Y, critic.Position.Y)));
+
             // Nor does it deal a blow, and its time to the next blow stands still.
             if (critic.IsStunned)
             {
@@ -1232,7 +1240,9 @@ public sealed class Simulation(Tuning tuning, ulong seed, IReadOnlyList<IReadOnl
     // ponytail: a critic knows its kind, and an entry its door, by a place in the tuning's lists as they were when
     // the plan was made. A reload that reorders a list changes who is what, and one that shortens it leaves those
     // past its end as its last; the lists need names to be looked up by when a reload has to do better.
-    private EnemyKind KindOf(Critic critic) => Tuning.EnemyKinds[Math.Min(critic.Kind, Tuning.EnemyKinds.Count - 1)];
+    private EnemyKind KindOf(Critic critic) => KindOf(critic.Kind);
+
+    private EnemyKind KindOf(int kind) => Tuning.EnemyKinds[Math.Min(kind, Tuning.EnemyKinds.Count - 1)];
 
     private void LetTheCriticsIn()
     {
@@ -1245,17 +1255,17 @@ public sealed class Simulation(Tuning tuning, ulong seed, IReadOnlyList<IReadOnl
 
     private void LetACriticIn(PlannedEntry entry)
     {
-        // A door in a side edge runs up and down it; any other, at the foot of the back wall or in the bottom edge,
-        // runs along the stage's width.
+        // A door runs along the stage's width wherever it is (plan T49), and whoever enters is whole within it: the
+        // wider the kind, the less of the door is left for its middle, and one wider than its door enters at the
+        // door's middle.
         Vector2 door = Tuning.StageDoors[Math.Min(entry.Door, Tuning.StageDoors.Count - 1)].Position;
-        bool inASide = door.X <= 0f || door.X >= Tuning.StageSize.X;
-        float along = (_doorPlaces.NextFloat() - 0.5f) * Tuning.StageDoorWidth;
-        Vector2 position = door + (inASide ? new Vector2(0f, along) : new Vector2(along, 0f));
-        var critic = new Critic(_criticsEntered++, entry.Kind, position);
+        EnemyKind kind = KindOf(entry.Kind);
+        float room = MathF.Max(0f, Tuning.StageDoorWidth - (2f * kind.Radius));
+        var critic = new Critic(
+            _criticsEntered++, entry.Kind, door + new Vector2((_doorPlaces.NextFloat() - 0.5f) * room, 0f));
 
         // A kind grows tougher by the act (plan T29): what one enters with is worked out here, from the act's
         // number and the tuning of now, and kept by the critic as its hit points, so nothing else is state.
-        EnemyKind kind = KindOf(critic);
         critic.HitPoints = kind.HitPoints + (kind.HitPointsPerAct * Math.Max(0, Act - kind.FromAct));
         _critics.Add(critic);
     }

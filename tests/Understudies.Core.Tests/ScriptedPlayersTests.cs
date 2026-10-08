@@ -19,11 +19,12 @@ public class ScriptedPlayersTests
     /// <summary>
     /// Plan decision 9's question, whether <c>float</c> gives one result on two machines: two scripted
     /// performances, each pinned at the end of its third act and at its end, on macOS ARM and on Linux x64,
-    /// both in CI. The earlier pin says how early a disagreement starts. The first is the doors player on the committed
-    /// numbers, asserted to have an encore in it; the second, the orbit player on a circle of nine with a fuller first act, is
-    /// asserted to have the Vanish and its cloud, stunned critics and blows on the box office in it. A change to tuning.json, to a
-    /// rule or to a player changes them: pin them again from the failure's message, and say so in the pull
-    /// request. If the two machines ever disagree, that is a finding for the owner and not a test to make pass.
+    /// both in CI. The earlier pin says how early a disagreement starts. The first is the doors player on the
+    /// committed numbers, asserted to have an encore in it; the second, the orbit player on a circle of ten and a
+    /// quarter with a fuller first act, is asserted to have the Vanish and its cloud, stunned critics and blows on
+    /// the box office in it, and an end after its third act. A change to tuning.json, to a rule or to a player
+    /// changes them: pin them again from the failure's message, and say so in the pull request. If the two
+    /// machines ever disagree, that is a finding for the owner and not a test to make pass.
     /// </summary>
     [Test]
     public void Play_TheDoorsPlayerOnSeedOne_EndsInThePinnedStateHashOnEveryMachine()
@@ -36,8 +37,8 @@ public class ScriptedPlayersTests
 
             // An act that stood for an encore is in what is pinned.
             Assert.That(performance.Acts.Sum(act => act.Encores), Is.GreaterThan(0), "encores");
-            Assert.That(performance.Acts[2].StateHash, Is.EqualTo(162178741610036784UL), "the end of act three");
-            Assert.That(performance.Acts[^1].StateHash, Is.EqualTo(4282083162319239188UL), "the end of the performance");
+            Assert.That(performance.Acts[2].StateHash, Is.EqualTo(15201573834497074747UL), "the end of act three");
+            Assert.That(performance.Acts[^1].StateHash, Is.EqualTo(14669672916148839855UL), "the end of the performance");
         });
     }
 
@@ -49,10 +50,16 @@ public class ScriptedPlayersTests
         int blows = 0;
         int stunned = 0;
 
-        // On a circle of nine, wider than the guard's: on those no fall leaves applause (plan decision 27), and
-        // an orbit without an encore pins less. Its budget is its own and has no rise: the rise is pinned by the
-        // doors player's performance alone.
-        Func<Simulation, MagicianInput> orbit = ScriptedPlayers.Orbit(9f);
+        // On a circle of ten and a quarter, wider than the guard's: on those no fall leaves applause (plan
+        // decision 27), and an orbit without an encore pins less. Its budget is its own and has no rise: the rise
+        // is pinned by the doors player's performance alone.
+        // Why that circle (plan T49, probed on this seed and budget; it was nine before): every circle from 8.2
+        // to 10 closes in its second act with no encore, and every one from 10.5 to 13 in its third, where the
+        // two pins are one. Ten and a quarter has five encores and closes in its fourth. It is cut by the back
+        // wall, where its walker crawls, as nine was and every circle over 8.4 is: pinned as well as anything.
+        // ponytail: one circle in a narrow band. When a change closes this performance by act three again, the
+        // test says so (its count of acts), and a budget of its own is the sturdier scene than another circle.
+        Func<Simulation, MagicianInput> orbit = ScriptedPlayers.Orbit(10.25f);
 
         Performance performance = ScriptedPlayers.Play(Crowded, seed: 1, simulation =>
         {
@@ -69,8 +76,9 @@ public class ScriptedPlayersTests
             Assert.That(blows, Is.GreaterThan(0), "blows on the box office");
             Assert.That(stunned, Is.GreaterThan(0), "stunned critics");
             Assert.That(performance.Acts.Sum(act => act.Encores), Is.GreaterThan(0), "encores");
-            Assert.That(performance.Acts[2].StateHash, Is.EqualTo(14979360235718945559UL), "the end of act three");
-            Assert.That(performance.Acts[^1].StateHash, Is.EqualTo(5419211264143406984UL), "the end of the performance");
+            Assert.That(performance.Acts, Has.Count.GreaterThan(3), "acts: the two pins are two");
+            Assert.That(performance.Acts[2].StateHash, Is.EqualTo(4804231357754467498UL), "the end of act three");
+            Assert.That(performance.Acts[^1].StateHash, Is.EqualTo(14242633899946872512UL), "the end of the performance");
         });
     }
 
