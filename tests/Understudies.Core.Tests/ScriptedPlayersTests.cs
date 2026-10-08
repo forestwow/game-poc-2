@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Globalization;
 using System.Numerics;
+using System.Text.Json.Nodes;
 
 namespace Understudies.Core.Tests;
 
@@ -335,7 +336,112 @@ public class ScriptedPlayersTests
     public void PrintTheTableOnAnotherBudget(int firstActBudget, int budgetGrowthPerAct) =>
         PrintTheTable(Tuning with { FirstActBudget = firstActBudget, BudgetGrowthPerAct = budgetGrowthPerAct });
 
-    /// <summary>The seeds the guard is read over: 1 to this.</summary>
+    /// <summary>
+    /// The guard's table in short, for whoever weighs one tuning against another: every variant on the seeds 1
+    /// to 20, which the committed numbers were tuned on, and on 101 to 120, which nothing was. A variant is the
+    /// committed tuning.json with some of its keys given other values. They are read from the file the
+    /// environment variable <c>UNDERSTUDIES_VARIANTS</c> names, a variant a line, a name and a JSON object of
+    /// the keys: <c>gentle | { "firstActBudget": 60, "budgetGrowthPerAct": 120 }</c>. A line that is empty or
+    /// starts with # is none. Without the variable it is the committed tuning alone. Beside the guard's players it
+    /// plays the doors player with no applause in the first act, and the orbit on two circles wider than the
+    /// guard's: none of the three counts for the guard.
+    /// </summary>
+    [Test]
+    [Explicit("Prints the guard in short for every variant of the tuning in the file UNDERSTUDIES_VARIANTS names, on the seeds 1 to 20 and 101 to 120 (a few seconds a variant)")]
+    public void PrintTheVariants()
+    {
+        string? file = Environment.GetEnvironmentVariable("UNDERSTUDIES_VARIANTS");
+        IEnumerable<string> lines = file is null ? ["committed | {}"] : File.ReadLines(file);
+        TextWriter table = TestContext.Out;
+        table.WriteLine(
+            "lost: the act a performance closed in and whether the magician stood (up) or had fallen (down) when the box office fell, and on how many seeds. "
+            + "By act: averages over the performances that played the act, but the most critics at once, which is the most on any seed.");
+        foreach (string line in lines.Select(line => line.Trim()).Where(line => line.Length > 0 && line[0] != '#'))
+        {
+            string[] parts = line.Split('|', 2);
+            var json = JsonNode.Parse(CommittedTuning.Json)!.AsObject();
+            foreach ((string key, JsonNode? value) in JsonNode.Parse(parts[1])!.AsObject())
+            {
+                // Tuning.Parse refuses a key it does not know, so a misspelt one is not played in silence.
+                json[key] = value?.DeepClone();
+            }
+
+            PrintAVariant(table, $"{parts[0].Trim()} {parts[1].Trim()}", Tuning.Parse(json.ToJsonString()));
+        }
+    }
+
+    private static void PrintAVariant(TextWriter table, string name, Tuning tuning)
+    {
+        // The doors player with no applause in the first act, and so no encore in it: whether a player with no
+        // card yet lives through the second act. The simulation takes new numbers between two ticks.
+        Tuning noApplause = tuning with { ApplauseTime = 0f };
+        (string Name, Func<Simulation, MagicianInput> Player)[] players =
+        [
+            .. GuardPlayers,
+            ("doors, no applause in act one", simulation =>
+            {
+                simulation.Tuning = simulation.Act == 1 ? noApplause : tuning;
+                return ScriptedPlayers.Doors(simulation);
+            }),
+
+            // Circles wider than the guard's: what a rule about the floor near the box office leaves to a player
+            // that walks round just outside it.
+            .. new[] { 9f, 13f }.Select(radius => ($"orbit {Number(radius)}, outside the guard", ScriptedPlayers.Orbit(radius))),
+        ];
+        int orbits = GuardPlayers.Length - 1;
+
+        table.WriteLine();
+        table.WriteLine($"== {name}");
+        table.WriteLine($"   enemies by act (seed 1): {string.Join(" ", Waves.Plan(tuning, seed: 1).Select(act => act.Count))}");
+        foreach (int firstSeed in new[] { 1, 101 })
+        {
+            var clock = Stopwatch.StartNew();
+            Performance[] performances = PlayTheGuard(tuning, firstSeed, players);
+            clock.Stop();
+            List<Performance> Of(int player) => [.. performances.Skip(player * Seeds).Take(Seeds)];
+
+            int hidingLost = Enumerable.Range(0, Seeds).Count(seed =>
+                Enumerable.Range(0, orbits).All(orbit => LostByActSix(performances[(orbit * Seeds) + seed])));
+            table.WriteLine(
+                $"   seeds {firstSeed}-{firstSeed + Seeds - 1}: the guard: orbit {hidingLost} ({string.Join(", ", Enumerable.Range(0, orbits).Select(orbit => Of(orbit).Count(LostByActSix)))}), "
+                + $"doors {Of(orbits).Count(played => played.Ended == Phase.Ovation)}   [{Number(clock.Elapsed.TotalSeconds)} s]");
+            for (int player = 0; player < players.Length; player++)
+            {
+                List<Performance> mine = Of(player);
+                string ByAct(Func<List<ActRecord>, string> of) => string.Join(" ", Enumerable.Range(0, mine.Max(played => played.Act))
+                    .Select(act => of([.. mine.Where(played => played.Act > act).Select(played => played.Acts[act])])));
+                table.WriteLine(
+                    $"     {players[player].Name}: lost {HowLost(mine)}; encores {Number(mine.Average(played => played.Acts.Sum(act => act.Encores)))}; "
+                    + $"box office at the end {Number(mine.Average(played => played.BoxOffice), "0")}, the worst {Number(mine.Min(played => played.BoxOffice), "0")}; "
+                    + $"past act two in {mine.Count(played => played.Act > 2)}");
+                if (players[player].Name.StartsWith("doors", StringComparison.Ordinal))
+                {
+                    table.WriteLine($"       encores by act      {ByAct(acts => Number(acts.Average(act => act.Encores)))}");
+                    table.WriteLine($"       picked up / dropped {ByAct(acts => $"{Number(acts.Average(act => act.Applause), "0")}/{Number(acts.Average(act => act.Dropped), "0")}")}");
+                    table.WriteLine($"       box office by act   {ByAct(acts => Number(acts.Average(act => act.BoxOffice), "0"))}");
+                    table.WriteLine($"       fell by act         {ByAct(acts => acts.Count(act => act.Fell).ToString(CultureInfo.InvariantCulture))}");
+                }
+
+                table.WriteLine($"       most critics by act {ByAct(acts => acts.Max(act => act.MostCritics).ToString(CultureInfo.InvariantCulture))}");
+            }
+        }
+    }
+
+    /// <summary>
+    /// How the lost of <paramref name="performances"/> were lost: the act the box office fell in, whether the
+    /// magician stood then, and how many were lost so, the earliest act first.
+    /// </summary>
+    private static string HowLost(IEnumerable<Performance> performances)
+    {
+        var lost = performances.Where(played => played.Ended == Phase.Closed)
+            .GroupBy(played => (played.Act, played.Acts[^1].Fell))
+            .OrderBy(group => group.Key)
+            .Select(group => $"act {group.Key.Act} {(group.Key.Fell ? "down" : "up")} x{group.Count()}")
+            .ToList();
+        return lost.Count == 0 ? "never" : string.Join(", ", lost);
+    }
+
+    /// <summary>How many seeds the guard is read over: 1 to this, where nothing says where they start.</summary>
     private const int Seeds = 20;
 
     /// <summary>Who plays the guard: the orbit on each of its circles, and the doors player last.</summary>
@@ -346,17 +452,20 @@ public class ScriptedPlayersTests
     ];
 
     /// <summary>
-    /// Every one of <see cref="GuardPlayers"/> over the seeds 1 to <see cref="Seeds"/>: a player's performances
-    /// side by side, a seed after a seed.
+    /// Every one of <paramref name="players"/> (<see cref="GuardPlayers"/> when none are named) over
+    /// <see cref="Seeds"/> seeds from <paramref name="firstSeed"/>: a player's performances side by side, a seed
+    /// after a seed.
     /// </summary>
-    private static Performance[] PlayTheGuard(Tuning tuning)
+    private static Performance[] PlayTheGuard(
+        Tuning tuning, int firstSeed = 1, (string Name, Func<Simulation, MagicianInput> Player)[]? players = null)
     {
-        var performances = new Performance[GuardPlayers.Length * Seeds];
+        players ??= GuardPlayers;
+        var performances = new Performance[players.Length * Seeds];
 
         // A lost performance fills the stage and is slow; each is its own simulation, so they are played side
         // by side.
         Parallel.For(0, performances.Length, i =>
-            performances[i] = ScriptedPlayers.Play(tuning, (ulong)(i % Seeds) + 1, GuardPlayers[i / Seeds].Player));
+            performances[i] = ScriptedPlayers.Play(tuning, (ulong)((i % Seeds) + firstSeed), players[i / Seeds].Player));
         return performances;
     }
 
