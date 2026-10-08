@@ -54,7 +54,7 @@ public sealed class ThrownCard
 
     /// <summary>
     /// The hit points it takes off the critic it touches: its thrower's, when it was thrown, less what its
-    /// strikes have taken off since. A card is spent when a strike leaves it nothing.
+    /// strikes have taken off since. A card is spent when a strike leaves it nothing, or next to nothing.
     /// </summary>
     internal float Damage { get; set; }
 
@@ -64,7 +64,9 @@ public sealed class ThrownCard
     /// </summary>
     internal float PierceLoss { get; }
 
-    /// <summary>How many times the card may still turn to another critic: its thrower's ricochet cards at first.</summary>
+    /// <summary>
+    /// How many times the card may still turn to another critic: its thrower's ricochet cards at first.
+    /// </summary>
     internal int TurnsLeft { get; set; }
 
     /// <summary>

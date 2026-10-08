@@ -465,8 +465,8 @@ public class ScriptedPlayersTests
     /// Plan T37, the kiter as the rival of going out to the doors: over each set of seeds the doors player
     /// finishes act ten at least as often as the kiter, with at least half as many encores again a performance
     /// and at least fifty more of the box office left on average (on the committed numbers both finish every
-    /// seed, and the doors player has 40.3 encores against 18.7 and 392 of the box office against 336 on the
-    /// first set, 40.9 against 17.9 and 395 against 330 on the second: the fifty-six of the first set is barely
+    /// seed, and the doors player has 40.2 encores against 18.5 and 392 of the box office against 337 on the
+    /// first set, 40.9 against 17.9 and 395 against 330 on the second: the fifty-five of the first set is barely
     /// over the fifty, and plan T25 says what the order of the cards has to do with it). Whether the kiter has to lose outright is the owner's question, open in the plan:
     /// nothing here says it loses, and by the committed card order it does not.
     /// </summary>
@@ -539,10 +539,11 @@ public class ScriptedPlayersTests
     /// committed tuning, over the seeds 1 to 20 and the sets <c>UNDERSTUDIES_SEED_SETS</c> names, taking their
     /// cards by the committed order, by its reverse, with "one more card" last, and with the longer arm first;
     /// and, since plan T25, with each of its three cards first, and with each of them in the place of "one more
-    /// card", which is then taken last.
+    /// card", which is then taken last; and with the three behind every other card, as they do what they do
+    /// and made to do nothing.
     /// </summary>
     [Test]
-    [Explicit("Prints how the doors player and the kiter end on the committed tuning when they take their cards by ten different orders (some ten seconds a set)")]
+    [Explicit("Prints how the doors player and the kiter end on the committed tuning when they take their cards by eleven different orders, one of them twice (some ten seconds a set)")]
     public void PrintTheCardOrders()
     {
         (string Name, IReadOnlyList<Card> Order)[] orders =
@@ -560,6 +561,11 @@ public class ScriptedPlayersTests
             .. new[] { Card.Pierce, Card.Ricochet, Card.Burst }.Select(card => (
                 $"{card} for one more".ToLowerInvariant(),
                 (IReadOnlyList<Card>)[card, .. OneMoreCardLast.Where(other => other != card)])),
+
+            // The order plan T25 was asked for and did not take: the three behind the longer arm and the quicker
+            // Vanish, which the players then take. Its second row has the three made to do nothing: what the
+            // offer of eight does by itself.
+            ("the three last", ThreeLast),
         ];
         (string Name, Func<Simulation, MagicianInput> Player)[] players = [GuardPlayers[Doors], GuardPlayers[Kiter]];
         TextWriter table = TestContext.Out;
@@ -569,7 +575,14 @@ public class ScriptedPlayersTests
             table.WriteLine($"seeds {firstSeed}-{firstSeed + Seeds - 1}");
             foreach ((string name, IReadOnlyList<Card> order) in orders)
             {
-                Performance[] performances = PlayTheGuard(Tuning, firstSeed, players, order);
+                Print(name, PlayTheGuard(Tuning, firstSeed, players, order));
+            }
+
+            Tuning nothing = Tuning with { CardPierceLoss = 1000f, CardRicochetReach = 0f, CardBurstRadius = 0f };
+            Print("the three last, null", PlayTheGuard(nothing, firstSeed, players, ThreeLast));
+
+            void Print(string name, Performance[] performances)
+            {
                 for (int player = 0; player < players.Length; player++)
                 {
                     List<Performance> mine = Of(performances, player);
@@ -679,6 +692,13 @@ public class ScriptedPlayersTests
     /// <summary>The committed order with one card taken before anything else.</summary>
     private static IReadOnlyList<Card> First(Card first) =>
         [first, .. ScriptedPlayers.CardOrder.Where(card => card != first)];
+
+    /// <summary>The committed order with the three cards of plan T25 behind every other.</summary>
+    private static readonly IReadOnlyList<Card> ThreeLast =
+    [
+        .. ScriptedPlayers.CardOrder.Where(card => card is not (Card.Pierce or Card.Ricochet or Card.Burst)),
+        Card.Pierce, Card.Ricochet, Card.Burst,
+    ];
 
     /// <summary>The committed order with the longer arm taken before anything else.</summary>
     private static readonly IReadOnlyList<Card> RangeFirst = First(Card.Range);

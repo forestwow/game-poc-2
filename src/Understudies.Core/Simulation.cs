@@ -14,6 +14,13 @@ public sealed class Simulation(Tuning tuning, ulong seed, IReadOnlyList<IReadOnl
 {
     public const int TicksPerSecond = 60;
 
+    /// <summary>
+    /// A thrown card with less than this left to hurt for is spent. It is no number of a rule: the losses of a
+    /// card that goes on are a sum of floats, and three thirds taken off one leave a ten-millionth, which would
+    /// strike once more for nothing.
+    /// </summary>
+    private const float SpentBelow = 0.0001f;
+
     private readonly Rng _doorPlaces = Rng.ForStream(seed, RngStream.DoorPlaces);
     private readonly Rng _encore = Rng.ForStream(seed, RngStream.Encore);
     private readonly List<Critic> _critics = [];
@@ -528,12 +535,10 @@ public sealed class Simulation(Tuning tuning, ulong seed, IReadOnlyList<IReadOnl
             hasher.AddFloat(card.RangeLeft);
             hasher.AddFloat(card.Damage);
 
-            // What the card still does when it strikes (plan T25). What a strike takes off it and the share of
-            // its burst each have a test that tells them apart (two tunings, one card in the air). A turn left and
-            // the critics struck have none that tells them apart from the rest: as the rules stand a turn left is
-            // the thrower's ricochet cards less the turns made, each of which changed the direction, and a critic
-            // struck lost hit points to the card and took some off it or spent a turn of it. Whatever changes that
-            // adds the test.
+            // What the card still does when it strikes (plan T25). Each of the four has a test that tells it
+            // apart: what a strike takes off it and the share of its burst by two tunings and one card in the
+            // air; a turn left by a card that turned to a critic straight ahead; the critics struck by a critic
+            // that enters where the card is.
             hasher.AddFloat(card.PierceLoss);
             hasher.AddInt(card.TurnsLeft);
             hasher.AddFloat(card.BurstShare);
@@ -795,6 +800,11 @@ public sealed class Simulation(Tuning tuning, ulong seed, IReadOnlyList<IReadOnl
             // Every critic the step comes to, the first first: a card is spent on the first critic it touches,
             // which need not be the one it was thrown at, unless its thrower's cards say otherwise (plan T25).
             // Each turn of the loop strikes a critic the card had not struck, so it ends.
+            // ponytail: every strike looks at every critic three times over (the path, with a walk of the card's
+            // `Struck` for each; the burst; the turn), and a card that goes on strikes many. With the 200 enemies
+            // an act has at once and cards that go through ten of them that is some thousands of looks a card a
+            // tick, which the guard's performances bear. A grid of cells for the critics, the one the push-apart
+            // waits for, replaces the scans when a stage holds many more or cards go through dozens.
             bool spent = false;
             while (!spent && FirstCriticOnThePath(card, step, out float entry) is { } touched)
             {
@@ -828,11 +838,13 @@ public sealed class Simulation(Tuning tuning, ulong seed, IReadOnlyList<IReadOnl
                 if (card.TurnsLeft > 0 && NearestNotStruck(touched.Position, card) is { } next)
                 {
                     card.TurnsLeft--;
+                    // The reach is from middle to middle and the card turns at the struck critic's edge, which
+                    // may be the far side of it from the next: as far as that critic's middle at least, too.
                     card.Position += card.Direction * entry;
-                    card.RangeLeft = MathF.Max(card.RangeLeft - entry, Tuning.CardRicochetReach);
-                    step = MathF.Min(step - entry, card.RangeLeft);
                     card.ThrownFrom = card.Position;
-                    card.Direction = Direction(next.Position - card.Position, out _);
+                    card.Direction = Direction(next.Position - card.Position, out float away);
+                    card.RangeLeft = MathF.Max(card.RangeLeft - entry, MathF.Max(away, Tuning.CardRicochetReach));
+                    step = MathF.Min(step - entry, card.RangeLeft);
                 }
 
                 // With none it goes on through the critic, and the strike takes its loss off the card: all it
@@ -840,7 +852,7 @@ public sealed class Simulation(Tuning tuning, ulong seed, IReadOnlyList<IReadOnl
                 else
                 {
                     card.Damage -= card.PierceLoss;
-                    spent = card.Damage <= 0f;
+                    spent = card.Damage < SpentBelow;
                 }
             }
 

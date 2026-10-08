@@ -37,6 +37,10 @@ internal sealed partial class UnderstudiesGame
     private const float FlavourPitch = 0.7f;
     private const float SentencePitch = 0.9f;
     private const float PanelMargin = 0.5f;
+
+    // What is held is one line at the stage's bottom edge, or two, this far apart: the second stands clear of
+    // the line of keys under the countdown.
+    private const float HoldsPitch = 0.85f;
     private const float CountdownHeight = 1f;
     private static readonly Vector2 CountdownBar = new(20f, 0.4f);
 
@@ -210,8 +214,8 @@ internal sealed partial class UnderstudiesGame
             : Wrapped(SmallWordsHeight, ["You hold:", .. held[..^1].Select(card => $"{card},"), held[^1]], Tuning.StageSize.X - 2f);
         for (int line = 0; line < holds.Count; line++)
         {
-            float up = (holds.Count - 1 - line) * SentencePitch;
-            Write(SmallWordsHeight, holds[line], new Vector2(middle, Tuning.StageSize.Y - 0.6f - up), 0.5f, Words);
+            float up = (holds.Count - 1 - line) * HoldsPitch;
+            Write(SmallWordsHeight, holds[line], new Vector2(middle, Tuning.StageSize.Y - 0.5f - up), 0.5f, Words);
         }
 
         if (!ProgramIsShown)
@@ -279,7 +283,7 @@ internal sealed partial class UnderstudiesGame
             choice
                 ? $"Left and right choose, Enter or Space takes. Or press {(_offered.Count == 2 ? "1 or 2" : "1 to 3")}. Gamepad: the stick and A."
                 : "Enter, Space, 1 or a gamepad's A takes it.",
-            new Vector2(middle, PanelsBottom + 2.9f),
+            new Vector2(middle, PanelsBottom + 2.8f),
             0.5f,
             Words);
     }
@@ -361,7 +365,7 @@ internal sealed partial class UnderstudiesGame
                 "Pick a card. No, you. Yes, you too."),
             Card.Pierce => (
                 "The Pierce",
-                Say($"A card goes on through the critic it strikes, losing {Tuning.CardPierceLoss / withThis:0.##} each time."),
+                Say($"A card goes on through the critic it strikes, losing {Tuning.CardPierceLoss / withThis:0.###} each time."),
                 "Through the critic, through the review, through the paper it is printed on."),
             Card.Ricochet => (
                 "The Ricochet",

@@ -1456,6 +1456,120 @@ public class CardTests
         Assert.That(Show(0.5f).ComputeStateHash(), Is.Not.EqualTo(Show(0.25f).ComputeStateHash()));
     }
 
+    [Test]
+    public void ComputeStateHash_ACardThatHasATurnLeftAndOneThatHasNone_AreTwoHashes()
+    {
+        // Three critics that outlast the act: two on the card's line, three units apart, and one three units
+        // below the second. A card that goes on at no loss and has one turn strikes the first. Where the reach
+        // is four it turns, to the second, which is straight ahead: it flies on as it flew. Where the reach is
+        // one it has nobody to turn to and goes through. The two cards are in one place, fly one way, hurt for
+        // as much and have as far to go, and each has struck the first critic: one has its turn and one has not.
+        Simulation Show(float reach)
+        {
+            Simulation simulation = WithACrowd(
+                Scene with { CardPierceLoss = 0f, CardRicochetReach = reach },
+                [Card.Pierce, Card.Ricochet],
+                new(14f, 10f), new(17f, 10f), new(17f, 13f));
+            Run(simulation, ticks: 66);
+            Assert.That(Lost(simulation), Is.EqualTo(new[] { 1f, 0f, 0f }).Within(0.001f));
+            return simulation;
+        }
+
+        Simulation turned = Show(reach: 4f);
+        Simulation kept = Show(reach: 1f);
+        Assert.That(turned.ComputeStateHash(), Is.Not.EqualTo(kept.ComputeStateHash()));
+
+        // And it decides what happens next: on one tuning from here, only the card that kept its turn turns
+        // from the second critic to the third.
+        kept.Tuning = turned.Tuning;
+        PlayTheAct(turned);
+        PlayTheAct(kept);
+        Assert.That(Lost(turned), Is.EqualTo(new[] { 1f, 1f, 0f }).Within(0.001f));
+        Assert.That(Lost(kept), Is.EqualTo(new[] { 1f, 1f, 1f }).Within(0.001f));
+    }
+
+    [Test]
+    public void ComputeStateHash_ACardThatHasStruckACriticAndOneThatHasNot_AreTwoHashes()
+    {
+        // A card that goes on at no loss flies at a critic eight and a half units off, past a place four units
+        // off. In one show a critic of a thousand hit points stands there from the start, and the card strikes
+        // it on its way: 999. In the other a critic enters there on the tick the card arrives, with 999: the
+        // card is in its circle and has not struck it. The critics, the card's place, what it hurts for and how
+        // far it may fly are the same in both.
+        Simulation Show(int secondEntersOn)
+        {
+            Simulation simulation = ShowThatTook(
+                Scene with { CardPierceLoss = 0f },
+                [Later, new PlannedEntry(secondEntersOn, Door: 1, Kind: 0)],
+                Card.Pierce);
+            simulation.Tuning = simulation.Tuning.WithCritic(critic => critic with { HitPoints = 1000f }) with
+            {
+                StageDoors = [new StageDoor(new Vector2(18.5f, 10f), 1), new StageDoor(new Vector2(14f, 10f), 1)],
+                MagicianMark = Stand,
+                ThrowCooldown = 1f,
+            };
+            simulation.GoOn();
+            Run(simulation, ticks: 65);
+            simulation.Tuning = simulation.Tuning.WithCritic(critic => critic with { HitPoints = 999f });
+            Run(simulation, ticks: 1);
+            Assert.That(simulation.Critics.Select(critic => critic.HitPoints), Is.EqualTo(new[] { 1000f, 999f }));
+            Assert.That(simulation.ThrownCards, Has.Count.EqualTo(1));
+            return simulation;
+        }
+
+        Simulation struck = Show(secondEntersOn: Later.Tick);
+        Simulation notStruck = Show(secondEntersOn: Later.Tick + 5);
+        Assert.That(struck.ComputeStateHash(), Is.Not.EqualTo(notStruck.ComputeStateHash()));
+
+        // And it decides what happens next: the card that has not struck the critic it is in strikes it.
+        Run(struck, ticks: 3);
+        Run(notStruck, ticks: 3);
+        Assert.That(struck.Critics[1].HitPoints, Is.EqualTo(999f));
+        Assert.That(notStruck.Critics[1].HitPoints, Is.EqualTo(998f));
+    }
+
+    [Test]
+    public void Pick_TheRicochet_ACardThatTurnsAtTheEdgeOfAWideCriticStillReachesTheNext()
+    {
+        // The throw reaches little further than the middle of a wide critic, whose circle the card touches 0.9
+        // before it. The next critic stands four units past that middle, at the end of the reach: 4.9 from the
+        // card, and its own circle begins 4.4 from it. A card with only the reach left would fall 0.4 short.
+        Simulation simulation = ShowThatTook(
+            Scene with { CardRicochetReach = 4f }, [Later with { Kind = 1 }, Later with { Door = 1 }], Card.Ricochet);
+        EnemyKind critic = simulation.Tuning.Critic() with { HitPoints = 1000f };
+        simulation.Tuning = simulation.Tuning with
+        {
+            EnemyKinds = [critic, critic with { Radius = 0.9f }],
+            StageDoors = [new StageDoor(new Vector2(14f, 10f), 1), new StageDoor(new Vector2(18f, 10f), 1)],
+            MagicianMark = Stand,
+            ThrowRange = 4.2f,
+            ThrowCooldown = 1f,
+        };
+        simulation.GoOn();
+
+        PlayTheAct(simulation);
+
+        Assert.That(Lost(simulation), Is.EqualTo(new[] { 1f, 1f }).Within(0.001f));
+    }
+
+    [Test]
+    public void Pick_ThePierce_ACardWhoseLossesLeaveItNextToNothingIsSpent()
+    {
+        // A card of one and a half, and a loss of a sixth with three cards of the name: nine strikes take all of
+        // it, but nine sixths taken off a float one by one leave a ten-millionth. Ten critics stand on the
+        // card's line: the tenth is not struck for that.
+        Simulation simulation = WithACrowd(
+            Scene with { CardDamage = 0.5f, CardPierceLoss = 0.5f },
+            [Card.Damage, Card.Pierce, Card.Pierce, Card.Pierce],
+            [.. Enumerable.Range(0, 10).Select(place => new Vector2(11f + (0.8f * place), 10f))]);
+        simulation.Tuning = simulation.Tuning.WithCritic(critic => critic with { Radius = 0.3f });
+
+        List<(int Tick, TickEvent Event)> events = PlayTheAct(simulation);
+
+        Assert.That(Of(events, TickEventKind.Hit), Has.Count.EqualTo(9));
+        Assert.That(Lost(simulation)[^1], Is.Zero);
+    }
+
     /// <summary>Two places are one when they are within a hundredth of a unit: a walk is a sum of floats.</summary>
     private static bool Near(Vector2 one, Vector2 other) => Vector2.Distance(one, other) < 0.01f;
 

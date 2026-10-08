@@ -45,13 +45,15 @@ public enum TickEventKind
 /// <summary>Something that happened in one tick, for the view and the sound to show.</summary>
 /// <param name="Position">
 /// Where on the floor: for a throw, where the card was thrown from; for a hit and for a kill, the middle of the
-/// critic's circle; for a burst, the middle of the circle of the critic the card struck; for a Vanish, where the magician stood before it; for a hurt magician and for a fallen one,
-/// where the magician stands; for a struck box office, the middle of the circle of the critic that struck it; for
-/// applause, dropped or picked up, where the piece lies.
+/// critic's circle; for a burst, the middle of the circle of the critic the card struck; for a Vanish, where the
+/// magician stood before it; for a hurt magician and for a fallen one, where the magician stands; for a struck
+/// box office, the middle of the circle of the critic that struck it; for applause, dropped or picked up, where
+/// the piece lies.
 /// </param>
 /// <param name="Thrower">
-/// Who threw the card, for a throw, a hit, a kill and a burst: <see cref="TheMagician"/>, or an understudy by its place in
-/// <see cref="Simulation.Understudies"/>. For any other kind it is left as it is made, the magician: true of applause dropped, which only the magician's card leaves, and saying nothing of the rest.
+/// Who threw the card, for a throw, a hit, a kill and a burst: <see cref="TheMagician"/>, or an understudy by
+/// its place in <see cref="Simulation.Understudies"/>. For any other kind it is left as it is made, the
+/// magician: true of applause dropped, which only the magician's card leaves, and saying nothing of the rest.
 /// </param>
 /// <param name="CriticId">
 /// The <see cref="Critic.Id"/> of the critic a card struck, for a hit and a kill, and of the critic that left
