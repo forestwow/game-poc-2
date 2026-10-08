@@ -1,0 +1,458 @@
+{
+  "tool": "ludo.ai, through its CLI (ludo 0.1.6)",
+  "ticket": "T47, the cards' pictures (the plan's row S5a): candidates, none in the game yet",
+  "credits": 15,
+  "note": "Candidates for the owner to pick from; sheet.png shows them all. Each is 768 pixels with twelve to a sprite pixel and a transparent background. A name with -b or -c is a second or third try of that card with a changed prompt; pierce (no letter) was the first picture made and its card stops short of the critics. A job that returned two pictures is listed twice with the credits of the whole job.",
+  "generations_made": [
+    {
+      "returned": "pierce-v1.png",
+      "command": "ludo image create",
+      "settings": {
+        "image_type": "item-icon",
+        "perspective": "Any perspective",
+        "aspect_ratio": "ar_1_1",
+        "art_style": "16-Bit",
+        "prompt": "A single white playing card with a red diamond flying fast in a straight horizontal line from left to right clean through two surreal theatre critics standing one behind the other, each critic a short stout man in a blue-grey overcoat whose whole head is one huge white eyeball with a blue iris under a small black bowler hat. The card has already passed through the first critic, leaving a card-shaped slot in his chest, and is passing through the second; one bold straight red speed line marks its path through both. Pixel art game icon with a thick dark outline and a small limited palette of black, white, red, blue-grey and gold, big bold simple shapes that read at a very small size, seen flat from the side, centred on a plain flat cream paper background, no text, no letters, no border, no frame.",
+        "n": 2
+      },
+      "job_id": "073d83f3-f05b-438b-9dd2-927037eb671c",
+      "created_at": "2026-10-08T17:26:04.303Z",
+      "credits_of_the_job": 1
+    },
+    {
+      "returned": "pierce-v2.png",
+      "command": "ludo image create",
+      "settings": {
+        "image_type": "item-icon",
+        "perspective": "Any perspective",
+        "aspect_ratio": "ar_1_1",
+        "art_style": "16-Bit",
+        "prompt": "A single white playing card with a red diamond flying fast in a straight horizontal line from left to right clean through two surreal theatre critics standing one behind the other, each critic a short stout man in a blue-grey overcoat whose whole head is one huge white eyeball with a blue iris under a small black bowler hat. The card has already passed through the first critic, leaving a card-shaped slot in his chest, and is passing through the second; one bold straight red speed line marks its path through both. Pixel art game icon with a thick dark outline and a small limited palette of black, white, red, blue-grey and gold, big bold simple shapes that read at a very small size, seen flat from the side, centred on a plain flat cream paper background, no text, no letters, no border, no frame.",
+        "n": 2
+      },
+      "job_id": "073d83f3-f05b-438b-9dd2-927037eb671c",
+      "created_at": "2026-10-08T17:26:04.303Z",
+      "credits_of_the_job": 1
+    },
+    {
+      "returned": "burst-v1.png",
+      "command": "ludo image create",
+      "settings": {
+        "image_type": "item-icon",
+        "perspective": "Any perspective",
+        "aspect_ratio": "ar_1_1",
+        "art_style": "16-Bit",
+        "prompt": "Three of the same figure in a row: a surreal theatre critic, a short stout man in a blue-grey overcoat whose whole head is one huge white eyeball with a blue iris under a small black bowler hat. A white playing card with a red diamond has struck the middle critic in the chest, and from that point a big bold gold and red ring of force, a shock wave drawn as one thick circle with small card-suit sparks on it, spreads outward and catches the critic on the left and the critic on the right, who both lean away from it. Pixel art game icon with a thick dark outline and a small limited palette of black, white, red, blue-grey and gold, big bold simple shapes that read at a very small size, seen flat, centred and filling the frame, on a plain empty background, no text, no letters, no numbers, no border, no frame.",
+        "n": 2
+      },
+      "job_id": "9e878373-2ce3-4cb3-9c8a-34b33b43c082",
+      "created_at": "2026-10-08T17:26:42.968Z",
+      "credits_of_the_job": 1
+    },
+    {
+      "returned": "burst-v2.png",
+      "command": "ludo image create",
+      "settings": {
+        "image_type": "item-icon",
+        "perspective": "Any perspective",
+        "aspect_ratio": "ar_1_1",
+        "art_style": "16-Bit",
+        "prompt": "Three of the same figure in a row: a surreal theatre critic, a short stout man in a blue-grey overcoat whose whole head is one huge white eyeball with a blue iris under a small black bowler hat. A white playing card with a red diamond has struck the middle critic in the chest, and from that point a big bold gold and red ring of force, a shock wave drawn as one thick circle with small card-suit sparks on it, spreads outward and catches the critic on the left and the critic on the right, who both lean away from it. Pixel art game icon with a thick dark outline and a small limited palette of black, white, red, blue-grey and gold, big bold simple shapes that read at a very small size, seen flat, centred and filling the frame, on a plain empty background, no text, no letters, no numbers, no border, no frame.",
+        "n": 2
+      },
+      "job_id": "9e878373-2ce3-4cb3-9c8a-34b33b43c082",
+      "created_at": "2026-10-08T17:26:42.968Z",
+      "credits_of_the_job": 1
+    },
+    {
+      "returned": "pierce-b-v1.png",
+      "command": "ludo image create",
+      "settings": {
+        "image_type": "item-icon",
+        "perspective": "Any perspective",
+        "aspect_ratio": "ar_1_1",
+        "art_style": "16-Bit",
+        "prompt": "Two of the same figure stand side by side in the middle: a surreal theatre critic, a short stout man in a blue-grey overcoat whose whole head is one huge white eyeball with a blue iris under a small black bowler hat. One long straight bold red line runs horizontally across the whole picture, entering from the left edge, going right through the chest of the first critic and right through the chest of the second, and coming out on the right, where at the end of the line a white playing card with a red diamond flies on to the right, past both of them. Each critic has a small burst where the line goes through him. Pixel art game icon with a thick dark outline and a small limited palette of black, white, red, blue-grey and gold, big bold simple shapes that read at a very small size, seen flat, centred and filling the frame, on a plain empty background, no text, no letters, no numbers, no border, no frame.",
+        "n": 2
+      },
+      "job_id": "f47eb13d-7547-4254-a558-e45139476371",
+      "created_at": "2026-10-08T17:26:46.228Z",
+      "credits_of_the_job": 1
+    },
+    {
+      "returned": "pierce-b-v2.png",
+      "command": "ludo image create",
+      "settings": {
+        "image_type": "item-icon",
+        "perspective": "Any perspective",
+        "aspect_ratio": "ar_1_1",
+        "art_style": "16-Bit",
+        "prompt": "Two of the same figure stand side by side in the middle: a surreal theatre critic, a short stout man in a blue-grey overcoat whose whole head is one huge white eyeball with a blue iris under a small black bowler hat. One long straight bold red line runs horizontally across the whole picture, entering from the left edge, going right through the chest of the first critic and right through the chest of the second, and coming out on the right, where at the end of the line a white playing card with a red diamond flies on to the right, past both of them. Each critic has a small burst where the line goes through him. Pixel art game icon with a thick dark outline and a small limited palette of black, white, red, blue-grey and gold, big bold simple shapes that read at a very small size, seen flat, centred and filling the frame, on a plain empty background, no text, no letters, no numbers, no border, no frame.",
+        "n": 2
+      },
+      "job_id": "f47eb13d-7547-4254-a558-e45139476371",
+      "created_at": "2026-10-08T17:26:46.228Z",
+      "credits_of_the_job": 1
+    },
+    {
+      "returned": "long-arm-v1.png",
+      "command": "ludo image create",
+      "settings": {
+        "image_type": "item-icon",
+        "perspective": "Any perspective",
+        "aspect_ratio": "ar_1_1",
+        "art_style": "16-Bit",
+        "prompt": "One absurdly long, thin, stretched arm in a black tailcoat sleeve with a white cuff, reaching in a long diagonal across the whole picture from the bottom left corner to the top right corner, bending like rubber, ending in a big white-gloved hand that holds out one white playing card with a red diamond. The arm is many times longer than any real arm. Only the arm, no body. Pixel art game icon with a thick dark outline and a small limited palette of black, white, red, blue-grey and gold, big bold simple shapes that read at a very small size, seen flat, centred and filling the frame, on a plain empty background, no text, no letters, no numbers, no border, no frame.",
+        "n": 2
+      },
+      "job_id": "fd7ba2e5-9920-4b9d-893b-49a3a0e49e2d",
+      "created_at": "2026-10-08T17:26:59.541Z",
+      "credits_of_the_job": 1
+    },
+    {
+      "returned": "long-arm-v2.png",
+      "command": "ludo image create",
+      "settings": {
+        "image_type": "item-icon",
+        "perspective": "Any perspective",
+        "aspect_ratio": "ar_1_1",
+        "art_style": "16-Bit",
+        "prompt": "One absurdly long, thin, stretched arm in a black tailcoat sleeve with a white cuff, reaching in a long diagonal across the whole picture from the bottom left corner to the top right corner, bending like rubber, ending in a big white-gloved hand that holds out one white playing card with a red diamond. The arm is many times longer than any real arm. Only the arm, no body. Pixel art game icon with a thick dark outline and a small limited palette of black, white, red, blue-grey and gold, big bold simple shapes that read at a very small size, seen flat, centred and filling the frame, on a plain empty background, no text, no letters, no numbers, no border, no frame.",
+        "n": 2
+      },
+      "job_id": "fd7ba2e5-9920-4b9d-893b-49a3a0e49e2d",
+      "created_at": "2026-10-08T17:26:59.541Z",
+      "credits_of_the_job": 1
+    },
+    {
+      "returned": "card-sharp-v1.png",
+      "command": "ludo image create",
+      "settings": {
+        "image_type": "item-icon",
+        "perspective": "Any perspective",
+        "aspect_ratio": "ar_1_1",
+        "art_style": "16-Bit",
+        "prompt": "One big white playing card with a red diamond, its edge ground to a gleaming steel razor blade with a bright glint and sparks flying off it, stuck deep like a thrown knife into the bowler hat of a surreal theatre critic, a short stout man in a blue-grey overcoat whose whole head is one huge white eyeball with a blue iris under a small black bowler hat, who is drawn large, his eye wide with shock, with a big red impact star where the card went in. Pixel art game icon with a thick dark outline and a small limited palette of black, white, red, blue-grey and gold, big bold simple shapes that read at a very small size, seen flat, centred and filling the frame, on a plain empty background, no text, no letters, no numbers, no border, no frame.",
+        "n": 2
+      },
+      "job_id": "94e615b0-0fa3-4f21-9e21-66f306b88f72",
+      "created_at": "2026-10-08T17:27:51.087Z",
+      "credits_of_the_job": 1
+    },
+    {
+      "returned": "card-sharp-v2.png",
+      "command": "ludo image create",
+      "settings": {
+        "image_type": "item-icon",
+        "perspective": "Any perspective",
+        "aspect_ratio": "ar_1_1",
+        "art_style": "16-Bit",
+        "prompt": "One big white playing card with a red diamond, its edge ground to a gleaming steel razor blade with a bright glint and sparks flying off it, stuck deep like a thrown knife into the bowler hat of a surreal theatre critic, a short stout man in a blue-grey overcoat whose whole head is one huge white eyeball with a blue iris under a small black bowler hat, who is drawn large, his eye wide with shock, with a big red impact star where the card went in. Pixel art game icon with a thick dark outline and a small limited palette of black, white, red, blue-grey and gold, big bold simple shapes that read at a very small size, seen flat, centred and filling the frame, on a plain empty background, no text, no letters, no numbers, no border, no frame.",
+        "n": 2
+      },
+      "job_id": "94e615b0-0fa3-4f21-9e21-66f306b88f72",
+      "created_at": "2026-10-08T17:27:51.087Z",
+      "credits_of_the_job": 1
+    },
+    {
+      "returned": "sleight-of-hand-v1.png",
+      "command": "ludo image create",
+      "settings": {
+        "image_type": "item-icon",
+        "perspective": "Any perspective",
+        "aspect_ratio": "ar_1_1",
+        "art_style": "16-Bit",
+        "prompt": "One white-gloved hand in a black tailcoat sleeve with a white cuff, drawn three times over as a motion blur, three overlapping copies of the same hand fanning from left to right, throwing a rapid stream of five small white playing cards with red diamonds that fly one after another in a line to the right, with bold speed lines behind each card. Fast, a flurry of cards. Only the hands and the cards, no body. Pixel art game icon with a thick dark outline and a small limited palette of black, white, red, blue-grey and gold, big bold simple shapes that read at a very small size, seen flat, centred and filling the frame, on a plain empty background, no text, no letters, no numbers, no border, no frame.",
+        "n": 2
+      },
+      "job_id": "170d09e6-4308-4dfe-861d-053e16740329",
+      "created_at": "2026-10-08T17:27:53.300Z",
+      "credits_of_the_job": 1
+    },
+    {
+      "returned": "sleight-of-hand-v2.png",
+      "command": "ludo image create",
+      "settings": {
+        "image_type": "item-icon",
+        "perspective": "Any perspective",
+        "aspect_ratio": "ar_1_1",
+        "art_style": "16-Bit",
+        "prompt": "One white-gloved hand in a black tailcoat sleeve with a white cuff, drawn three times over as a motion blur, three overlapping copies of the same hand fanning from left to right, throwing a rapid stream of five small white playing cards with red diamonds that fly one after another in a line to the right, with bold speed lines behind each card. Fast, a flurry of cards. Only the hands and the cards, no body. Pixel art game icon with a thick dark outline and a small limited palette of black, white, red, blue-grey and gold, big bold simple shapes that read at a very small size, seen flat, centred and filling the frame, on a plain empty background, no text, no letters, no numbers, no border, no frame.",
+        "n": 2
+      },
+      "job_id": "170d09e6-4308-4dfe-861d-053e16740329",
+      "created_at": "2026-10-08T17:27:53.300Z",
+      "credits_of_the_job": 1
+    },
+    {
+      "returned": "one-more-v1.png",
+      "command": "ludo image create",
+      "settings": {
+        "image_type": "item-icon",
+        "perspective": "Any perspective",
+        "aspect_ratio": "ar_1_1",
+        "art_style": "16-Bit",
+        "prompt": "One big white-gloved hand in a black tailcoat sleeve with a white cuff, throwing three white playing cards with red diamonds at once, the three cards flying away from the hand to the right side by side on three separate paths that fan apart, each with its own bold speed line behind it. Only the hand and the three cards, no body. Pixel art game icon with a thick dark outline and a small limited palette of black, white, red, blue-grey and gold, big bold simple shapes that read at a very small size, seen flat, centred and filling the frame, on a plain empty background, no text, no letters, no numbers, no border, no frame.",
+        "n": 2
+      },
+      "job_id": "d4ceb178-6cfd-4273-9fcf-5c74061405af",
+      "created_at": "2026-10-08T17:28:11.491Z",
+      "credits_of_the_job": 1
+    },
+    {
+      "returned": "one-more-v2.png",
+      "command": "ludo image create",
+      "settings": {
+        "image_type": "item-icon",
+        "perspective": "Any perspective",
+        "aspect_ratio": "ar_1_1",
+        "art_style": "16-Bit",
+        "prompt": "One big white-gloved hand in a black tailcoat sleeve with a white cuff, throwing three white playing cards with red diamonds at once, the three cards flying away from the hand to the right side by side on three separate paths that fan apart, each with its own bold speed line behind it. Only the hand and the three cards, no body. Pixel art game icon with a thick dark outline and a small limited palette of black, white, red, blue-grey and gold, big bold simple shapes that read at a very small size, seen flat, centred and filling the frame, on a plain empty background, no text, no letters, no numbers, no border, no frame.",
+        "n": 2
+      },
+      "job_id": "d4ceb178-6cfd-4273-9fcf-5c74061405af",
+      "created_at": "2026-10-08T17:28:11.491Z",
+      "credits_of_the_job": 1
+    },
+    {
+      "returned": "quick-smoke-v1.png",
+      "command": "ludo image create",
+      "settings": {
+        "image_type": "item-icon",
+        "perspective": "Any perspective",
+        "aspect_ratio": "ar_1_1",
+        "art_style": "16-Bit",
+        "prompt": "A big round puff of pale grey stage smoke in the middle, and rising out of the top of the smoke a large black top hat with a red band, with a white dove's head peeking out of the hat, reappearing. Beside it a small gold pocket watch with its hands spinning and two short speed lines, meaning sooner. Bold round smoke shapes. Pixel art game icon with a thick dark outline and a small limited palette of black, white, red, blue-grey and gold, big bold simple shapes that read at a very small size, seen flat, centred and filling the frame, on a plain empty background, no text, no letters, no numbers, no border, no frame.",
+        "n": 2
+      },
+      "job_id": "0ab6a390-3a03-4502-9105-e83658479244",
+      "created_at": "2026-10-08T17:28:24.495Z",
+      "credits_of_the_job": 1
+    },
+    {
+      "returned": "quick-smoke-v2.png",
+      "command": "ludo image create",
+      "settings": {
+        "image_type": "item-icon",
+        "perspective": "Any perspective",
+        "aspect_ratio": "ar_1_1",
+        "art_style": "16-Bit",
+        "prompt": "A big round puff of pale grey stage smoke in the middle, and rising out of the top of the smoke a large black top hat with a red band, with a white dove's head peeking out of the hat, reappearing. Beside it a small gold pocket watch with its hands spinning and two short speed lines, meaning sooner. Bold round smoke shapes. Pixel art game icon with a thick dark outline and a small limited palette of black, white, red, blue-grey and gold, big bold simple shapes that read at a very small size, seen flat, centred and filling the frame, on a plain empty background, no text, no letters, no numbers, no border, no frame.",
+        "n": 2
+      },
+      "job_id": "0ab6a390-3a03-4502-9105-e83658479244",
+      "created_at": "2026-10-08T17:28:24.495Z",
+      "credits_of_the_job": 1
+    },
+    {
+      "returned": "ricochet-v1.png",
+      "command": "ludo image create",
+      "settings": {
+        "image_type": "item-icon",
+        "perspective": "Any perspective",
+        "aspect_ratio": "ar_1_1",
+        "art_style": "16-Bit",
+        "prompt": "Two of the same figure, one at the bottom left and one at the top right, far apart: a surreal theatre critic, a short stout man in a blue-grey overcoat whose whole head is one huge white eyeball with a blue iris under a small black bowler hat. A white playing card with a red diamond flies along a bold red line that makes a sharp zigzag: it comes in from the top left, strikes the first critic at the bottom left with a small impact star, bounces off at a sharp angle like a billiard ball, and flies on up to strike the second critic at the top right. The line has one clear sharp corner at the first critic and an arrowhead at the second. Pixel art game icon with a thick dark outline and a small limited palette of black, white, red, blue-grey and gold, big bold simple shapes that read at a very small size, seen flat, centred and filling the frame, on a plain empty background, no text, no letters, no numbers, no border, no frame.",
+        "n": 2
+      },
+      "job_id": "6a307d89-d114-4580-9c32-80f5a34a1d8d",
+      "created_at": "2026-10-08T17:28:41.698Z",
+      "credits_of_the_job": 1
+    },
+    {
+      "returned": "ricochet-v2.png",
+      "command": "ludo image create",
+      "settings": {
+        "image_type": "item-icon",
+        "perspective": "Any perspective",
+        "aspect_ratio": "ar_1_1",
+        "art_style": "16-Bit",
+        "prompt": "Two of the same figure, one at the bottom left and one at the top right, far apart: a surreal theatre critic, a short stout man in a blue-grey overcoat whose whole head is one huge white eyeball with a blue iris under a small black bowler hat. A white playing card with a red diamond flies along a bold red line that makes a sharp zigzag: it comes in from the top left, strikes the first critic at the bottom left with a small impact star, bounces off at a sharp angle like a billiard ball, and flies on up to strike the second critic at the top right. The line has one clear sharp corner at the first critic and an arrowhead at the second. Pixel art game icon with a thick dark outline and a small limited palette of black, white, red, blue-grey and gold, big bold simple shapes that read at a very small size, seen flat, centred and filling the frame, on a plain empty background, no text, no letters, no numbers, no border, no frame.",
+        "n": 2
+      },
+      "job_id": "6a307d89-d114-4580-9c32-80f5a34a1d8d",
+      "created_at": "2026-10-08T17:28:41.698Z",
+      "credits_of_the_job": 1
+    },
+    {
+      "returned": "chorus-v1.png",
+      "command": "ludo image create",
+      "settings": {
+        "image_type": "item-icon",
+        "perspective": "Any perspective",
+        "aspect_ratio": "ar_1_1",
+        "art_style": "16-Bit",
+        "prompt": "A chorus line of three identical stage magicians standing shoulder to shoulder in a row, each a tall thin man in a tailcoat and cape whose head is an upturned top hat with a white dove in it, each one a see-through ghost of a single flat colour: the first all pale blue, the second all pale green, the third all pale pink. All three throw a white playing card with a red diamond to the right at the same moment in the same pose, arms raised together, three cards flying in parallel with bold speed lines. Pixel art game icon with a thick dark outline and a small limited palette of black, white, red, blue-grey and gold, big bold simple shapes that read at a very small size, seen flat, centred and filling the frame, on a plain empty background, no text, no letters, no numbers, no border, no frame.",
+        "n": 2
+      },
+      "job_id": "be6d97fb-d587-45c4-8a3b-739047a5fd18",
+      "created_at": "2026-10-08T17:28:49.466Z",
+      "credits_of_the_job": 1
+    },
+    {
+      "returned": "chorus-v2.png",
+      "command": "ludo image create",
+      "settings": {
+        "image_type": "item-icon",
+        "perspective": "Any perspective",
+        "aspect_ratio": "ar_1_1",
+        "art_style": "16-Bit",
+        "prompt": "A chorus line of three identical stage magicians standing shoulder to shoulder in a row, each a tall thin man in a tailcoat and cape whose head is an upturned top hat with a white dove in it, each one a see-through ghost of a single flat colour: the first all pale blue, the second all pale green, the third all pale pink. All three throw a white playing card with a red diamond to the right at the same moment in the same pose, arms raised together, three cards flying in parallel with bold speed lines. Pixel art game icon with a thick dark outline and a small limited palette of black, white, red, blue-grey and gold, big bold simple shapes that read at a very small size, seen flat, centred and filling the frame, on a plain empty background, no text, no letters, no numbers, no border, no frame.",
+        "n": 2
+      },
+      "job_id": "be6d97fb-d587-45c4-8a3b-739047a5fd18",
+      "created_at": "2026-10-08T17:28:49.466Z",
+      "credits_of_the_job": 1
+    },
+    {
+      "returned": "sleight-of-hand-b-v1.png",
+      "command": "ludo image create",
+      "settings": {
+        "image_type": "item-icon",
+        "perspective": "Any perspective",
+        "aspect_ratio": "ar_1_1",
+        "art_style": "16-Bit",
+        "prompt": "One white-gloved hand in a black tailcoat sleeve on the left, flicking playing cards, with two curved motion arcs round the wrist showing that it moves very fast, and four white playing cards with red diamonds flying away from it to the right in single file, one behind the other on the same straight line, evenly spaced with gaps between them, the nearest large and the farthest small, a bold speed line under the row. Only the hand and the cards, no body. Pixel art game icon with a thick dark outline and a small limited palette of black, white, red, blue-grey and gold, big bold simple shapes that read at a very small size, seen flat, centred and filling the frame, on a plain empty background, no text, no letters, no numbers, no border, no frame.",
+        "n": 2
+      },
+      "job_id": "72cbad98-6d70-4f44-8f7f-1e8c71fe58e8",
+      "created_at": "2026-10-08T17:29:29.408Z",
+      "credits_of_the_job": 1
+    },
+    {
+      "returned": "sleight-of-hand-b-v2.png",
+      "command": "ludo image create",
+      "settings": {
+        "image_type": "item-icon",
+        "perspective": "Any perspective",
+        "aspect_ratio": "ar_1_1",
+        "art_style": "16-Bit",
+        "prompt": "One white-gloved hand in a black tailcoat sleeve on the left, flicking playing cards, with two curved motion arcs round the wrist showing that it moves very fast, and four white playing cards with red diamonds flying away from it to the right in single file, one behind the other on the same straight line, evenly spaced with gaps between them, the nearest large and the farthest small, a bold speed line under the row. Only the hand and the cards, no body. Pixel art game icon with a thick dark outline and a small limited palette of black, white, red, blue-grey and gold, big bold simple shapes that read at a very small size, seen flat, centred and filling the frame, on a plain empty background, no text, no letters, no numbers, no border, no frame.",
+        "n": 2
+      },
+      "job_id": "72cbad98-6d70-4f44-8f7f-1e8c71fe58e8",
+      "created_at": "2026-10-08T17:29:29.408Z",
+      "credits_of_the_job": 1
+    },
+    {
+      "returned": "ricochet-b-v1.png",
+      "command": "ludo image create",
+      "settings": {
+        "image_type": "item-icon",
+        "perspective": "Any perspective",
+        "aspect_ratio": "ar_1_1",
+        "art_style": "16-Bit",
+        "prompt": "A big bold red V-shaped path, like a ball bouncing: the line comes down diagonally from the top left corner to a point at the bottom middle, and bounces up diagonally to the top right corner, ending in an arrowhead. At the bottom point of the V stands one small figure, a surreal theatre critic, a short stout man in a blue-grey overcoat whose whole head is one huge white eyeball with a blue iris under a small black bowler hat, with a gold impact star on him where the line bounces off him. At the top right end of the V stands a second identical critic, and a white playing card with a red diamond is just about to hit him. Diagonal lines only, one sharp corner. Pixel art game icon with a thick dark outline and a small limited palette of black, white, red, blue-grey and gold, big bold simple shapes that read at a very small size, seen flat, centred and filling the frame, on a plain empty background, no text, no letters, no numbers, no border, no frame.",
+        "n": 2
+      },
+      "job_id": "f76287d3-9432-470c-9c4f-d54ed40ecd92",
+      "created_at": "2026-10-08T17:29:35.804Z",
+      "credits_of_the_job": 1
+    },
+    {
+      "returned": "ricochet-b-v2.png",
+      "command": "ludo image create",
+      "settings": {
+        "image_type": "item-icon",
+        "perspective": "Any perspective",
+        "aspect_ratio": "ar_1_1",
+        "art_style": "16-Bit",
+        "prompt": "A big bold red V-shaped path, like a ball bouncing: the line comes down diagonally from the top left corner to a point at the bottom middle, and bounces up diagonally to the top right corner, ending in an arrowhead. At the bottom point of the V stands one small figure, a surreal theatre critic, a short stout man in a blue-grey overcoat whose whole head is one huge white eyeball with a blue iris under a small black bowler hat, with a gold impact star on him where the line bounces off him. At the top right end of the V stands a second identical critic, and a white playing card with a red diamond is just about to hit him. Diagonal lines only, one sharp corner. Pixel art game icon with a thick dark outline and a small limited palette of black, white, red, blue-grey and gold, big bold simple shapes that read at a very small size, seen flat, centred and filling the frame, on a plain empty background, no text, no letters, no numbers, no border, no frame.",
+        "n": 2
+      },
+      "job_id": "f76287d3-9432-470c-9c4f-d54ed40ecd92",
+      "created_at": "2026-10-08T17:29:35.804Z",
+      "credits_of_the_job": 1
+    },
+    {
+      "returned": "card-sharp-b-v1.png",
+      "command": "ludo image create",
+      "settings": {
+        "image_type": "item-icon",
+        "perspective": "Any perspective",
+        "aspect_ratio": "ar_1_1",
+        "art_style": "16-Bit",
+        "prompt": "One huge white playing card with a red diamond, drawn very large and tilted, its long edge a gleaming steel razor blade with a bright white glint, slicing a black bowler hat clean in two halves that fly apart, with a big red and gold impact star at the cut and bold cut lines. Heavy, sharp, a hard blow. Only the card and the cut hat. Pixel art game icon with a thick dark outline and a small limited palette of black, white, red, blue-grey and gold, big bold simple shapes that read at a very small size, seen flat, centred and filling the frame, on a plain empty background, no text, no letters, no numbers, no border, no frame.",
+        "n": 2
+      },
+      "job_id": "acd2b10b-be79-499f-9091-6600c59715b0",
+      "created_at": "2026-10-08T17:29:49.258Z",
+      "credits_of_the_job": 1
+    },
+    {
+      "returned": "card-sharp-b-v2.png",
+      "command": "ludo image create",
+      "settings": {
+        "image_type": "item-icon",
+        "perspective": "Any perspective",
+        "aspect_ratio": "ar_1_1",
+        "art_style": "16-Bit",
+        "prompt": "One huge white playing card with a red diamond, drawn very large and tilted, its long edge a gleaming steel razor blade with a bright white glint, slicing a black bowler hat clean in two halves that fly apart, with a big red and gold impact star at the cut and bold cut lines. Heavy, sharp, a hard blow. Only the card and the cut hat. Pixel art game icon with a thick dark outline and a small limited palette of black, white, red, blue-grey and gold, big bold simple shapes that read at a very small size, seen flat, centred and filling the frame, on a plain empty background, no text, no letters, no numbers, no border, no frame.",
+        "n": 2
+      },
+      "job_id": "acd2b10b-be79-499f-9091-6600c59715b0",
+      "created_at": "2026-10-08T17:29:49.258Z",
+      "credits_of_the_job": 1
+    },
+    {
+      "returned": "burst-b-v1.png",
+      "command": "ludo image create",
+      "settings": {
+        "image_type": "item-icon",
+        "perspective": "Any perspective",
+        "aspect_ratio": "ar_1_1",
+        "art_style": "16-Bit",
+        "prompt": "Seen from above and slightly in front: one figure in the middle, a surreal theatre critic, a short stout man in a blue-grey overcoat whose whole head is one huge white eyeball with a blue iris under a small black bowler hat, struck in the chest by a white playing card with a red diamond, and round him on the floor one big thick gold and red circle, a shock wave ring, perfectly round and centred on him, with short rays pointing outward. Two more identical critics stand on the ring itself, one at the left and one at the right, each knocked back with a red impact star where the ring touches him. Pixel art game icon with a thick dark outline and a small limited palette of black, white, red, blue-grey and gold, big bold simple shapes that read at a very small size, seen flat, centred and filling the frame, on a plain empty background, no text, no letters, no numbers, no border, no frame.",
+        "n": 2
+      },
+      "job_id": "566dec39-2a1e-4d80-ab92-ba859270793f",
+      "created_at": "2026-10-08T17:29:49.295Z",
+      "credits_of_the_job": 1
+    },
+    {
+      "returned": "burst-b-v2.png",
+      "command": "ludo image create",
+      "settings": {
+        "image_type": "item-icon",
+        "perspective": "Any perspective",
+        "aspect_ratio": "ar_1_1",
+        "art_style": "16-Bit",
+        "prompt": "Seen from above and slightly in front: one figure in the middle, a surreal theatre critic, a short stout man in a blue-grey overcoat whose whole head is one huge white eyeball with a blue iris under a small black bowler hat, struck in the chest by a white playing card with a red diamond, and round him on the floor one big thick gold and red circle, a shock wave ring, perfectly round and centred on him, with short rays pointing outward. Two more identical critics stand on the ring itself, one at the left and one at the right, each knocked back with a red impact star where the ring touches him. Pixel art game icon with a thick dark outline and a small limited palette of black, white, red, blue-grey and gold, big bold simple shapes that read at a very small size, seen flat, centred and filling the frame, on a plain empty background, no text, no letters, no numbers, no border, no frame.",
+        "n": 2
+      },
+      "job_id": "566dec39-2a1e-4d80-ab92-ba859270793f",
+      "created_at": "2026-10-08T17:29:49.295Z",
+      "credits_of_the_job": 1
+    },
+    {
+      "returned": "card-sharp-c-v1.png",
+      "command": "ludo image create",
+      "settings": {
+        "image_type": "item-icon",
+        "perspective": "Any perspective",
+        "aspect_ratio": "ar_1_1",
+        "art_style": "16-Bit",
+        "prompt": "A hard blow: one figure drawn large, a surreal theatre critic, a short stout man in a blue-grey overcoat whose whole head is one huge white eyeball with a blue iris under a small black bowler hat, struck full in the chest by one oversized white playing card with a red diamond whose edge is a gleaming steel blade, with a very big jagged red and gold impact star bursting where it hits, the critic knocked backward off his feet, his bowler hat flying off above him and his eye squeezed in pain. The impact star is the biggest and brightest thing in the picture. Pixel art game icon with a thick dark outline and a small limited palette of black, white, red, blue-grey and gold, big bold simple shapes that read at a very small size, seen flat, centred and filling the frame, on a plain empty background, no text, no letters, no numbers, no border, no frame.",
+        "n": 2
+      },
+      "job_id": "7e23e24b-df35-4ed4-9d02-9669bdafd26c",
+      "created_at": "2026-10-08T17:30:15.978Z",
+      "credits_of_the_job": 1
+    },
+    {
+      "returned": "card-sharp-c-v2.png",
+      "command": "ludo image create",
+      "settings": {
+        "image_type": "item-icon",
+        "perspective": "Any perspective",
+        "aspect_ratio": "ar_1_1",
+        "art_style": "16-Bit",
+        "prompt": "A hard blow: one figure drawn large, a surreal theatre critic, a short stout man in a blue-grey overcoat whose whole head is one huge white eyeball with a blue iris under a small black bowler hat, struck full in the chest by one oversized white playing card with a red diamond whose edge is a gleaming steel blade, with a very big jagged red and gold impact star bursting where it hits, the critic knocked backward off his feet, his bowler hat flying off above him and his eye squeezed in pain. The impact star is the biggest and brightest thing in the picture. Pixel art game icon with a thick dark outline and a small limited palette of black, white, red, blue-grey and gold, big bold simple shapes that read at a very small size, seen flat, centred and filling the frame, on a plain empty background, no text, no letters, no numbers, no border, no frame.",
+        "n": 2
+      },
+      "job_id": "7e23e24b-df35-4ed4-9d02-9669bdafd26c",
+      "created_at": "2026-10-08T17:30:15.978Z",
+      "credits_of_the_job": 1
+    }
+  ]
+}
