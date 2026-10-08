@@ -513,7 +513,8 @@ public class ScriptedPlayersTests
     /// plan T25's three cards first), with the spread over the six; and for the doors player by every order what
     /// plan T41 weighs a limit on copies by: by act the encores, the most cards of one throw, the cards held of
     /// each kind, its own kills and its understudies', and the encores that had fewer than three cards to offer
-    /// or were earned and did not open.
+    /// or were earned and did not open. With the environment variable <c>UNDERSTUDIES_GUARD_ONLY</c> set the four
+    /// players outside the guard are not played, which is some three times as quick.
     /// </summary>
     [Test]
     [Explicit("Prints the guard in short for every variant of the tuning in the file UNDERSTUDIES_VARIANTS names, on the seeds 1 to 20 and on the sets UNDERSTUDIES_SEED_SETS names (a few seconds a variant and set)")]
@@ -604,7 +605,7 @@ public class ScriptedPlayersTests
         // The doors player with no applause in the first act, and so no encore in it: whether a player with no
         // card yet lives through the second act. The simulation takes new numbers between two ticks.
         Tuning noApplause = tuning with { ApplauseTime = 0f };
-        (string Name, Func<Simulation, MagicianInput> Player)[] players =
+        (string Name, Func<Simulation, MagicianInput> Player)[] players = Environment.GetEnvironmentVariable("UNDERSTUDIES_GUARD_ONLY") is not null ? GuardPlayers :
         [
             .. GuardPlayers,
             ("doors, no applause in act one", simulation =>
