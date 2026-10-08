@@ -310,7 +310,7 @@ internal static class ScriptedPlayers
                 continue;
             }
 
-            // The program's one card, where the act has a program.
+            // The program's one card, where the act has a program: one with an encore in it.
             simulation.Pick(0);
             encores.Add(taken);
             acts.Add(new ActRecord(

@@ -60,7 +60,6 @@ public class CurtainTests
         Assert.That(simulation.Phase, Is.EqualTo(Phase.Act));
 
         Run(simulation, ActTicks);
-        simulation.Pick(0);
         simulation.GoOn();
 
         Assert.That(simulation.Phase, Is.EqualTo(Phase.Act));
@@ -97,7 +96,7 @@ public class CurtainTests
         // seconds are up a Vanish that goes nowhere leaves its cloud. So the second act's curtain rises on critics
         // that walk in from the door, critics that strike the box office, cards in the air, a cloud that thins, a
         // critic that is due, and an understudy. Through the curtain the magician is asked to walk and to vanish.
-        // Applause has no time, so there is none, and no encore: the program's card is taken at once. The critic walks at 4, whatever
+        // Applause has no time, so there is none, and no program before the curtain. The critic walks at 4, whatever
         // the committed one does: at that pace the first of them are at the box office when the act ends.
         Tuning tuning = CommittedTuning.Parse().WithCritic(critic => critic with { Speed = 4f }) with
         {
@@ -113,7 +112,6 @@ public class CurtainTests
         Run(simulation, CurtainTicks + twentySeconds - 10);
         simulation.Step(Vanish);
         Run(simulation, 9);
-        simulation.Pick(0);
         Assert.That(simulation.Phase, Is.EqualTo(Phase.BetweenActs));
         simulation.GoOn();
         Assert.That(simulation.Phase, Is.EqualTo(Phase.Curtain));
@@ -168,7 +166,6 @@ public class CurtainTests
     {
         Simulation simulation = Shows.WithACriticEvery(3 * Simulation.TicksPerSecond, Scene, seed: 1);
         Run(simulation, CurtainTicks + ActTicks);
-        simulation.Pick(0);
         Assert.That(simulation.Phase, Is.EqualTo(Phase.BetweenActs));
 
         simulation.GoOn();
@@ -184,7 +181,6 @@ public class CurtainTests
     {
         Simulation simulation = Shows.WithACriticEvery(3 * Simulation.TicksPerSecond, Scene, seed: 1);
         Run(simulation, CurtainTicks + ActTicks);
-        simulation.Pick(0);
         simulation.GoOn();
         Run(simulation, 10);
         ulong hash = simulation.ComputeStateHash();
@@ -207,7 +203,6 @@ public class CurtainTests
             simulation.Step(Left);
         }
 
-        simulation.Pick(0);
         simulation.GoOn();
 
         Understudy understudy = simulation.Understudies[0];
@@ -231,7 +226,6 @@ public class CurtainTests
         Assert.That(simulation.Critics[0].PreviousPosition, Is.Not.EqualTo(simulation.Critics[0].Position));
         Assert.That(simulation.ThrownCards[0].PreviousPosition, Is.Not.EqualTo(simulation.ThrownCards[0].Position));
 
-        simulation.Pick(0);
         simulation.GoOn();
 
         Assert.That(simulation.Critics[0].PreviousPosition, Is.EqualTo(simulation.Critics[0].Position));
@@ -294,7 +288,7 @@ public class CurtainTests
                 }
             }
 
-            // The program's card, in both shows.
+            // An act that had an encore takes its program's card: in both shows.
             withCurtains.Pick(0);
             without.Pick(0);
             withCurtains.GoOn();

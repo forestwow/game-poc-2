@@ -73,7 +73,6 @@ public class FallTests
         Run(simulation, ticks: ActTicks - TicksToTheFall - 1);
         Assert.That(simulation.Phase, Is.EqualTo(Phase.Act));
         simulation.Step(default);
-        simulation.Pick(0);
         Assert.That(simulation.Phase, Is.EqualTo(Phase.BetweenActs));
         Assert.That(simulation.MagicianHasFallen, Is.True);
     }
@@ -188,7 +187,6 @@ public class FallTests
         Vector2 fellAt = simulation.MagicianPosition;
         Assert.That(fellAt, Is.EqualTo(Mark - new Vector2(1.5f, 0f)));
         Run(simulation, ticks: ActTicks - TicksToTheFall, Left);
-        simulation.Pick(0);
         simulation.GoOn();
 
         Understudy understudy = simulation.Understudies[0];
@@ -209,7 +207,6 @@ public class FallTests
         Assert.That(understudy.Position, Is.EqualTo(fellAt));
 
         // And in the same way in the act after that.
-        simulation.Pick(0);
         simulation.GoOn();
         Run(simulation, ticks: TicksToTheFall, Left);
         Assert.That(understudy.IsOnStage, Is.True);
@@ -226,7 +223,6 @@ public class FallTests
         Assert.That(simulation.MagicianHasFallen, Is.True);
         Assert.That(simulation.MagicianPosition, Is.Not.EqualTo(Mark));
 
-        simulation.Pick(0);
         simulation.GoOn();
 
         Assert.That(simulation.Phase, Is.EqualTo(Phase.Act));
@@ -255,7 +251,6 @@ public class FallTests
 
         Assert.That(simulation.MagicianHasFallen, Is.False);
         Assert.That(first.Distinct().Count(), Is.GreaterThan(ActTicks / 2));
-        simulation.Pick(0);
         simulation.GoOn();
 
         // The second: down the stage and into the critic's radius, where the magician falls well before the act
@@ -270,7 +265,6 @@ public class FallTests
             Assert.That(ofTheFirst.Position, Is.EqualTo(first[tick]), $"tick {tick}");
         }
 
-        simulation.Pick(0);
         Assert.That(simulation.Phase, Is.EqualTo(Phase.BetweenActs));
         Assert.That(ticksToTheFall, Is.InRange(1, ActTicks - 30));
         simulation.GoOn();

@@ -548,8 +548,9 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
         const float hair = 0.001f;
         DrawFigure(Figure.BoxOffice, boxOfficeFeet - new Vector2(0f, hair), white: _juice.BoxOfficeWhite);
         // The footlights, along the stage's front edge and in front of all that stands on it. An offer writes its
-        // last line there, so they are out while one is read.
-        for (float x = FootlightGap / 2f; x < Tuning.StageSize.X && !IsOffered; x += FootlightGap)
+        // last line there, and so does the stage between two acts, so they are out while that line is read.
+        bool lit = !IsOffered && _simulation.Phase != Phase.BetweenActs;
+        for (float x = FootlightGap / 2f; x < Tuning.StageSize.X && lit; x += FootlightGap)
         {
             DrawFigure(Figure.Footlight, new Vector2(x, Tuning.StageSize.Y));
         }
@@ -821,6 +822,8 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
             Phase.Encore => "Encore! Take a card, and the act goes on.",
             Phase.Program => $"Act {_simulation.Act} is over. The program has a card for the chorus.",
             Phase.BetweenActs when ProgramIsShown => $"{Describe(_offered[_taken]).Name} it is.",
+            Phase.BetweenActs when _simulation.ActEncores == 0 =>
+                $"Act {_simulation.Act} is over. No encore, no card for the chorus. Enter or Start goes on.",
             Phase.BetweenActs => $"Act {_simulation.Act} is over. Press Enter or Start to go on.",
             Phase.Ovation => "A standing ovation! R starts a new performance.",
             Phase.Closed => "The box office fell. R starts a new performance.",

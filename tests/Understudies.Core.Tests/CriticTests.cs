@@ -123,7 +123,7 @@ public class CriticTests
         Assert.That(simulation.Phase, Is.EqualTo(Phase.Act));
 
         Run(simulation, ticks: 1);
-        Assert.That(simulation.Phase, Is.EqualTo(Phase.Program));
+        Assert.That(simulation.Phase, Is.EqualTo(Phase.BetweenActs));
     }
 
     [Test]

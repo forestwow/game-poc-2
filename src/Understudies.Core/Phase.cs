@@ -20,13 +20,14 @@ public enum Phase
     Encore,
 
     /// <summary>
-    /// An act is over and another follows: the world stands while the program offers the chorus card, until
-    /// <see cref="Simulation.Pick"/> or the end of the program's time.
+    /// An act in which an encore was taken is over and another follows: the world stands while the program offers
+    /// the chorus card, until <see cref="Simulation.Pick"/> or the end of the program's time. An act with no
+    /// encore has no program.
     /// </summary>
     Program,
 
     /// <summary>
-    /// An act is over, its program's card taken, and the next has not begun: the world stands until
+    /// An act is over, its program's card taken if it had a program, and the next has not begun: the world stands until
     /// <see cref="Simulation.GoOn"/>.
     /// </summary>
     BetweenActs,

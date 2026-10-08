@@ -157,14 +157,20 @@ public sealed class Simulation(Tuning tuning, ulong seed, IReadOnlyList<IReadOnl
     public int EncoresTaken { get; private set; }
 
     /// <summary>
+    /// How many encores were taken in the act that is played, or in the one just over: an act with one has its
+    /// program, and an act with none has no program.
+    /// </summary>
+    public int ActEncores { get; private set; }
+
+    /// <summary>
     /// The pieces the next encore costs, on the tuning of now: every encore taken makes the next cost more.
     /// </summary>
     public int EncoreCost => Tuning.EncoreFirstCost + (Tuning.EncoreCostGrowth * EncoresTaken);
 
     /// <summary>
     /// The cards on offer, from the leftmost. In an encore, three different self cards; in the program, which
-    /// comes after every act that has another after it and has not closed the show, the chorus card alone,
-    /// whatever the act's applause. It is empty in every other phase.
+    /// comes after an act in which an encore was taken, when the act has another after it and has not closed the
+    /// show, the chorus card alone. It is empty in every other phase.
     /// </summary>
     public IReadOnlyList<Card> Offer => _offer;
 
@@ -208,6 +214,7 @@ public sealed class Simulation(Tuning tuning, ulong seed, IReadOnlyList<IReadOnl
         {
             EncoreApplause = Math.Max(0, EncoreApplause - EncoreCost);
             EncoresTaken++;
+            ActEncores++;
         }
 
         if (_offer[place] == Card.ChorusDamage)
@@ -338,12 +345,16 @@ public sealed class Simulation(Tuning tuning, ulong seed, IReadOnlyList<IReadOnl
         // whatever is on the stage. A blow of that very tick may still have closed the show.
         ActTicksLeft--;
 
-        // An act that is over and has another after it has its program: the chorus card, alone and always. Not one
-        // that closed the show on its last tick, nor the last act of the performance.
+        // An act that is over and has another after it has its program when an encore was taken in it: the chorus
+        // card, alone. Not one that closed the show on its last tick, nor the last act of the performance. An act
+        // with no encore has none: the chorus grows by the magician's applause and never without it.
         if (Phase == Phase.BetweenActs)
         {
-            _offer.Add(Card.ChorusDamage);
-            OfferTicksLeft = Ticks(Tuning.ProgramTime);
+            if (ActEncores > 0)
+            {
+                _offer.Add(Card.ChorusDamage);
+                OfferTicksLeft = Ticks(Tuning.ProgramTime);
+            }
         }
 
         // An act that goes on stands for an encore when its applause has reached the cost of one: asked when the
@@ -358,7 +369,8 @@ public sealed class Simulation(Tuning tuning, ulong seed, IReadOnlyList<IReadOnl
     /// <summary>
     /// Between two acts, begins the next one, with its curtain: the magician is whole and on its mark, facing the
     /// audience, with the Vanish ready. Everything else on the stage is as the last act left it, the critics too
-    /// (plan decision 17). In any other phase this does nothing: a program waits for its <see cref="Pick"/>.
+    /// (plan decision 17). In any other phase this does nothing: a program waits for its <see cref="Pick"/>, and
+    /// an act with no encore has no program to wait for.
     /// The encores of the act just over stay taken, and make those of the next cost more.
     /// </summary>
     public void GoOn()
@@ -401,6 +413,7 @@ public sealed class Simulation(Tuning tuning, ulong seed, IReadOnlyList<IReadOnl
         _applause.Clear();
         ActApplause = 0;
         EncoreApplause = 0;
+        ActEncores = 0;
 
         Act++;
         ActTicksLeft = Ticks(Tuning.ActLength);
@@ -510,6 +523,7 @@ public sealed class Simulation(Tuning tuning, ulong seed, IReadOnlyList<IReadOnl
         hasher.AddInt(ActApplause);
         hasher.AddInt(EncoreApplause);
         hasher.AddInt(EncoresTaken);
+        hasher.AddInt(ActEncores);
 
         // Every recording whole, an understudy's and that of the act that is played, which is the next
         // understudy: where everybody stands now does not say where each will stand a tick from now.

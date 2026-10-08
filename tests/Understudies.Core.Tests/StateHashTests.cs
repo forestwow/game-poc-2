@@ -141,7 +141,6 @@ public class StateHashTests
             inTheSecondAct.Step(default);
         }
 
-        inTheSecondAct.Pick(0);
         inTheSecondAct.GoOn();
         Assert.That((inTheFirstAct.Act, inTheFirstAct.ActTicksLeft), Is.EqualTo((1, 10)));
         Assert.That((inTheSecondAct.Act, inTheSecondAct.ActTicksLeft), Is.EqualTo((2, 10)));

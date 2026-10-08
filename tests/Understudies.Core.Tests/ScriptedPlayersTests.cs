@@ -32,8 +32,8 @@ public class ScriptedPlayersTests
         {
             // An act that stood for an encore is in what is pinned.
             Assert.That(performance.Acts.Sum(act => act.Encores), Is.GreaterThan(0), "encores");
-            Assert.That(performance.Acts[2].StateHash, Is.EqualTo(3163424947657937603UL), "the end of act three");
-            Assert.That(performance.Acts[^1].StateHash, Is.EqualTo(15353404476281283108UL), "the end of the performance");
+            Assert.That(performance.Acts[2].StateHash, Is.EqualTo(4534225376748274154UL), "the end of act three");
+            Assert.That(performance.Acts[^1].StateHash, Is.EqualTo(9503559715981885832UL), "the end of the performance");
         });
     }
 
@@ -60,8 +60,8 @@ public class ScriptedPlayersTests
             Assert.That(vanishes, Is.GreaterThan(0), "Vanishes");
             Assert.That(blows, Is.GreaterThan(0), "blows on the box office");
             Assert.That(stunned, Is.GreaterThan(0), "stunned critics");
-            Assert.That(performance.Acts[2].StateHash, Is.EqualTo(8518830487565442418UL), "the end of act three");
-            Assert.That(performance.Acts[^1].StateHash, Is.EqualTo(10320038926145958029UL), "the end of the performance");
+            Assert.That(performance.Acts[2].StateHash, Is.EqualTo(18205824393891740368UL), "the end of act three");
+            Assert.That(performance.Acts[^1].StateHash, Is.EqualTo(8602346803663158055UL), "the end of the performance");
         });
     }
 

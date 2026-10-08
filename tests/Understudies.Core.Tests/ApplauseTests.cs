@@ -113,7 +113,6 @@ public class ApplauseTests
         // range, and the understudy on the mark is the only one to throw.
         var simulation = new Simulation(Scene, seed: 1, [[], [new PlannedEntry(Simulation.TicksPerSecond, Door: 0, Kind: 0)]]);
         PlayTheAct(simulation, _ => default);
-        simulation.Pick(0);
         simulation.GoOn();
 
         List<TickEvent> events = PlayTheAct(simulation, _ => Right);
@@ -133,7 +132,6 @@ public class ApplauseTests
         Tuning tuning = Scene.WithCritic(critic => critic with { HitPoints = hitPoints });
         var simulation = new Simulation(tuning, seed: 1, [[], [new PlannedEntry(0, Door: 0, Kind: 0)]]);
         PlayTheAct(simulation, _ => default);
-        simulation.Pick(0);
         simulation.GoOn();
 
         List<TickEvent> events = PlayTheAct(simulation, _ => default);
@@ -238,7 +236,6 @@ public class ApplauseTests
         // understudy walks onto the piece and stands on it for more than a second.
         var simulation = new Simulation(Scene, seed: 1, [[], [new PlannedEntry(0, Door: 0, Kind: 0)]]);
         PlayTheAct(simulation, tick => tick < 30 ? default : Up);
-        simulation.Pick(0);
         simulation.GoOn();
 
         List<TickEvent> events = PlayTheAct(simulation, _ => default);
@@ -293,9 +290,7 @@ public class ApplauseTests
             _ => default,
         });
 
-        // The act that is over still says what it picked up, in its program and when the card is taken.
-        Assert.That(simulation.Phase, Is.EqualTo(Phase.Program));
-        simulation.Pick(0);
+        // The act that is over still says what it picked up.
         Assert.That(simulation.Phase, Is.EqualTo(Phase.BetweenActs));
         Assert.That(simulation.ActApplause, Is.EqualTo(1));
         Assert.That(simulation.ApplauseOnTheFloor, Has.Count.EqualTo(1));
