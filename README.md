@@ -48,3 +48,9 @@ The script never closes the show and never lets the magician fall. To see either
 ## Tests
 
     dotnet test Understudies.sln --configuration Release
+
+Two scripted players measure whether hiding at the box office loses and going out to the doors wins: the orbit player walks round the box office and never leaves its circle, and the doors player holds the door that opened last. This plays both over twenty seeds on the committed `tuning.json` and prints how every performance ended, each act's averages and the two counts the design is judged by (it takes a few seconds, and asserts nothing):
+
+    dotnet test tests/Understudies.Core.Tests --configuration Release --filter "FullyQualifiedName~ScriptedPlayersTests.PrintTheGuardsTable" --logger "console;verbosity=detailed"
+
+One of the ordinary tests pins the state hash of a scripted performance: the same seed and the same player must end in the same state on macOS ARM and on Linux x64. A change to `tuning.json` or to a rule changes that hash, and the test's two numbers are pinned again.
