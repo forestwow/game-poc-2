@@ -199,6 +199,7 @@ internal sealed partial class UnderstudiesGame
         int encores = _simulation.EncoresTaken;
         string soFar = $"{(encores == 1 ? "1 encore" : $"{encores} encores")} so far.";
         Write(
+            Face.Sentence,
             SmallWordsHeight,
             _simulation.Phase == Phase.Encore
                 ? $"{soFar} This one was earned with {_simulation.EncoreCost} pieces of applause."
@@ -209,13 +210,15 @@ internal sealed partial class UnderstudiesGame
 
         // Nine kinds of card do not go in one line: as many lines as it takes, the last where the one line was.
         string[] held = [.. Enum.GetValues<Card>().Where(card => Held(card) > 0).Select(card => $"{Describe(card).Name} x{Held(card)}")];
+        // Names and counts are the label's face, and the one sentence the sentences'.
+        Face holdsFace = held.Length == 0 ? Face.Sentence : Face.Label;
         List<string> holds = held.Length == 0
             ? ["You hold no card yet."]
-            : Wrapped(SmallWordsHeight, ["You hold:", .. held[..^1].Select(card => $"{card},"), held[^1]], Tuning.StageSize.X - 2f);
+            : Wrapped(Face.Label, SmallWordsHeight, ["You hold:", .. held[..^1].Select(card => $"{card},"), held[^1]], Tuning.StageSize.X - 2f);
         for (int line = 0; line < holds.Count; line++)
         {
             float up = (holds.Count - 1 - line) * HoldsPitch;
-            Write(SmallWordsHeight, holds[line], new Vector2(middle, Tuning.StageSize.Y - 0.5f - up), 0.5f, Words);
+            Write(holdsFace, SmallWordsHeight, holds[line], new Vector2(middle, Tuning.StageSize.Y - 0.5f - up), 0.5f, Words);
         }
 
         if (!ProgramIsShown)
@@ -234,32 +237,62 @@ internal sealed partial class UnderstudiesGame
 
             // The band: the card's key at its left end, whose the card is, and at its right end how many of it
             // are held.
-            Write(SmallWordsHeight, $"{place + 1}", topLeft + new Vector2(0.4f, PanelBand / 2f), 0f, ink);
+            Write(Face.Label, SmallWordsHeight, $"{place + 1}", topLeft + new Vector2(0.4f, PanelBand / 2f), 0f, ink, onPaper: true);
             if (Held(card) > 0)
             {
-                Write(SmallWordsHeight, $"x{Held(card)}", topLeft + new Vector2(PanelSize.X - 0.4f, PanelBand / 2f), 1f, ink);
+                Write(
+                    Face.Label,
+                    SmallWordsHeight,
+                    $"x{Held(card)}",
+                    topLeft + new Vector2(PanelSize.X - 0.4f, PanelBand / 2f),
+                    1f,
+                    ink,
+                    onPaper: true);
             }
 
             Write(
+                Face.Label,
                 SmallWordsHeight,
                 chorus ? "For every understudy" : "For the magician",
                 centre + new Vector2(0f, PanelBand / 2f),
                 0.5f,
-                ink);
+                ink,
+                onPaper: true);
             // The name, no wider than the panel; under it the flavour in the smaller face, and under that what
             // the card does, which is what is read first: the larger face and the darker ink.
             float room = PanelSize.X - (2f * PanelMargin);
-            Write(NameHeight * MathF.Min(1f, room / Wide(NameHeight, name)), name, centre + new Vector2(0f, 2.15f), 0.5f, ink);
-            List<string> flavours = Wrapped(FlavourHeight, flavour.Split(' '), room);
+            Write(
+                Face.Heading,
+                NameHeight * MathF.Min(1f, room / Wide(Face.Heading, NameHeight, name)),
+                name,
+                centre + new Vector2(0f, 2.15f),
+                0.5f,
+                ink,
+                onPaper: true);
+            List<string> flavours = Wrapped(Face.Sentence, FlavourHeight, flavour.Split(' '), room);
             for (int line = 0; line < flavours.Count; line++)
             {
-                Write(FlavourHeight, flavours[line], centre + new Vector2(0f, 3.2f + (line * FlavourPitch)), 0.5f, FaintInk * Seen(place));
+                Write(
+                    Face.Sentence,
+                    FlavourHeight,
+                    flavours[line],
+                    centre + new Vector2(0f, 3.2f + (line * FlavourPitch)),
+                    0.5f,
+                    FaintInk * Seen(place),
+                    onPaper: true);
             }
 
-            List<string> sentences = Wrapped(SmallWordsHeight, sentence.Split(' '), room);
+            List<string> sentences = Wrapped(Face.Sentence, SmallWordsHeight, sentence.Split(' '), room);
             for (int line = 0; line < sentences.Count; line++)
             {
-                Write(SmallWordsHeight, sentences[line], centre + new Vector2(0f, 4.9f + (line * SentencePitch)), 0.5f, ink);
+                Write(
+                    Face.Sentence,
+                    SmallWordsHeight,
+                    sentences[line],
+                    centre + new Vector2(0f, 4.9f + (line * SentencePitch)),
+                    0.5f,
+                    ink,
+                    onPaper: true);
             }
         }
 
@@ -273,12 +306,14 @@ internal sealed partial class UnderstudiesGame
         int seconds = (_simulation.OfferTicksLeft + Simulation.TicksPerSecond - 1) / Simulation.TicksPerSecond;
         bool choice = _offered.Count > 1;
         Write(
+            Face.Label,
             CountdownHeight,
             $"{seconds} s left: then {(choice ? "the leftmost card" : "this card")} is taken for you.",
             new Vector2(middle, PanelsBottom + 1.2f),
             0.5f,
             Magician);
         Write(
+            Face.Sentence,
             SmallWordsHeight,
             choice
                 ? $"Left and right choose, Enter or Space takes. Or press {(_offered.Count == 2 ? "1 or 2" : "1 to 3")}. Gamepad: the stick and A."
@@ -290,15 +325,15 @@ internal sealed partial class UnderstudiesGame
 
     /// <summary>
     /// The <paramref name="pieces"/> as lines of words a space apart, each line as many of them as are no wider
-    /// than <paramref name="width"/> at that height: a piece is never broken, and one wider than a line has a
+    /// than <paramref name="width"/> in that face at that height: a piece is never broken, and one wider than a line has a
     /// line to itself.
     /// </summary>
-    private List<string> Wrapped(float height, IEnumerable<string> pieces, float width)
+    private List<string> Wrapped(Face face, float height, IEnumerable<string> pieces, float width)
     {
         List<string> lines = [];
         foreach (string piece in pieces)
         {
-            if (lines.Count > 0 && Wide(height, $"{lines[^1]} {piece}") <= width)
+            if (lines.Count > 0 && Wide(face, height, $"{lines[^1]} {piece}") <= width)
             {
                 lines[^1] = $"{lines[^1]} {piece}";
             }

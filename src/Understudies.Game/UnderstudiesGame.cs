@@ -92,21 +92,27 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
     private const float ApplauseBarGap = 0.2f;
     private const float ApplauseCountHeight = 0.7f;
 
-    // ponytail: a system font, the first of these files that this machine has: Arial for macOS and for Windows,
-    // and for Linux DejaVu Sans and then Liberation Sans, each where Debian, Fedora and Arch keep it. A Linux that
-    // keeps neither there has no text. A font file is shipped with the game when a build leaves the owner's
-    // machine: which font is the owner's choice.
-    private static readonly string[] FontFiles =
+    // The game's words are in two faces, read from the repository's own files so that every machine shows the
+    // same (plan decision 30): Pixelify Sans for a heading, a name and a number, Bold for the large ones and
+    // SemiBold for a label and a count, and Atkinson Hyperlegible for a sentence. The files are in the order of
+    // Face, under the fonts' folder.
+    // ponytail: Pixelify Sans is smoothed at every size. Its static weights are not drawn on one grid of whole
+    // pixels: a weight is made by fattening each square over its neighbours (Bold's squares are 127 by 136 font
+    // units at a pitch of 88 across and 85 up; Regular's 101 at 90.5), so no size puts every edge on a whole
+    // screen pixel, and the text library's rasteriser has no setting that draws without smoothing. A face cut as
+    // a bitmap at the sizes the screens use would end it.
+    private static readonly string[] FaceFiles =
     [
-        "/System/Library/Fonts/Supplemental/Arial.ttf",
-        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Fonts), "arial.ttf"),
-        "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
-        "/usr/share/fonts/dejavu-sans-fonts/DejaVuSans.ttf",
-        "/usr/share/fonts/TTF/DejaVuSans.ttf",
-        "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",
-        "/usr/share/fonts/liberation-sans/LiberationSans-Regular.ttf",
-        "/usr/share/fonts/liberation/LiberationSans-Regular.ttf",
+        Path.Combine("pixelify-sans", "PixelifySans-Bold.ttf"),
+        Path.Combine("pixelify-sans", "PixelifySans-SemiBold.ttf"),
+        Path.Combine("atkinson-hyperlegible", "AtkinsonHyperlegible-Regular.ttf"),
     ];
+
+    // Words on the stage carry an outline in ink, this wide in world units: two screen pixels in a window 1280
+    // wide, never less than one, and never more than one part in SmallestOutlined of the words' height.
+    private static readonly Color OutlineInk = new(30, 22, 30);
+    private const float OutlineWidth = 0.075f;
+    private const float SmallestOutlined = 12f;
 
     // The floor about the box office where a fall earns no applause: a shade over the boards and a broken line,
     // both quiet. The rows are an eighth of a unit tall, and the line is cut into this many stretches, every
@@ -159,6 +165,7 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
     private readonly int _captureTicks;
 
     private readonly string _spritesFolder;
+    private readonly string _fontsFolder;
 
     // By Figure and then by Facing; a figure with one view has that one alone.
     private readonly Sheet[][] _sheets = new Sheet[Enum.GetValues<Figure>().Length][];
@@ -190,14 +197,16 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
     private float _scale;
     private Vector2 _corner;
 
-    // Null on a machine that has none of the font files: the game then runs without its words.
-    private FontSystem? _fonts;
+    // One for each Face, in its order.
+    private readonly FontSystem[] _faces = new FontSystem[FaceFiles.Length];
 
     /// <summary>With a <paramref name="capturePath"/> the game does not play: it saves one frame there and exits.</summary>
     /// <param name="spritesFolder">Where the figures' images are.</param>
-    public UnderstudiesGame(Tuning tuning, string? capturePath, int captureTicks, string spritesFolder)
+    /// <param name="fontsFolder">Where the two faces' files are.</param>
+    public UnderstudiesGame(Tuning tuning, string? capturePath, int captureTicks, string spritesFolder, string fontsFolder)
     {
         _spritesFolder = spritesFolder;
+        _fontsFolder = fontsFolder;
         _simulation = capturePath is null ? NewShow(tuning) : new Simulation(tuning, CaptureSeed);
         _juice = new Juice(capturePath is null ? Random.Shared : new Random((int)CaptureSeed));
         _sound = new Sound(silent: capturePath is not null);
@@ -251,15 +260,10 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
         _hitBurst = ReadSheet("hit-burst.png", 3);
         _killBurst = ReadSheet("kill-burst.png", 3);
 
-        if (FontFiles.FirstOrDefault(File.Exists) is { } fontFile)
+        for (int face = 0; face < FaceFiles.Length; face++)
         {
-            _fonts = new FontSystem();
-            _fonts.AddFont(File.ReadAllBytes(fontFile));
-            Console.WriteLine($"Font read from {fontFile}");
-        }
-        else
-        {
-            Console.Error.WriteLine("No font found: the game has no text.");
+            _faces[face] = new FontSystem();
+            _faces[face].AddFont(File.ReadAllBytes(Path.Combine(_fontsFolder, FaceFiles[face])));
         }
     }
 
@@ -881,11 +885,6 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
     /// </summary>
     private void DrawWords(float alpha, Vector2 besideTheBar)
     {
-        if (_fonts is null)
-        {
-            return;
-        }
-
         // Halfway up the back wall, and on a stage with no wall just clear of the top edge.
         float line = MathF.Max(Tuning.StageFloorTop, WordsHeight + 0.4f) / 2f;
 
@@ -916,26 +915,27 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
 
         string clock = $"{seconds / 60}:{seconds % 60:00}";
         _spriteBatch.Begin();
-        Write(WordsHeight, act, new Vector2(1f, line), 0f, Words);
-        Write(WordsHeight, clock, new Vector2(Tuning.StageSize.X - 1f, line), 1f, Words);
+        Write(Face.Heading, WordsHeight, act, new Vector2(1f, line), 0f, Words);
+        Write(Face.Heading, WordsHeight, clock, new Vector2(Tuning.StageSize.X - 1f, line), 1f, Words);
         if (said is not null)
         {
             // The three share one line of the wall, and the middle one has what the other two leave: in the
             // middle of the stage where it has the room, moved aside where it has not, and smaller where it is
             // longer than all that is left, so that it keeps off the act and the clock (to within the rounding of its
             // size to a whole pixel, which the gap beside it takes).
-            float from = 1f + Wide(WordsHeight, act) + WordsGap;
-            float to = Tuning.StageSize.X - 1f - Wide(WordsHeight, clock) - WordsGap;
-            float height = WordsHeight * MathF.Min(1f, (to - from) / Wide(WordsHeight, said));
-            float half = MathF.Min(Wide(height, said), to - from) / 2f;
+            float from = 1f + Wide(Face.Heading, WordsHeight, act) + WordsGap;
+            float to = Tuning.StageSize.X - 1f - Wide(Face.Heading, WordsHeight, clock) - WordsGap;
+            float height = WordsHeight * MathF.Min(1f, (to - from) / Wide(Face.Sentence, WordsHeight, said));
+            float half = MathF.Min(Wide(Face.Sentence, height, said), to - from) / 2f;
             // Not Math.Clamp: where the line fills its room the two bounds are one number on paper and can cross by a
             // hair in float, and a clamp between crossed bounds throws.
             float middle = MathF.Max(from + half, MathF.Min(Tuning.StageSize.X / 2f, to - half));
-            Write(height, said, new Vector2(middle, line), 0.5f, Magician);
+            Write(Face.Sentence, height, said, new Vector2(middle, line), 0.5f, Magician);
         }
 
         // Beside the bar's end, what it counts: the pieces toward the next encore, over its cost.
         Write(
+            Face.Label,
             ApplauseCountHeight,
             $"{_simulation.EncoreApplause}/{_simulation.EncoreCost}",
             ApplauseBarTopLeft + new Vector2(ApplauseBar.X + 0.3f, ApplauseBar.Y / 2f),
@@ -955,6 +955,7 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
             && actHasJustBegun)
         {
             Write(
+                Face.Sentence,
                 CaptionHeight,
                 Caption,
                 Feet(first, alpha) - new Vector2(0f, CaptionLift),
@@ -963,21 +964,21 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
                 keptOnTheStage: true);
         }
 
-        Write(NumberHeight, $"{MathF.Ceiling(_simulation.BoxOfficeHitPoints)}", besideTheBar, 0f, Words);
+        Write(Face.Label, NumberHeight, $"{MathF.Ceiling(_simulation.BoxOfficeHitPoints)}", besideTheBar, 0f, Words);
         _spriteBatch.End();
     }
 
     /// <summary>
-    /// Words in screen pixels: the line is centred on the height of <paramref name="at"/>, a point of the stage,
-    /// with its left end there, its middle (<paramref name="anchor"/> 0.5) or its right end (1). Words
-    /// <paramref name="keptOnTheStage"/> are moved by as much as it takes to have the whole line on the stage.
-    /// Called between the Begin and the End of a batch with no transform, and only when there is a font.
+    /// Words in screen pixels, in a <paramref name="face"/>: the line is centred on the height of
+    /// <paramref name="at"/>, a point of the stage, with its left end there, its middle (<paramref name="anchor"/>
+    /// 0.5) or its right end (1). Words on the stage carry the outline; words <paramref name="onPaper"/>, dark on
+    /// a light ground, have none. Words <paramref name="keptOnTheStage"/> are moved by as much as it takes to have
+    /// the whole line on the stage. Called between the Begin and the End of a batch with no transform.
     /// </summary>
-    private void Write(float height, string text, Vector2 at, float anchor, Color color, bool keptOnTheStage = false)
+    private void Write(
+        Face face, float height, string text, Vector2 at, float anchor, Color color, bool onPaper = false, bool keptOnTheStage = false)
     {
-        // A whole number of pixels tall and on whole pixels: a glyph drawn between two pixels is smeared over
-        // both. A window too small for words still has a pixel's worth.
-        SpriteFontBase font = _fonts!.GetFont(MathF.Max(1f, MathF.Round(height * _scale)));
+        SpriteFontBase font = Font(face, height);
         var size = new Vector2(font.MeasureString(text).X, font.LineHeight);
         Vector2 topLeft = _corner + (at * _scale) - new Vector2(size.X * anchor, size.Y / 2f);
         if (keptOnTheStage)
@@ -986,12 +987,51 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
             topLeft = Vector2.Max(_corner, Vector2.Min(topLeft, _corner + (Tuning.StageSize * _scale) - size));
         }
 
-        _spriteBatch.DrawString(font, text, new Vector2(MathF.Round(topLeft.X), MathF.Round(topLeft.Y)), color);
+        var place = new Vector2(MathF.Round(topLeft.X), MathF.Round(topLeft.Y));
+        if (!onPaper)
+        {
+            // The words in ink at every place within the outline's width, and then themselves over that: at the
+            // eight places of its rim alone a stroke thinner than the outline would stand clear of it. The text
+            // library's own stroke (FontSystemEffect.Stroked) is not used: it is black, it eats into the letters
+            // and it moves the line by its width.
+            // Small words have a thinner one, a twelfth of their height: the whole width shuts the eyes of
+            // letters under some eighteen pixels tall.
+            int width = Math.Max(1, (int)MathF.Round(MathF.Min(OutlineWidth * _scale, font.FontSize / SmallestOutlined)));
+            for (int x = -width; x <= width; x++)
+            {
+                for (int y = -width; y <= width; y++)
+                {
+                    _spriteBatch.DrawString(font, text, place + new Vector2(x, y), OutlineInk * (color.A / 255f));
+                }
+            }
+        }
+
+        _spriteBatch.DrawString(font, text, place, color);
     }
 
-    /// <summary>How wide <see cref="Write"/> draws <paramref name="text"/> at that height, in world units.</summary>
-    private float Wide(float height, string text) =>
-        _fonts!.GetFont(MathF.Max(1f, MathF.Round(height * _scale))).MeasureString(text).X / _scale;
+    /// <summary>How wide <see cref="Write"/> draws <paramref name="text"/> in that face at that height, in world units.</summary>
+    private float Wide(Face face, float height, string text) => Font(face, height).MeasureString(text).X / _scale;
+
+    /// <summary>
+    /// A face at the size the window makes of a height in world units. A whole number of pixels tall, and drawn
+    /// on whole pixels: a glyph drawn between two pixels is smeared over both. A window too small for words still
+    /// has a pixel's worth.
+    /// </summary>
+    private SpriteFontBase Font(Face face, float height) =>
+        _faces[(int)face].GetFont(MathF.Max(1f, MathF.Round(height * _scale)));
+
+    /// <summary>The faces of the game's words, in the order of <see cref="FaceFiles"/>.</summary>
+    private enum Face
+    {
+        /// <summary>Pixelify Sans Bold: the large ones, the act, the clock and a card's name.</summary>
+        Heading,
+
+        /// <summary>Pixelify Sans SemiBold: a label, a number and a count.</summary>
+        Label,
+
+        /// <summary>Atkinson Hyperlegible: a sentence.</summary>
+        Sentence,
+    }
 
     private Vector2 ApplauseBarTopLeft => new(
         (Tuning.StageSize.X - ApplauseBar.X) / 2f,

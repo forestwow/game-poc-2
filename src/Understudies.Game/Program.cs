@@ -18,18 +18,24 @@ if (Understudies.Game.TuningFile.Read() is not { } tuning)
 }
 
 // Found as tuning.json is: the repository's own when the game is run from its root, or else beside the executable.
-string sprites = Path.Combine("art", "ludo", "sprites");
-if (!Directory.Exists(sprites))
+// Without its pictures or its faces the game does not open a window either.
+static string? Found(string folder, string what)
 {
-    sprites = Path.Combine(AppContext.BaseDirectory, sprites);
+    string found = Directory.Exists(folder) ? folder : Path.Combine(AppContext.BaseDirectory, folder);
+    if (Directory.Exists(found))
+    {
+        return found;
+    }
+
+    Console.Error.WriteLine($"No {what} in {Path.GetFullPath(found)}");
+    return null;
 }
 
-if (!Directory.Exists(sprites))
+if (Found(Path.Combine("art", "ludo", "sprites"), "sprites") is not { } sprites || Found("fonts", "fonts") is not { } fonts)
 {
-    Console.Error.WriteLine($"No sprites in {Path.GetFullPath(sprites)}");
     return 1;
 }
 
-using var game = new Understudies.Game.UnderstudiesGame(tuning, capturePath, captureTicks, sprites);
+using var game = new Understudies.Game.UnderstudiesGame(tuning, capturePath, captureTicks, sprites, fonts);
 game.Run();
 return 0;
