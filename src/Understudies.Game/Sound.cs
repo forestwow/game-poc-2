@@ -174,29 +174,32 @@ internal sealed class Sound
     /// <summary>Plays what the last tick did. Called after every tick: a frame may run several.</summary>
     public void Feed(Simulation simulation)
     {
-        if (Muted)
+        foreach (TickEvent happened in simulation.Events)
+        {
+            // From -1 at the stage's left edge to 1 at its right. A critic may stand a little outside the stage.
+            Play(happened.Kind, Math.Clamp((2f * happened.Position.X / simulation.Tuning.StageSize.X) - 1f, -1f, 1f));
+        }
+    }
+
+    /// <summary>
+    /// Plays the sound of a <paramref name="kind"/> of event, <paramref name="side"/> of the stage's middle: from
+    /// -1 at its left edge to 1 at its right. The view asks for one itself where no tick has an event to say.
+    /// </summary>
+    public void Play(TickEventKind kind, float side = 0f)
+    {
+        // A kind of event that has no sound makes none; nor does any, on a machine with no audio device.
+        if (Muted
+            || !_sounds.TryGetValue(kind, out var sound)
+            || Stopwatch.GetElapsedTime(sound.StartedAt).TotalSeconds < RepeatGap)
         {
             return;
         }
 
-        foreach (TickEvent happened in simulation.Events)
-        {
-            // A kind of event that has no sound makes none; nor does any, on a machine with no audio device.
-            if (!_sounds.TryGetValue(happened.Kind, out var sound)
-                || Stopwatch.GetElapsedTime(sound.StartedAt).TotalSeconds < RepeatGap)
-            {
-                continue;
-            }
+        _sounds[kind] = sound with { StartedAt = Stopwatch.GetTimestamp() };
+        float pitch = ((Random.Shared.NextSingle() * 2f) - 1f) * PitchSpread;
 
-            _sounds[happened.Kind] = sound with { StartedAt = Stopwatch.GetTimestamp() };
-
-            // From -1 at the stage's left edge to 1 at its right. A critic may stand a little outside the stage.
-            float side = Math.Clamp((2f * happened.Position.X / simulation.Tuning.StageSize.X) - 1f, -1f, 1f);
-            float pitch = ((Random.Shared.NextSingle() * 2f) - 1f) * PitchSpread;
-
-            // No source left to play it on is no error: the sound is not heard this once.
-            sound.Effect.Play(sound.Level * MasterLevel, pitch, side * PanReach);
-        }
+        // No source left to play it on is no error: the sound is not heard this once.
+        sound.Effect.Play(sound.Level * MasterLevel, pitch, side * PanReach);
     }
 
     /// <summary>
