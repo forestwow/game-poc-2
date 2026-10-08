@@ -22,12 +22,15 @@ public enum TickEventKind
 
     /// <summary>A critic struck the box office.</summary>
     BoxOfficeStruck,
+
+    /// <summary>The magician fell: the blow that took the last of its hit points is reported before it.</summary>
+    MagicianFell,
 }
 
 /// <summary>Something that happened in one tick, for the view and the sound to show.</summary>
 /// <param name="Position">
 /// Where on the floor: for a throw, where the card was thrown from; for a hit and for a kill, the middle of the
-/// critic's circle; for a Vanish, where the magician stood before it; for a hurt magician, where the magician
-/// stands; for a struck box office, the middle of the circle of the critic that struck it.
+/// critic's circle; for a Vanish, where the magician stood before it; for a hurt magician and for a fallen one,
+/// where the magician stands; for a struck box office, the middle of the circle of the critic that struck it.
 /// </param>
 public readonly record struct TickEvent(TickEventKind Kind, Vector2 Position);
