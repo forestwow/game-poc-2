@@ -74,8 +74,8 @@ public class ApplauseTests
         // The kill first, then what it left, both at the critic's place: the piece has its whole time.
         Assert.That(simulation.Events, Is.EqualTo(new[]
         {
-            new TickEvent(TickEventKind.Kill, Door),
-            new TickEvent(TickEventKind.ApplauseDropped, Door),
+            new TickEvent(TickEventKind.Kill, Door, CriticId: 0),
+            new TickEvent(TickEventKind.ApplauseDropped, Door, CriticId: 0),
         }));
         Assert.That(simulation.ApplauseOnTheFloor, Has.Count.EqualTo(1));
         Assert.That(simulation.ApplauseOnTheFloor[0].Position, Is.EqualTo(Door));
@@ -99,8 +99,8 @@ public class ApplauseTests
         Assert.That(fell, Is.Not.EqualTo(Door));
         Assert.That(simulation.Events, Is.EqualTo(new[]
         {
-            new TickEvent(TickEventKind.Kill, fell),
-            new TickEvent(TickEventKind.ApplauseDropped, fell),
+            new TickEvent(TickEventKind.Kill, fell, CriticId: 0),
+            new TickEvent(TickEventKind.ApplauseDropped, fell, CriticId: 0),
         }));
         Assert.That(simulation.ApplauseOnTheFloor.Select(piece => piece.Position), Is.EqualTo(new[] { fell }));
     }
@@ -139,7 +139,7 @@ public class ApplauseTests
         StepUntil(simulation, TickEventKind.Kill);
 
         // The fall is a fall either way: only the piece is missing.
-        Assert.That(simulation.Events[0], Is.EqualTo(new TickEvent(TickEventKind.Kill, Door)));
+        Assert.That(simulation.Events[0], Is.EqualTo(new TickEvent(TickEventKind.Kill, Door, CriticId: 0)));
         Assert.That(simulation.Events, Has.Count.EqualTo(1 + pieces));
         Assert.That(simulation.ApplauseOnTheFloor, Has.Count.EqualTo(pieces));
     }
@@ -155,7 +155,7 @@ public class ApplauseTests
 
         StepUntil(simulation, TickEventKind.Kill);
 
-        Assert.That(simulation.Events, Is.EqualTo(new[] { new TickEvent(TickEventKind.Kill, Door) }));
+        Assert.That(simulation.Events, Is.EqualTo(new[] { new TickEvent(TickEventKind.Kill, Door, CriticId: 0) }));
         Assert.That(simulation.ApplauseOnTheFloor, Is.Empty);
     }
 

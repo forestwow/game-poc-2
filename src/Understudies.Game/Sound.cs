@@ -32,8 +32,14 @@ internal sealed class Sound
     private const float HurtLevel = 0.25f;
     private const float PickUpLevel = 0.5f;
 
+    // What an understudy does is heard apart from what the magician does: its throw, its hit and its kill are
+    // this much of the magician's in loudness, and this far lower, in octaves.
+    private const float UnderstudyLevel = 0.5f;
+    private const float UnderstudyPitch = -0.3f;
+
     // A sound does not start again within this long of its own last start: a crowd strikes the box office many
-    // times a second, and every blow of one tick would start at once.
+    // times a second, and every blow of one tick would start at once. A throw, a hit and a kill may start twice in
+    // that time and no more: an understudy's, and then the magician's own, which a quieter one must not silence.
     // ponytail: one gap for all seven, so a sound longer than the gap still lies on itself under a crowd, the buzz
     // of a hurt magician four deep. A gap of its own for each sound, near its length, when that is too much.
     private const float RepeatGap = 0.05f;
@@ -137,9 +143,10 @@ internal sealed class Sound
     private const int SampleRate = 44100;
     private const int NoiseSeed = 1;
 
-    // What plays for each kind of event, how loud, and when it last started by the stopwatch's count: 0 before
-    // its first start, which is long ago to a stopwatch that counts from the machine's own start.
-    private readonly Dictionary<TickEventKind, (SoundEffect Effect, float Level, long StartedAt)> _sounds = [];
+    // What plays for each kind of event, how loud, when it last started by the stopwatch's count (0 before its
+    // first start, which is long ago to a stopwatch that counts from the machine's own start), and whether that
+    // start was an understudy's.
+    private readonly Dictionary<TickEventKind, (SoundEffect Effect, float Level, long StartedAt, bool Understudys)> _sounds = [];
 
     /// <param name="silent">A capture only draws a frame: it asks for no audio device and plays nothing.</param>
     public Sound(bool silent)
@@ -155,7 +162,7 @@ internal sealed class Sound
         {
             foreach (var (kind, level, samples) in Synthesise())
             {
-                _sounds[kind] = (new SoundEffect(samples, SampleRate, AudioChannels.Mono), level, 0);
+                _sounds[kind] = (new SoundEffect(samples, SampleRate, AudioChannels.Mono), level, 0, false);
             }
         }
         catch (NoAudioHardwareException)
@@ -177,29 +184,37 @@ internal sealed class Sound
         foreach (TickEvent happened in simulation.Events)
         {
             // From -1 at the stage's left edge to 1 at its right. A critic may stand a little outside the stage.
-            Play(happened.Kind, Math.Clamp((2f * happened.Position.X / simulation.Tuning.StageSize.X) - 1f, -1f, 1f));
+            // Only a throw, a hit and a kill are ever an understudy's.
+            Play(
+                happened.Kind,
+                Math.Clamp((2f * happened.Position.X / simulation.Tuning.StageSize.X) - 1f, -1f, 1f),
+                byAnUnderstudy: happened.Thrower != TickEvent.TheMagician);
         }
     }
 
     /// <summary>
     /// Plays the sound of a <paramref name="kind"/> of event, <paramref name="side"/> of the stage's middle: from
     /// -1 at its left edge to 1 at its right. The view asks for one itself where no tick has an event to say.
+    /// What was done <paramref name="byAnUnderstudy"/> is quieter and lower.
     /// </summary>
-    public void Play(TickEventKind kind, float side = 0f)
+    public void Play(TickEventKind kind, float side = 0f, bool byAnUnderstudy = false)
     {
-        // A kind of event that has no sound makes none; nor does any, on a machine with no audio device.
+        // A kind of event that has no sound makes none; nor does any, on a machine with no audio device. The gap
+        // is not kept by the magician's own sound after an understudy's: nine understudies throw all the time,
+        // and the present must not be silenced by the past.
         if (Muted
             || !_sounds.TryGetValue(kind, out var sound)
-            || Stopwatch.GetElapsedTime(sound.StartedAt).TotalSeconds < RepeatGap)
+            || (Stopwatch.GetElapsedTime(sound.StartedAt).TotalSeconds < RepeatGap
+                && (byAnUnderstudy || !sound.Understudys)))
         {
             return;
         }
 
-        _sounds[kind] = sound with { StartedAt = Stopwatch.GetTimestamp() };
-        float pitch = ((Random.Shared.NextSingle() * 2f) - 1f) * PitchSpread;
+        _sounds[kind] = sound with { StartedAt = Stopwatch.GetTimestamp(), Understudys = byAnUnderstudy };
+        float pitch = (((Random.Shared.NextSingle() * 2f) - 1f) * PitchSpread) + (byAnUnderstudy ? UnderstudyPitch : 0f);
 
         // No source left to play it on is no error: the sound is not heard this once.
-        sound.Effect.Play(sound.Level * MasterLevel, pitch, side * PanReach);
+        sound.Effect.Play(sound.Level * MasterLevel * (byAnUnderstudy ? UnderstudyLevel : 1f), pitch, side * PanReach);
     }
 
     /// <summary>

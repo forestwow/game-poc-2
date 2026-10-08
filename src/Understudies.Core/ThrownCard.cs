@@ -5,7 +5,7 @@ namespace Understudies.Core;
 /// <summary>A card in the air: a point over the floor that flies the way it was thrown.</summary>
 public sealed class ThrownCard
 {
-    internal ThrownCard(Vector2 position, Vector2 direction, float rangeLeft, float damage, bool thrownByMagician)
+    internal ThrownCard(Vector2 position, Vector2 direction, float rangeLeft, float damage, int thrower)
     {
         Damage = damage;
         ThrownFrom = position;
@@ -13,7 +13,7 @@ public sealed class ThrownCard
         PreviousPosition = position;
         Direction = direction;
         RangeLeft = rangeLeft;
-        ThrownByMagician = thrownByMagician;
+        Thrower = thrower;
     }
 
     /// <summary>Where whoever threw the card stood: the view's trail reaches back no further.</summary>
@@ -26,7 +26,14 @@ public sealed class ThrownCard
     public Vector2 PreviousPosition { get; internal set; }
 
     /// <summary>The magician itself threw the card, and not an understudy.</summary>
-    public bool ThrownByMagician { get; }
+    public bool ThrownByMagician => Thrower == TickEvent.TheMagician;
+
+    /// <summary>
+    /// Who threw the card: <see cref="TickEvent.TheMagician"/>, or an understudy by its place in
+    /// <see cref="Simulation.Understudies"/>. No rule reads which understudy, only whether it was the magician:
+    /// it is carried for the events of the card's strike, and so is not in the state hash.
+    /// </summary>
+    public int Thrower { get; }
 
     /// <summary>One unit long.</summary>
     internal Vector2 Direction { get; }

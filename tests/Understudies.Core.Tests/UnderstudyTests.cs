@@ -206,19 +206,31 @@ public class UnderstudyTests
             simulation.ThrownCards.Select(card => (card.Position, card.PreviousPosition, card.ThrownByMagician));
 
         // The first act: sixty steps to the left, and the magician throws its one card on the way.
+        var events = new List<TickEvent>();
         Play(simulation, tick => tick < 60 ? new MagicianInput(new Vector2(-1f, 0f)) : default, tick =>
         {
             if (tick <= 50)
             {
                 Assert.That(Cards(), Is.EqualTo(tick < 50 ? [] : new[] { (inRange, inRange, true) }), $"tick {tick}");
             }
+
+            events.AddRange(simulation.Events);
         });
         Assert.That(simulation.Critics[0].HitPoints, Is.EqualTo(1f));
+
+        // The magician's throw and its hit say the magician threw, and the hit names the critic.
+        Assert.That(
+            events,
+            Is.EqualTo(new[]
+            {
+                new TickEvent(TickEventKind.Throw, inRange, TickEvent.TheMagician),
+                new TickEvent(TickEventKind.Hit, Door, TickEvent.TheMagician, CriticId: 0),
+            }));
         simulation.GoOn();
 
         // In the second the magician stays on its mark, out of range: whatever is thrown, the understudy throws.
         // Nothing while nobody is in its range, and a card from where it stands on the tick the critic is.
-        var events = new List<TickEvent>();
+        events.Clear();
         Play(simulation, _ => default, tick =>
         {
             if (tick <= 50)
@@ -229,11 +241,16 @@ public class UnderstudyTests
             events.AddRange(simulation.Events);
         });
 
-        // An understudy's throw is a throw, reported at the place it throws from. And its card hurts like any
-        // card: this one was the critic's last.
+        // An understudy's throw is a throw, reported at the place it throws from, and says which understudy
+        // threw: the first there is. And its card hurts like any card: this one was the critic's last, and the
+        // kill says whose card it was and which critic fell.
         Assert.That(
             events,
-            Is.EqualTo(new[] { new TickEvent(TickEventKind.Throw, inRange), new TickEvent(TickEventKind.Kill, Door) }));
+            Is.EqualTo(new[]
+            {
+                new TickEvent(TickEventKind.Throw, inRange, Thrower: 0),
+                new TickEvent(TickEventKind.Kill, Door, Thrower: 0, CriticId: 0),
+            }));
         Assert.That(simulation.Critics, Is.Empty);
         simulation.GoOn();
 
@@ -514,6 +531,56 @@ public class UnderstudyTests
         }
 
         Assert.That(HashAfterTheThrow(throwCooldown: 1f), Is.Not.EqualTo(HashAfterTheThrow(throwCooldown: 0.5f)));
+    }
+
+    [Test]
+    public void Step_TheMagicianAndTwoUnderstudiesThrowOnOneTick_EveryThrowCardAndStrikeSaysWhoThrew()
+    {
+        // Nobody has a range in the first two acts, which leave an understudy a step to the left of the mark and
+        // one a step to the right of it. The critic can take three cards.
+        Tuning scene = Scene.WithCritic(critic => critic with { HitPoints = 3f });
+        var simulation = Shows.WithOneCritic(scene);
+        Play(simulation, tick => tick == 0 ? new MagicianInput(new Vector2(-1f, 0f)) : default);
+        simulation.GoOn();
+        Play(simulation, tick => tick == 0 ? new MagicianInput(new Vector2(1f, 0f)) : default);
+
+        // In the third act a throw reaches the critic from anywhere near the mark, and each of the three throws
+        // its one card on the first tick: a unit a tick, so all three have landed before the act is over.
+        simulation.Tuning = scene with
+        {
+            ThrowRange = 30f, ThrowCooldown = 3600f, ThrownCardSpeed = 60f, ThrownCardDamage = 1f,
+        };
+        simulation.GoOn();
+        var events = new List<TickEvent>();
+        int[] inTheAir = [];
+        Play(simulation, tick => tick == 0 ? new MagicianInput(new Vector2(0f, 1f)) : default, tick =>
+        {
+            events.AddRange(simulation.Events);
+            if (tick == 0)
+            {
+                inTheAir = [.. simulation.ThrownCards.Select(card => card.Thrower)];
+            }
+        });
+
+        // The magician is nobody's index, and an understudy is named by its place among the understudies. A card
+        // in the air says the same of itself.
+        Assert.That(
+            events.Where(happened => happened.Kind == TickEventKind.Throw).Select(thrown => (thrown.Position, thrown.Thrower)),
+            Is.EqualTo(new[]
+            {
+                (Mark + new Vector2(0f, 0.25f), TickEvent.TheMagician),
+                (simulation.Understudies[0].Route[0], 0),
+                (simulation.Understudies[1].Route[0], 1),
+            }));
+        Assert.That(inTheAir, Is.EqualTo(new[] { TickEvent.TheMagician, 0, 1 }));
+
+        // Three cards at the one critic, whose id is 0: two hits and the kill, one by each, whichever lands first.
+        List<TickEvent> strikes = [.. events.Where(happened => happened.Kind != TickEventKind.Throw)];
+        Assert.That(
+            strikes.Select(strike => strike.Kind),
+            Is.EqualTo(new[] { TickEventKind.Hit, TickEventKind.Hit, TickEventKind.Kill }));
+        Assert.That(strikes.Select(strike => strike.Thrower), Is.EquivalentTo(new[] { TickEvent.TheMagician, 0, 1 }));
+        Assert.That(strikes.Select(strike => strike.CriticId), Is.All.EqualTo(0));
     }
 
     /// <summary>

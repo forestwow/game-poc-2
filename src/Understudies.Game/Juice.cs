@@ -51,6 +51,13 @@ internal sealed class Juice(Random random)
     private const float HitBurstTime = 0.25f;
     private const float KillBurstTime = 0.5f;
 
+    /// <summary>
+    /// An understudy's flick is the past's and not the present's: this much of the magician's in size and in
+    /// brightness, and in the dull face of an understudy's card.
+    /// </summary>
+    public const float UnderstudyFlickSize = 0.7f;
+    public const float UnderstudyFlickOpacity = 0.5f;
+
     // A fallen critic lies there this long, fading all the while.
     private const float BodyTime = 1.5f;
 
@@ -77,7 +84,8 @@ internal sealed class Juice(Random random)
     public const float TrailWidth = 0.15f;
     public const float TrailOpacity = 0.5f;
 
-    private readonly Dictionary<int, (float HitPoints, float FlashedAt)> _critics = [];
+    // When each critic that a card has hurt last began to flash, by its id: a critic that falls is taken out.
+    private readonly Dictionary<int, float> _criticFlashedAt = [];
 
     // How many self cards each understudy had when it was last looked at, in the order of their acts.
     private readonly List<int> _understudyCards = [];
@@ -104,7 +112,7 @@ internal sealed class Juice(Random random)
     public float BoxOfficeWhite => White(_boxOfficeFlashedAt) * BoxOfficeFlash;
 
     /// <summary>The same for a critic that a card hurt a moment ago.</summary>
-    public float CriticWhite(int id) => _critics.TryGetValue(id, out var seen) ? White(seen.FlashedAt) : 0f;
+    public float CriticWhite(int id) => _criticFlashedAt.TryGetValue(id, out float flashedAt) ? White(flashedAt) : 0f;
 
     /// <summary>
     /// The critics that fell a moment ago: where each lies, how far to white it is drawn (the blow that felled it
@@ -129,20 +137,6 @@ internal sealed class Juice(Random random)
     /// <summary>Takes in what the last tick did. Called after every tick: a frame may run several.</summary>
     public void Feed(Simulation simulation)
     {
-        // An event has no id. A card hurt the critic that has less left than when it was last looked at.
-        // ponytail: a fallen critic's entry stays until the next show, a few bytes for every critic there ever was.
-        // A show that lets in tens of thousands needs them taken out, and a kill that says whose it was.
-        foreach (Critic critic in simulation.Critics)
-        {
-            if (!_critics.TryGetValue(critic.Id, out var seen))
-            {
-                seen = (critic.HitPoints, float.NegativeInfinity);
-            }
-
-            bool hurt = critic.HitPoints < seen.HitPoints;
-            _critics[critic.Id] = (critic.HitPoints, hurt ? FlashNow(seen.FlashedAt) : seen.FlashedAt);
-        }
-
         // An understudy that has more cards than when it was last looked at has just gained one of its act's
         // encores (plan T24): a puff at it, as for a piece picked up. No event says so. An act that begins sets an
         // understudy back to the cards it began with, which is fewer and no puff.
@@ -169,14 +163,21 @@ internal sealed class Juice(Random random)
             switch (happened.Kind)
             {
                 case TickEventKind.Throw:
-                    Show(Effect.Flick, happened.Position);
+                    Show(
+                        happened.Thrower == TickEvent.TheMagician ? Effect.Flick : Effect.UnderstudyFlick,
+                        happened.Position);
                     break;
 
+                // The hit says which critic it hurt, and that one flashes.
                 case TickEventKind.Hit:
+                    _criticFlashedAt[happened.CriticId] =
+                        FlashNow(_criticFlashedAt.GetValueOrDefault(happened.CriticId, float.NegativeInfinity));
                     Show(Effect.HitBurst, happened.Position);
                     break;
 
+                // A fallen critic is a body, which flashes by the time it fell: its own flash is kept no longer.
                 case TickEventKind.Kill:
+                    _criticFlashedAt.Remove(happened.CriticId);
                     _bodies.Add((happened.Position, _now));
                     Burst(happened.Position, KillScraps);
                     Show(Effect.KillBurst, happened.Position);
@@ -234,7 +235,7 @@ internal sealed class Juice(Random random)
 
     private static float Lasts(Effect kind) => kind switch
     {
-        Effect.Flick => FlickTime,
+        Effect.Flick or Effect.UnderstudyFlick => FlickTime,
         Effect.HitBurst => HitBurstTime,
         _ => KillBurstTime,
     };
@@ -270,6 +271,7 @@ internal sealed class Juice(Random random)
     public enum Effect
     {
         Flick,
+        UnderstudyFlick,
         HitBurst,
         KillBurst,
     }
