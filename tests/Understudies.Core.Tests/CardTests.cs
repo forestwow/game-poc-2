@@ -52,7 +52,8 @@ public class CardTests
     /// door on the first tick falls on the third, and on the fourth its piece is picked up, if the magician still
     /// stands there. An encore costs one piece, the first and every other. A Vanish is ready again half a second
     /// later and leaves no cloud. A card gives a round number. The stage has no back wall and the curtain no
-    /// length: these tests count their ticks from the first tick of an act.
+    /// length: these tests count their ticks from the first tick of an act. There is no limit on copies: the
+    /// tests of a card's arithmetic take five of one, and those of the limit give their own.
     /// </summary>
     private Tuning Scene { get; } = CommittedTuning.Parse().WithCritic(
         critic => critic with { Speed = 0f, Radius = 0.5f, HitPoints = 1f }) with
@@ -85,6 +86,7 @@ public class CardTests
         CardRange = 1.5f,
         CardVanishCooldown = 0.25f,
         CardChorusDamage = 1f,
+        CardMaxCopies = 0,
     };
 
     /// <summary><see cref="Scene"/> with an encore nobody can pay for.</summary>
@@ -981,6 +983,87 @@ public class CardTests
 
     // The state hash.
 
+    // The limit on copies (plan T41, decision 31).
+
+    [Test]
+    public void Offer_ACardTheMagicianHoldsTheLimitOf_IsLeftOut_AndAnEncoreOffersWhatIsLeft()
+    {
+        // One of each and no more: every encore's leftmost card is taken, so each encore has a kind fewer.
+        (Simulation simulation, List<Card[]> offers) = InAnEncoreAfter(Scene with { CardMaxCopies = 1 }, taken: 7);
+
+        var held = new HashSet<Card>();
+        foreach (Card[] offer in offers)
+        {
+            Assert.That(offer, Is.Unique);
+            Assert.That(offer, Has.None.Matches<Card>(held.Contains));
+            held.Add(offer[0]);
+        }
+
+        // Eight kinds: three are offered while three are left, then the two and then the one.
+        Assert.That(offers.Select(offer => offer.Length), Is.EqualTo(new[] { 3, 3, 3, 3, 3, 3, 2, 1 }));
+        Assert.That(simulation.Offer, Has.None.EqualTo(Card.ChorusDamage));
+    }
+
+    [Test]
+    public void Offer_TheMagicianHoldsTheLimitOfEveryCard_TheEncoreOffersTheChorusCardAlone_AndItIsTakenAsAnEncore()
+    {
+        (Simulation simulation, _) = InAnEncoreAfter(Scene with { CardMaxCopies = 1 }, taken: 8);
+        SelfCards cards = simulation.MagicianCards;
+        Assert.That(simulation.Phase, Is.EqualTo(Phase.Encore));
+        Assert.That(simulation.Offer, Is.EqualTo(new[] { Card.ChorusDamage }));
+        Assert.That(simulation.OfferTicksLeft, Is.EqualTo(EncoreTicks));
+        Assert.That(simulation.EncoreApplause, Is.EqualTo(1));
+
+        simulation.Pick(0);
+
+        Assert.That(simulation.ChorusCards, Is.EqualTo(1));
+        Assert.That(simulation.MagicianCards, Is.EqualTo(cards));
+        Assert.That(simulation.EncoreApplause, Is.Zero);
+        Assert.That(simulation.EncoresTaken, Is.EqualTo(9));
+        Assert.That(simulation.ActEncores, Is.EqualTo(9));
+        Assert.That(simulation.Phase, Is.EqualTo(Phase.Act));
+    }
+
+    [Test]
+    public void Step_AnActWhoseEncoreGaveAChorusCardIsOver_TheProgramOffersItsChorusCardAsBefore()
+    {
+        (Simulation simulation, _) = InAnEncoreAfter(Scene with { CardMaxCopies = 1 }, taken: 8);
+        simulation.Pick(0);
+
+        PlayTheAct(simulation);
+
+        Assert.That(simulation.Phase, Is.EqualTo(Phase.Program));
+        Assert.That(simulation.Offer, Is.EqualTo(new[] { Card.ChorusDamage }));
+        simulation.Pick(0);
+        Assert.That(simulation.ChorusCards, Is.EqualTo(2));
+        Assert.That(simulation.Phase, Is.EqualTo(Phase.BetweenActs));
+    }
+
+    [Test]
+    public void Step_TheUnderstudyOfAnActThatReachedTheLimit_NeverHoldsMoreThanTheLimit_AndAChorusCardOfAnEncoreIsNoCardOfItsOwn()
+    {
+        // The act's ninth encore gave a chorus card. It is recorded as the act's encore like the others, and it
+        // gives the understudy nothing on its tick: a chorus card is nobody's own, and counts for every
+        // understudy from the moment it is taken.
+        (Simulation simulation, _) = InAnEncoreAfter(Scene with { CardMaxCopies = 1 }, taken: 8);
+        SelfCards all = simulation.MagicianCards;
+        simulation.Pick(0);
+        PlayTheAct(simulation);
+        simulation.Pick(0);
+        simulation.Tuning = simulation.Tuning with { EncoreFirstCost = 1000 };
+        simulation.GoOn();
+        Understudy understudy = simulation.Understudies[0];
+        Card[] kinds = [.. Enum.GetValues<Card>()];
+
+        while (simulation.Phase == Phase.Act)
+        {
+            simulation.Step(default);
+            Assert.That(kinds.Select(understudy.Cards.Of), Is.All.LessThanOrEqualTo(1));
+        }
+
+        Assert.That(understudy.Cards, Is.EqualTo(all));
+    }
+
     [Test]
     public void ComputeStateHash_TwoProgramsWithTwoTimesLeft_AreTwoHashes()
     {
@@ -1633,6 +1716,37 @@ public class CardTests
         Run(simulation, PieceTick + 1);
         Assert.That(simulation.EncoreApplause, Is.EqualTo(1));
         return simulation;
+    }
+
+    /// <summary>
+    /// A show of <paramref name="tuning"/> with acts of twelve seconds, standing in an encore of its first act
+    /// after <paramref name="taken"/> encores whose leftmost card was taken: a critic enters by the magician's
+    /// door every ten ticks, one for each of those encores and one for the encore that is up, and each one's
+    /// piece pays for an encore. With it, what every encore offered, the one that is up last.
+    /// </summary>
+    private static (Simulation Simulation, List<Card[]> Offers) InAnEncoreAfter(Tuning tuning, int taken)
+    {
+        var simulation = new Simulation(
+            tuning with { ActLength = 12f, ActsInPerformance = 2 },
+            seed: 1,
+            [[.. Enumerable.Range(0, taken + 1).Select(i => AtOnce with { Tick = 10 * i })], []]);
+        var offers = new List<Card[]>();
+        while (true)
+        {
+            Assert.That(simulation.Phase, Is.EqualTo(Phase.Act).Or.EqualTo(Phase.Encore));
+            if (simulation.Phase == Phase.Encore)
+            {
+                offers.Add([.. simulation.Offer]);
+                if (offers.Count > taken)
+                {
+                    return (simulation, offers);
+                }
+
+                simulation.Pick(0);
+            }
+
+            simulation.Step(default);
+        }
     }
 
     /// <summary>

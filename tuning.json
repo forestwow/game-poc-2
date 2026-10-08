@@ -89,5 +89,6 @@
   "cardPierceLoss": 0.5,
   "cardRicochetReach": 4,
   "cardBurstRadius": 2,
-  "cardBurstShare": 0.5
+  "cardBurstShare": 0.5,
+  "cardMaxCopies": 0
 }

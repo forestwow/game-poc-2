@@ -4,8 +4,9 @@ namespace Understudies.Core;
 /// The cards (plan decisions 20, 26 and 29). Eight are self cards, which an encore offers: they change the magician
 /// and, with it, the understudy of the act they were taken in, from that tick of every later act on, and of
 /// every act that begins after. One is a chorus card, which the program
-/// offers: it changes every understudy and not the magician. Any of them may be taken again and adds again; how
-/// much each gives is the tuning's.
+/// offers, and an encore when the magician has every self card it may: it changes every understudy and not the
+/// magician. A card may be taken again and adds again, a self card up to <see cref="Tuning.CardMaxCopies"/> of
+/// it (plan T41) and the chorus card without end; how much each gives is the tuning's.
 /// </summary>
 public enum Card
 {
@@ -70,6 +71,20 @@ public readonly record struct SelfCards(
     int Ricochet = 0,
     int Burst = 0)
 {
+    /// <summary>How many of <paramref name="card"/> these are: none of a chorus card, which is nobody's own.</summary>
+    public int Of(Card card) => card switch
+    {
+        Card.Damage => Damage,
+        Card.AttackSpeed => AttackSpeed,
+        Card.Range => Range,
+        Card.VanishCooldown => VanishCooldown,
+        Card.OneMoreCard => OneMoreCard,
+        Card.Pierce => Pierce,
+        Card.Ricochet => Ricochet,
+        Card.Burst => Burst,
+        _ => 0,
+    };
+
     /// <summary>These and one more self card. A chorus card is nobody's own.</summary>
     internal SelfCards With(Card card) => card switch
     {
