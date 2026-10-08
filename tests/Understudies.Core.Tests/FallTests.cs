@@ -33,13 +33,13 @@ public class FallTests
     /// quarter of a unit a tick and throws at nobody. The curtain has no length, which is no curtain: these tests
     /// count their ticks from the first tick of an act.
     /// </summary>
-    private Tuning Scene { get; } = CommittedTuning.Parse() with
+    private Tuning Scene { get; } = CommittedTuning.Parse().WithCritic(critic => critic with { Speed = 60f, Radius = 0.5f }) with
     {
         CurtainTime = 0f,
         ActLength = 2f,
         ActsInPerformance = 3,
         StageFloorTop = 0f,
-        StageDoors = [Door],
+        StageDoors = [new StageDoor(Door, 1)],
         StageDoorWidth = 0f,
         BoxOfficePosition = Door + new Vector2(0f, 20f),
         BoxOfficeSize = 4f,
@@ -50,9 +50,6 @@ public class FallTests
         MagicianHitPoints = 1f,
         VanishDistance = 6f,
         ThrowRange = 0f,
-        CriticSpeed = 60f,
-        CriticRadius = 0.5f,
-        CriticEntryInterval = 3600f,
         CriticTurnRadius = 3f,
         CriticStrikeDamage = 1f,
         CriticTouchDamage = 1f,
@@ -62,7 +59,7 @@ public class FallTests
     [Test]
     public void Step_TheMagicianFalls_TheShowIsNotClosedAndTheActRunsToItsTimer()
     {
-        var simulation = new Simulation(Scene, seed: 1);
+        Simulation simulation = Shows.WithOneCritic(Scene);
         Run(simulation, ticks: TicksToTheFall - 1);
         Assert.That(simulation.MagicianHasFallen, Is.False);
 
@@ -83,7 +80,7 @@ public class FallTests
     [Test]
     public void Step_TheMagicianFalls_TheFallIsReportedWhereItFellAfterTheBlowForThatTickOnly()
     {
-        var simulation = new Simulation(Scene, seed: 1);
+        Simulation simulation = Shows.WithOneCritic(Scene);
         Run(simulation, ticks: TicksToTheFall);
 
         Assert.That(
@@ -100,7 +97,7 @@ public class FallTests
     [Test]
     public void Step_AFallenMagician_TakesNoInputAndLiesWhereItFell()
     {
-        var simulation = new Simulation(Scene, seed: 1);
+        Simulation simulation = Shows.WithOneCritic(Scene);
         Run(simulation, ticks: TicksToTheFall);
 
         for (int tick = 0; tick < Simulation.TicksPerSecond; tick++)
@@ -121,11 +118,11 @@ public class FallTests
     {
         // The critic is in range all through, and a throw is ready on every tick; the cards are slow and none
         // lands.
-        Tuning tuning = Scene with
+        Tuning tuning = Scene.WithCritic(critic => critic with { HitPoints = 1000f }) with
         {
-            ThrowRange = 30f, ThrowCooldown = 1f / Simulation.TicksPerSecond, ThrownCardSpeed = 1f, CriticHitPoints = 1000f,
+            ThrowRange = 30f, ThrowCooldown = 1f / Simulation.TicksPerSecond, ThrownCardSpeed = 1f,
         };
-        var simulation = new Simulation(tuning, seed: 1);
+        Simulation simulation = Shows.WithOneCritic(tuning);
         Run(simulation, ticks: TicksToTheFall - 1);
         int thrown = simulation.ThrownCards.Count;
         Assert.That(thrown, Is.GreaterThan(0));
@@ -144,7 +141,7 @@ public class FallTests
     [Test]
     public void Step_TheMagicianHasFallen_TheCriticGoesBackToTheBoxOfficeAndNothingMoreHurtsTheMagician()
     {
-        var simulation = new Simulation(Scene, seed: 1);
+        Simulation simulation = Shows.WithOneCritic(Scene);
         Run(simulation, ticks: TicksToTheFall);
         Critic critic = simulation.Critics[0];
         float toTheBoxOffice = Vector2.Distance(critic.Position, Scene.BoxOfficePosition);
@@ -173,7 +170,7 @@ public class FallTests
     {
         // A second critic enters half a second after the first, which felled the magician and went on: it walks
         // down the stage past the magician, a unit and a half to its side, and never out of its way.
-        var simulation = new Simulation(Scene with { CriticEntryInterval = 0.5f }, seed: 1);
+        Simulation simulation = Shows.WithACriticEvery(Simulation.TicksPerSecond / 2, Scene);
         Run(simulation, ticks: 30 + TicksToTheFall + 4);
 
         Assert.That(simulation.MagicianHasFallen, Is.True);
@@ -184,7 +181,7 @@ public class FallTests
     public void GoOn_AfterAFall_TheRecordingEndsWhereTheMagicianFellAndItsUnderstudyIsGoneFromThatTickOn()
     {
         // The magician walks to the left for the whole act, towards the critic, and falls where the sixth tick has put it.
-        var simulation = new Simulation(Scene, seed: 1);
+        Simulation simulation = Shows.WithOneCritic(Scene);
         Run(simulation, ticks: TicksToTheFall, Left);
         Assert.That(simulation.MagicianHasFallen, Is.True);
         Vector2 fellAt = simulation.MagicianPosition;
@@ -220,7 +217,7 @@ public class FallTests
     [Test]
     public void GoOn_AfterAFall_TheNextActStartsWithTheMagicianWholeAndOnTheMark()
     {
-        var simulation = new Simulation(Scene, seed: 1);
+        Simulation simulation = Shows.WithOneCritic(Scene);
         Run(simulation, ticks: 3, Right);
         Run(simulation, ticks: ActTicks - 3);
         Assert.That(simulation.MagicianHasFallen, Is.True);
@@ -244,7 +241,7 @@ public class FallTests
     {
         // The first act: to the right all through, out of the critic's way, which goes to the box office and
         // stays there.
-        var simulation = new Simulation(Scene, seed: 1);
+        Simulation simulation = Shows.WithOneCritic(Scene);
         var first = new List<Vector2>();
         while (simulation.Phase == Phase.Act)
         {
@@ -289,7 +286,7 @@ public class FallTests
     public void Step_TheBoxOfficeFallsAfterTheMagicianFell_TheShowCloses()
     {
         // One strike is all this box office can take: the critic that felled the magician walks on to it.
-        var simulation = new Simulation(Scene with { BoxOfficeHitPoints = 1f }, seed: 1);
+        Simulation simulation = Shows.WithOneCritic(Scene with { BoxOfficeHitPoints = 1f });
         Run(simulation, ticks: TicksToTheFall);
         Assert.That(simulation.ShowClosed, Is.False);
 
@@ -304,7 +301,7 @@ public class FallTests
     [Test]
     public void Step_TheMagicianFallsInTheLastAct_ThePerformanceStillEndsInTheOvation()
     {
-        var simulation = new Simulation(Scene with { ActsInPerformance = 1 }, seed: 1);
+        Simulation simulation = Shows.WithOneCritic(Scene with { ActsInPerformance = 1 });
 
         Run(simulation, ticks: ActTicks);
 
@@ -317,7 +314,7 @@ public class FallTests
     {
         ulong HashAtTheEndOfTheAct(MagicianInput afterTheFall)
         {
-            var simulation = new Simulation(Scene, seed: 1);
+            Simulation simulation = Shows.WithOneCritic(Scene);
             Run(simulation, ticks: TicksToTheFall);
             Run(simulation, ticks: ActTicks - TicksToTheFall, afterTheFall);
             return simulation.ComputeStateHash();

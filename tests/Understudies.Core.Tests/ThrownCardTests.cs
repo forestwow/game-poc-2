@@ -14,25 +14,22 @@ public class ThrownCardTests
 
     /// <summary>
     /// One critic that stands still, with the magician in range of it. The door has no width and the critic no
-    /// speed, so it enters on the first tick exactly at <see cref="Door"/> and stays there; the second critic is an
-    /// hour away, and no critic turns on the magician. The second card is an hour away too, and a card flies one
+    /// speed, so it enters on the first tick exactly at <see cref="Door"/> and stays there; no other critic
+    /// enters, and no critic turns on the magician. The second card is an hour away too, and a card flies one
     /// unit a tick. The stage has no back wall: its floor starts at the top edge, where the door is, so a test
     /// can put the magician right below the door or in the edge itself, where a wall would not let it stand.
     ///
     /// The curtain has no length, which is no curtain: these tests count their ticks from the first
     /// tick of an act, and the curtain has tests of its own.
     /// </summary>
-    private Tuning Scene { get; } = CommittedTuning.Parse() with
+    private Tuning Scene { get; } = CommittedTuning.Parse().WithCritic(critic => critic with { Speed = 0f, HitPoints = 3f }) with
     {
         CurtainTime = 0f,
         StageFloorTop = 0f,
-        StageDoors = [Door],
+        StageDoors = [new StageDoor(Door, 1)],
         StageDoorWidth = 0f,
         MagicianMark = Mark,
-        CriticSpeed = 0f,
-        CriticEntryInterval = 3600f,
         CriticTurnRadius = 0f,
-        CriticHitPoints = 3f,
         ThrowRange = 9f,
         ThrowCooldown = 3600f,
         ThrownCardSpeed = 60f,
@@ -45,17 +42,16 @@ public class ThrownCardTests
     /// the second tick, when the critic stands straight to the left of the magician, and flies straight left behind
     /// its back.
     /// </summary>
-    private Tuning ACriticWalksPast => Scene with
+    private Tuning ACriticWalksPast => Scene.WithCritic(critic => critic with { Speed = 60f }) with
     {
         MagicianMark = new Vector2(24f, 1f),
         BoxOfficePosition = new Vector2(20f, 25f),
-        CriticSpeed = 60f,
     };
 
     [Test]
     public void Step_ACriticEnters_WithTheHitPointsOfTheTuning()
     {
-        var simulation = new Simulation(Scene with { CriticHitPoints = 7f }, seed: 1);
+        var simulation = Shows.WithOneCritic(Scene.WithCritic(critic => critic with { HitPoints = 7f }));
 
         simulation.Step(default);
 
@@ -65,7 +61,7 @@ public class ThrownCardTests
     [Test]
     public void Step_ACriticInRange_TheMagicianThrowsACardFromWhereItStands()
     {
-        var simulation = new Simulation(Scene, seed: 1);
+        var simulation = Shows.WithOneCritic(Scene);
         simulation.Step(default);
         Assert.That(simulation.ThrownCards, Is.Empty);
 
@@ -82,7 +78,7 @@ public class ThrownCardTests
     {
         // The magician's step is 0.15 of a unit: one step from 9.1 units away is well inside a range of 9.
         Tuning tuning = Scene with { MagicianMark = new Vector2(20f, 9.1f), MagicianSpeed = 9f };
-        var simulation = new Simulation(tuning, seed: 1);
+        var simulation = Shows.WithOneCritic(tuning);
 
         Run(simulation, ticks: 5 * Simulation.TicksPerSecond);
         Assert.That(simulation.ThrownCards, Is.Empty);
@@ -96,7 +92,7 @@ public class ThrownCardTests
     public void Step_ACriticStaysInRange_TheMagicianThrowsOncePerCooldown()
     {
         // Half a second is 30 ticks. The cards are slow: each is still in the air, so they count the throws.
-        var simulation = new Simulation(Scene with { ThrowCooldown = 0.5f, ThrownCardSpeed = 1f }, seed: 1);
+        var simulation = Shows.WithOneCritic(Scene with { ThrowCooldown = 0.5f, ThrownCardSpeed = 1f });
         Run(simulation, ticks: 2);
         Assert.That(simulation.ThrownCards, Has.Count.EqualTo(1));
 
@@ -113,7 +109,7 @@ public class ThrownCardTests
     [Test]
     public void Step_AThrownCard_FliesItsSpeedStraightAtWhereItsTargetStood()
     {
-        var simulation = new Simulation(ACriticWalksPast, seed: 1);
+        var simulation = Shows.WithOneCritic(ACriticWalksPast);
         Run(simulation, ticks: 2);
         Assert.That(simulation.Critics[0].Position, Is.EqualTo(new Vector2(20f, 1f)));
 
@@ -131,7 +127,7 @@ public class ThrownCardTests
     [Test]
     public void Step_ACardThatTouchesNobody_IsGoneWhenItHasFlownTheThrowsRange()
     {
-        var simulation = new Simulation(ACriticWalksPast with { ThrowRange = 6f }, seed: 1);
+        var simulation = Shows.WithOneCritic(ACriticWalksPast with { ThrowRange = 6f });
 
         // Thrown on the second tick; five ticks later it has flown five units.
         Run(simulation, ticks: 7);
@@ -144,7 +140,7 @@ public class ThrownCardTests
     [Test]
     public void Step_ACardReachesItsCritic_HurtsItOnceAndIsGone()
     {
-        var simulation = new Simulation(Scene, seed: 1);
+        var simulation = Shows.WithOneCritic(Scene);
 
         // Thrown on the second tick from six units away; five ticks later it is half a unit short of the critic's
         // circle.
@@ -164,7 +160,7 @@ public class ThrownCardTests
     public void Step_ACardFastEnoughToJumpOverACritic_StillHurtsIt()
     {
         // Eight units a tick: the card's first step starts six units before the critic and ends two units behind it.
-        var simulation = new Simulation(Scene with { ThrownCardSpeed = 480f }, seed: 1);
+        var simulation = Shows.WithOneCritic(Scene with { ThrownCardSpeed = 480f });
 
         Run(simulation, ticks: 3);
 
@@ -180,14 +176,13 @@ public class ThrownCardTests
         // 8.9 units away. The card flies eight units a tick: one step, which ends short of the critic, and then only
         // the unit that is left of its range. The eight it has not got would take it through the critic, two units
         // on.
-        Tuning tuning = Scene with
+        Tuning tuning = Scene.WithCritic(critic => critic with { Speed = 60f }) with
         {
             MagicianMark = new Vector2(20f, 1.1f),
             BoxOfficePosition = new Vector2(20f, 25f),
-            CriticSpeed = 60f,
             ThrownCardSpeed = 480f,
         };
-        var simulation = new Simulation(tuning with { ThrowRange = 0f }, seed: 1);
+        var simulation = Shows.WithOneCritic(tuning with { ThrowRange = 0f });
         Run(simulation, ticks: 10);
         simulation.Tuning = tuning;
         simulation.Step(default);
@@ -253,7 +248,7 @@ public class ThrownCardTests
     public void Step_ACriticTakesAsManyCardsAsItsHitPointsSay_ThenItFalls()
     {
         // Three hit points, and a card takes one. Thrown on ticks 2, 32 and 62, the cards arrive six ticks later.
-        var simulation = new Simulation(Scene with { ThrowCooldown = 0.5f }, seed: 1);
+        var simulation = Shows.WithOneCritic(Scene with { ThrowCooldown = 0.5f });
 
         Run(simulation, ticks: 67);
         Assert.That(simulation.Critics, Has.Count.EqualTo(1));
@@ -267,7 +262,7 @@ public class ThrownCardTests
     public void Step_ACriticFalls_TheOtherStaysAsItWas()
     {
         // The same distance to both, so the first to enter is thrown at; it has one hit point.
-        Simulation simulation = TwoCritics(Scene with { CriticHitPoints = 1f });
+        Simulation simulation = TwoCritics(Scene.WithCritic(critic => critic with { HitPoints = 1f }));
         Critic second = simulation.Critics[1];
 
         Run(simulation, ticks: 10);
@@ -281,7 +276,7 @@ public class ThrownCardTests
     public void Step_TheMagicianThrowsACard_AThrowIsReportedWhereItStandsForThatTickOnly()
     {
         // The critic enters on the first tick, after the throw has looked for somebody: nothing is thrown yet.
-        var simulation = new Simulation(Scene, seed: 1);
+        var simulation = Shows.WithOneCritic(Scene);
         simulation.Step(default);
         Assert.That(simulation.Events, Is.Empty);
 
@@ -295,7 +290,7 @@ public class ThrownCardTests
     [Test]
     public void Step_ACardHurtsACriticThatStillStands_AHitIsReportedThereForThatTickOnly()
     {
-        var simulation = new Simulation(Scene, seed: 1);
+        var simulation = Shows.WithOneCritic(Scene);
         Run(simulation, ticks: 7);
         Assert.That(simulation.Events, Is.Empty);
 
@@ -309,7 +304,7 @@ public class ThrownCardTests
     [Test]
     public void Step_ACardTakesACriticsLastHitPoint_AKillIsReportedThereAndNoHit()
     {
-        var simulation = new Simulation(Scene with { CriticHitPoints = 1f }, seed: 1);
+        var simulation = Shows.WithOneCritic(Scene.WithCritic(critic => critic with { HitPoints = 1f }));
 
         Run(simulation, ticks: 8);
         Assert.That(simulation.Events, Is.EqualTo(new[] { new TickEvent(TickEventKind.Kill, Door) }));
@@ -334,12 +329,8 @@ public class ThrownCardTests
         // Both enter on the door's one point, a tick apart, and on the third tick they part along the stage's
         // width, the earlier to the left. Nobody is thrown at meanwhile: the throw's range is given last.
         Tuning outOfRange = tuning with { ThrowRange = 0f };
-        var simulation = new Simulation(
-            outOfRange with { CriticEntryInterval = 1f / Simulation.TicksPerSecond },
-            seed: 1);
-        simulation.Step(default);
-        simulation.Tuning = outOfRange;
-        Run(simulation, ticks: 2);
+        Simulation simulation = Shows.WithCriticsOnTicks(outOfRange, 0, 1);
+        Run(simulation, ticks: 3);
         simulation.Tuning = tuning;
         return simulation;
     }

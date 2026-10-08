@@ -15,21 +15,21 @@ public class UnderstudyTests
 
     /// <summary>
     /// A performance of five acts of two seconds, with one critic that stands still. The door has no width and the
-    /// critic no speed, so it enters on the first tick exactly at <see cref="Door"/> and stays there; the second
-    /// critic is an hour away. The magician is far from it on <see cref="Mark"/> and walks a quarter of a unit a
+    /// critic no speed, so it enters on the first tick exactly at <see cref="Door"/> and stays there; no other
+    /// critic enters. The magician is far from it on <see cref="Mark"/> and walks a quarter of a unit a
     /// tick, which a float adds and takes away without a rounding. Nobody throws, and no critic turns on the
     /// magician; a Vanish takes it six units, is ready again half a second later, and leaves a cloud that is there
     /// for the tick of the Vanish only.
     /// The curtain has no length, which is no curtain: these tests count their ticks from the first
     /// tick of an act, and the curtain has tests of its own.
     /// </summary>
-    private Tuning Scene { get; } = CommittedTuning.Parse() with
+    private Tuning Scene { get; } = CommittedTuning.Parse().WithCritic(critic => critic with { Speed = 0f }) with
     {
         CurtainTime = 0f,
         ActLength = 2f,
         ActsInPerformance = 5,
         StageFloorTop = 0f,
-        StageDoors = [Door],
+        StageDoors = [new StageDoor(Door, 1)],
         StageDoorWidth = 0f,
         MagicianMark = Mark,
         MagicianSpeed = 15f,
@@ -37,8 +37,6 @@ public class UnderstudyTests
         VanishCooldown = 0.5f,
         VanishCloudTime = 1f / Simulation.TicksPerSecond,
         ThrowRange = 0f,
-        CriticSpeed = 0f,
-        CriticEntryInterval = 3600f,
         CriticTurnRadius = 0f,
     };
 
@@ -47,19 +45,18 @@ public class UnderstudyTests
     /// stands there and outlasts every card thrown at it. A throw is ready again half a second later, and a card
     /// flies a unit a second: no card thrown in a test has landed by the end of it.
     /// </summary>
-    private Tuning InRangeOnTheMark => Scene with
+    private Tuning InRangeOnTheMark => Scene.WithCritic(critic => critic with { HitPoints = 1000f }) with
     {
         MagicianMark = Door + new Vector2(0f, 6f),
         ThrowRange = 9f,
         ThrowCooldown = 0.5f,
         ThrownCardSpeed = 1f,
-        CriticHitPoints = 1000f,
     };
 
     [Test]
     public void Understudies_InTheFirstAct_ThereIsNone()
     {
-        var simulation = new Simulation(Scene, seed: 1);
+        var simulation = Shows.WithOneCritic(Scene);
         Assert.That(simulation.Understudies, Is.Empty);
 
         // Nor when the act is over: the act just played is an understudy from the next act on.
@@ -72,7 +69,7 @@ public class UnderstudyTests
     [Test]
     public void GoOn_EveryActPlayed_LeavesAnUnderstudy_AndActFiveHasFour()
     {
-        var simulation = new Simulation(Scene, seed: 1);
+        var simulation = Shows.WithOneCritic(Scene);
 
         for (int act = 2; act <= 5; act++)
         {
@@ -94,7 +91,7 @@ public class UnderstudyTests
     {
         // The first act goes left, stands, goes down and to the right at once, and then up at half speed; the
         // second goes down the stage all through.
-        var simulation = new Simulation(Scene, seed: 1);
+        var simulation = Shows.WithOneCritic(Scene);
         (Vector2 Position, Vector2 Before)[] first = Play(simulation, tick => tick switch
         {
             < 20 => new MagicianInput(new Vector2(-1f, 0f)),
@@ -133,7 +130,7 @@ public class UnderstudyTests
         // Twenty ticks to the left, five units, and a Vanish from there on the next: the cloud is left where the
         // magician stood, and is there for that tick only.
         var from = Mark + new Vector2(-5f, 0f);
-        var simulation = new Simulation(Scene, seed: 1);
+        var simulation = Shows.WithOneCritic(Scene);
         (Vector2 Position, Vector2 Before)[] first = Play(simulation, tick => tick switch
         {
             < 20 => new MagicianInput(new Vector2(-1f, 0f)),
@@ -166,14 +163,13 @@ public class UnderstudyTests
     {
         // The mark is two units below the critic, so the cloud of a Vanish from the mark touches it: it reaches
         // two and a half units and the critic half a unit. The Vanish itself goes down the stage, away from it.
-        Tuning tuning = Scene with
+        Tuning tuning = Scene.WithCritic(critic => critic with { Radius = 0.5f }) with
         {
             MagicianMark = Door + new Vector2(0f, 2f),
             VanishCloudRadius = 2.5f,
             VanishStunTime = 0.5f,
-            CriticRadius = 0.5f,
         };
-        var simulation = new Simulation(tuning, seed: 1);
+        var simulation = Shows.WithOneCritic(tuning);
         var stunned = new List<bool>();
         void NoteTheCritic(int tick) => stunned.Add(simulation.Critics[0].IsStunned);
 
@@ -198,15 +194,14 @@ public class UnderstudyTests
         // quarter of a unit further right is a hair more than 15. The second throw of anybody is an hour away, and
         // a card flies a unit a tick. The critic can take two cards.
         var inRange = Mark + new Vector2(-12.75f, 0f);
-        Tuning tuning = Scene with
+        Tuning tuning = Scene.WithCritic(critic => critic with { HitPoints = 2f }) with
         {
             ThrowRange = 15f,
             ThrowCooldown = 3600f,
             ThrownCardSpeed = 60f,
             ThrownCardDamage = 1f,
-            CriticHitPoints = 2f,
         };
-        var simulation = new Simulation(tuning, seed: 1);
+        var simulation = Shows.WithOneCritic(tuning);
         IEnumerable<(Vector2, Vector2, bool)> Cards() =>
             simulation.ThrownCards.Select(card => (card.Position, card.PreviousPosition, card.ThrownByMagician));
 
@@ -251,7 +246,7 @@ public class UnderstudyTests
     {
         // The mark is in range of the critic, and nobody leaves it. Three quarters of a second are 45 ticks. The
         // cards are slow: each is still in the air, so they count the throws.
-        var simulation = new Simulation(InRangeOnTheMark with { ThrowCooldown = 0.75f }, seed: 1);
+        var simulation = Shows.WithOneCritic(InRangeOnTheMark with { ThrowCooldown = 0.75f });
         int Thrown(bool byTheMagician) => simulation.ThrownCards.Count(card => card.ThrownByMagician == byTheMagician);
 
         // The critic enters on the first tick, after the throws: the magician throws on ticks 1, 46 and 91.
@@ -291,16 +286,14 @@ public class UnderstudyTests
         // The critic walks a unit a tick down at a box office that one strike fells, and that the magician stands
         // in the middle of, six units below the door. The magician has the critic in range and a throw ready on
         // every tick; its cards are slow and none has landed.
-        Tuning tuning = InRangeOnTheMark with
+        Tuning tuning = InRangeOnTheMark.WithCritic(critic => critic with { Speed = 60f, Radius = 0.5f }) with
         {
             BoxOfficePosition = Door + new Vector2(0f, 6f),
             BoxOfficeSize = 4f,
             BoxOfficeHitPoints = 1f,
-            CriticRadius = 0.5f,
             ThrowCooldown = 1f / Simulation.TicksPerSecond,
-            CriticSpeed = 60f,
         };
-        var simulation = new Simulation(tuning, seed: 1);
+        var simulation = Shows.WithOneCritic(tuning);
         simulation.Step(default);
         simulation.Step(default);
         Assert.That(simulation.ThrownCards, Has.Count.EqualTo(1));
@@ -322,7 +315,7 @@ public class UnderstudyTests
     [Test]
     public void Step_AVanishInTheFirstActAndNoneInTheSecond_OnlyTheFirstActsUnderstudyLeavesACloud()
     {
-        var simulation = new Simulation(Scene, seed: 1);
+        var simulation = Shows.WithOneCritic(Scene);
         Play(simulation, tick => new MagicianInput(Vector2.Zero, Vanish: tick == 20));
         simulation.GoOn();
         Play(simulation, _ => default);
@@ -341,7 +334,7 @@ public class UnderstudyTests
     {
         // Nobody has a range in the first two acts, which leave an understudy a step to the left of the mark and
         // one a step to the right of it.
-        var simulation = new Simulation(Scene, seed: 1);
+        var simulation = Shows.WithOneCritic(Scene);
         Play(simulation, tick => tick == 0 ? new MagicianInput(new Vector2(-1f, 0f)) : default);
         simulation.GoOn();
         Play(simulation, tick => tick == 0 ? new MagicianInput(new Vector2(1f, 0f)) : default);
@@ -365,7 +358,7 @@ public class UnderstudyTests
     public void Step_AnActGoesOnForLongerThanAnUnderstudysOwn_ItIsGoneFromTheStageWhenItsRouteRunsOut()
     {
         // The first act is a second long. New numbers count from the next act: the second is two seconds long.
-        var simulation = new Simulation(InRangeOnTheMark with { ActLength = 1f }, seed: 1);
+        var simulation = Shows.WithOneCritic(InRangeOnTheMark with { ActLength = 1f });
         Play(simulation, _ => default);
         simulation.Tuning = InRangeOnTheMark;
         simulation.GoOn();
@@ -402,17 +395,15 @@ public class UnderstudyTests
         // units below the door, and turns on a magician that is nearer than two units. In the first act the
         // magician walks six units to the left and waits half a unit to the right of the critic's way and nine
         // units down it: the critic is six units down when the act ends, three from the magician.
-        Tuning tuning = Scene with
+        Tuning tuning = Scene.WithCritic(critic => critic with { Speed = 3f, Radius = 0.5f }) with
         {
             MagicianMark = Door + new Vector2(6.5f, 9f),
             MagicianRadius = 0.6f,
             BoxOfficePosition = Door + new Vector2(0f, 20f),
             BoxOfficeSize = 4f,
-            CriticSpeed = 3f,
-            CriticRadius = 0.5f,
             CriticTurnRadius = 2f,
         };
-        var simulation = new Simulation(tuning, seed: 1);
+        var simulation = Shows.WithOneCritic(tuning);
         Play(simulation, tick => tick < 24 ? new MagicianInput(new Vector2(-1f, 0f)) : default);
         simulation.GoOn();
         Understudy understudy = simulation.Understudies[0];
@@ -432,8 +423,8 @@ public class UnderstudyTests
         });
 
         Assert.That(understudy.Position, Is.EqualTo(Door + new Vector2(0.5f, 9f)));
-        Assert.That(critic.Position.Y, Is.GreaterThan(understudy.Position.Y + tuning.MagicianRadius + tuning.CriticRadius));
-        Assert.That(critic.HitPoints, Is.EqualTo(tuning.CriticHitPoints));
+        Assert.That(critic.Position.Y, Is.GreaterThan(understudy.Position.Y + tuning.MagicianRadius + tuning.Critic().Radius));
+        Assert.That(critic.HitPoints, Is.EqualTo(tuning.Critic().HitPoints));
         Assert.That(simulation.MagicianHitPoints, Is.EqualTo(tuning.MagicianHitPoints));
     }
 
@@ -442,8 +433,8 @@ public class UnderstudyTests
     {
         // One magician took a step to the right and a step back when the first act began, and the other never left
         // the mark. Three ticks into the second act both understudies stand on the mark, as both magicians do.
-        var walked = new Simulation(Scene, seed: 1);
-        var stood = new Simulation(Scene, seed: 1);
+        var walked = Shows.WithOneCritic(Scene);
+        var stood = Shows.WithOneCritic(Scene);
         Play(walked, tick => tick switch
         {
             0 => new MagicianInput(new Vector2(1f, 0f)),
@@ -470,8 +461,8 @@ public class UnderstudyTests
         // the right of it and a step to the left, the other only to the left: the two acts leave two understudies.
         var left = new MagicianInput(new Vector2(-1f, 0f));
         var right = new MagicianInput(new Vector2(1f, 0f));
-        var bothWays = new Simulation(Scene, seed: 1);
-        var oneWay = new Simulation(Scene, seed: 1);
+        var bothWays = Shows.WithOneCritic(Scene);
+        var oneWay = Shows.WithOneCritic(Scene);
         foreach (MagicianInput input in new[] { right, left, left, right })
         {
             bothWays.Step(input);
@@ -495,8 +486,8 @@ public class UnderstudyTests
         // A Vanish that goes nowhere, on the first tick of the first act. When the second act begins its cloud is
         // long gone and the Vanish is ready again: all that is left of it is that the understudy has one, and when.
         Tuning tuning = Scene with { VanishDistance = 0f };
-        var one = new Simulation(tuning, seed: 1);
-        var other = new Simulation(tuning, seed: 1);
+        var one = Shows.WithOneCritic(tuning);
+        var other = Shows.WithOneCritic(tuning);
         Play(one, tick => new MagicianInput(Vector2.Zero, Vanish: tick == 0));
         Play(other, tick => new MagicianInput(Vector2.Zero, Vanish: tick == otherVanishTick));
         one.GoOn();
@@ -513,7 +504,7 @@ public class UnderstudyTests
         // magician on its mark throws nothing. The two shows differ in how long it is to a thrower's next throw.
         ulong HashAfterTheThrow(float throwCooldown)
         {
-            var simulation = new Simulation(Scene, seed: 1);
+            var simulation = Shows.WithOneCritic(Scene);
             Play(simulation, tick => tick < 60 ? new MagicianInput(new Vector2(-1f, 0f)) : default);
             simulation.Tuning = Scene with { ThrowRange = 15f, ThrowCooldown = throwCooldown };
             simulation.GoOn();

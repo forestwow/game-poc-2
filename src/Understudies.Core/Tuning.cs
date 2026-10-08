@@ -23,8 +23,7 @@ namespace Understudies.Core;
 /// The y of the foot of the back wall, where the floor that can be walked starts. At 0 there is no wall.
 /// </param>
 /// <param name="StageDoors">
-/// The middle of each stage door, a point on the floor's edge, in the order the doors open: the floor's top edge is
-/// the foot of the back wall. Critics enter at the first.
+/// The stage doors. No door may be up the back wall, and one must be open in the first act.
 /// </param>
 /// <param name="StageDoorWidth">How much of the edge a door takes: a critic enters anywhere along it.</param>
 /// <param name="BoxOfficePosition">The centre of the box office's circle on the floor.</param>
@@ -48,14 +47,16 @@ namespace Understudies.Core;
 /// <param name="ThrowCooldown">Seconds from one throw to the next.</param>
 /// <param name="ThrownCardSpeed">Units per second.</param>
 /// <param name="ThrownCardDamage">The hit points one card takes off a critic.</param>
-/// <param name="CriticSpeed">Units per second.</param>
-/// <param name="CriticRadius">A critic is a circle on the floor.</param>
-/// <param name="CriticHitPoints">What a critic has when it enters.</param>
-/// <param name="CriticEntryInterval">Seconds from one critic entering to the next.</param>
+/// <param name="EnemyKinds">
+/// The kinds of enemy an act may buy, at least one. A planned entry names its kind by its place in this list.
+/// </param>
+/// <param name="FirstActBudget">What the first act has to buy its enemies with.</param>
+/// <param name="BudgetGrowthPerAct">How much more every act has than the one before it.</param>
+/// <param name="ActQuietEnd">Seconds at the end of an act in which nobody enters.</param>
 /// <param name="CriticTurnRadius">
-/// A critic whose centre is nearer than this to the magician's centre turns on the magician; any other walks to the
-/// box office. A critic that has not turned does not hurt the magician, so a radius of nothing leaves the magician
-/// alone.
+/// A critic of a kind that turns, whose centre is nearer than this to the magician's centre, turns on the magician;
+/// any other walks to the box office. A critic that has not turned does not hurt the magician, so a radius of
+/// nothing leaves the magician alone.
 /// </param>
 /// <param name="CriticStrikeDamage">The hit points one strike takes off the box office.</param>
 /// <param name="CriticTouchDamage">The hit points one touch takes off the magician.</param>
@@ -69,7 +70,7 @@ public sealed record Tuning(
     float CurtainTime,
     Vector2 StageSize,
     float StageFloorTop,
-    IReadOnlyList<Vector2> StageDoors,
+    IReadOnlyList<StageDoor> StageDoors,
     float StageDoorWidth,
     Vector2 BoxOfficePosition,
     float BoxOfficeSize,
@@ -88,10 +89,10 @@ public sealed record Tuning(
     float ThrowCooldown,
     float ThrownCardSpeed,
     float ThrownCardDamage,
-    float CriticSpeed,
-    float CriticRadius,
-    float CriticHitPoints,
-    float CriticEntryInterval,
+    IReadOnlyList<EnemyKind> EnemyKinds,
+    int FirstActBudget,
+    int BudgetGrowthPerAct,
+    float ActQuietEnd,
     float CriticTurnRadius,
     float CriticStrikeDamage,
     float CriticTouchDamage,
@@ -126,8 +127,8 @@ public sealed record Tuning(
 
     /// <summary>Reads the text of a tuning.json.</summary>
     /// <exception cref="JsonException">
-    /// The text is not a tuning. For an unknown key, a missing one, no stage door and a door above the floor's top
-    /// the message names the key.
+    /// The text is not a tuning. For an unknown key, a missing one, no stage door, a door above the floor's top, no
+    /// door open in the first act, no kind of enemy and a kind that costs nothing the message names the key.
     /// </exception>
     public static Tuning Parse(string json)
     {
@@ -135,17 +136,34 @@ public sealed record Tuning(
 
         // ponytail: no number is checked for making sense. An act of no length is over when its curtain is, and a
         // performance of no acts or fewer plays one. Check ranges here when a file is edited by more than its owner.
-        // The rules take the first door for granted.
         if (tuning.StageDoors is not { Count: > 0 })
         {
             throw new JsonException("'stageDoors' needs at least one door.");
+        }
+
+        // What the first act buys has to enter somewhere, and a door that has opened stays open.
+        if (!tuning.StageDoors.Any(door => door.OpensInAct <= 1))
+        {
+            throw new JsonException("'stageDoors' needs a door whose 'opensInAct' is 1: the first act has no way in.");
+        }
+
+        // The rules take the first kind for granted.
+        if (tuning.EnemyKinds is not { Count: > 0 })
+        {
+            throw new JsonException("'enemyKinds' needs at least one kind.");
+        }
+
+        // An act buys until it can afford nothing: a kind that costs nothing would be bought for ever.
+        if (tuning.EnemyKinds.Any(kind => kind.Cost < 1))
+        {
+            throw new JsonException("'enemyKinds' has a kind whose 'cost' is less than 1.");
         }
 
         // A door up the back wall would let its critics in on the wall.
         // ponytail: only a door's middle is looked at. A door in a side edge runs half its width up and down, so
         // one within that of the wall's foot still lets a critic in a little above the floor; checking a door's
         // ends needs the rule that says which way it runs, which lives in the simulation.
-        if (tuning.StageDoors.Any(door => door.Y < tuning.StageFloorTop))
+        if (tuning.StageDoors.Any(door => door.Position.Y < tuning.StageFloorTop))
         {
             throw new JsonException(
                 "'stageDoors' has a door whose y is less than 'stageFloorTop': it would be up the back wall.");
@@ -154,3 +172,34 @@ public sealed record Tuning(
         return tuning;
     }
 }
+
+/// <summary>A stage door: critics enter anywhere along it, in the acts in which it is open.</summary>
+/// <param name="Position">
+/// The door's middle, a point on the floor's edge: the floor's top edge is the foot of the back wall.
+/// </param>
+/// <param name="OpensInAct">The number of the first act in which the door is open: it is open ever after.</param>
+public readonly record struct StageDoor(Vector2 Position, int OpensInAct);
+
+/// <summary>A kind of enemy: what the critics of that kind are, and what an act pays for one.</summary>
+/// <param name="Name">What the file calls the kind. No rule reads it.</param>
+/// <param name="Speed">Units per second.</param>
+/// <param name="Radius">A critic is a circle on the floor.</param>
+/// <param name="HitPoints">What a critic has when it enters.</param>
+/// <param name="Cost">What one takes from an act's budget, 1 or more.</param>
+/// <param name="Weight">
+/// How likely an act is to buy this kind and not another it can afford: the weight's share of all their weights. A
+/// kind with no weight is never bought.
+/// </param>
+/// <param name="FromAct">The number of the first act that may buy the kind.</param>
+/// <param name="TurnsOnTheMagician">
+/// Whether the kind turns on a magician that comes within <see cref="Tuning.CriticTurnRadius"/>.
+/// </param>
+public readonly record struct EnemyKind(
+    string Name,
+    float Speed,
+    float Radius,
+    float HitPoints,
+    int Cost,
+    int Weight,
+    int FromAct,
+    bool TurnsOnTheMagician);

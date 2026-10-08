@@ -17,7 +17,7 @@ public class CriticsTurnTests
     /// <summary>
     /// One critic and a magician that throws at nobody. The door has no width, so the critic enters on the first
     /// tick exactly at <see cref="Door"/>; from the second tick on it walks a unit a tick straight down the stage,
-    /// to a box office it touches 17.5 units below the door. The second critic is an hour away. A critic turns on a
+    /// to a box office it touches 17.5 units below the door. No other critic enters. A critic turns on a
     /// magician nearer than three units: this one does on the fifth tick, three units below the door, where the
     /// magician is one and a half to the side and two further down, two and a half away. Each of the two circles is
     /// half a unit, so they touch on the sixth tick. A touch takes two of the magician's ten hit points and a strike
@@ -25,10 +25,10 @@ public class CriticsTurnTests
     /// The curtain has no length, which is no curtain: these tests count their ticks from the first
     /// tick of an act, and the curtain has tests of its own.
     /// </summary>
-    private Tuning Scene { get; } = CommittedTuning.Parse() with
+    private Tuning Scene { get; } = CommittedTuning.Parse().WithCritic(critic => critic with { Speed = 60f, Radius = 0.5f }) with
     {
         CurtainTime = 0f,
-        StageDoors = [Door],
+        StageDoors = [new StageDoor(Door, 1)],
         StageDoorWidth = 0f,
         BoxOfficePosition = Door + new Vector2(0f, 20f),
         BoxOfficeSize = 4f,
@@ -37,9 +37,6 @@ public class CriticsTurnTests
         MagicianRadius = 0.5f,
         MagicianHitPoints = 10f,
         ThrowRange = 0f,
-        CriticSpeed = 60f,
-        CriticRadius = 0.5f,
-        CriticEntryInterval = 3600f,
         CriticTurnRadius = 3f,
         CriticStrikeDamage = 1f,
         CriticTouchDamage = 2f,
@@ -50,7 +47,7 @@ public class CriticsTurnTests
     public void Step_ACriticInsideTheTurnRadius_WalksAtTheMagician()
     {
         // Until then the magician is too far and the critic walks at the box office.
-        var simulation = new Simulation(Scene, seed: 1);
+        var simulation = Shows.WithOneCritic(Scene);
         Run(simulation, ticks: 4);
         Assert.That(simulation.Critics[0].Position, Is.EqualTo(Door + new Vector2(0f, 3f)));
 
@@ -61,9 +58,27 @@ public class CriticsTurnTests
     }
 
     [Test]
+    public void Step_ACriticOfAKindThatDoesNotTurn_WalksOnToTheBoxOfficeAndNeverHurtsTheMagician()
+    {
+        // The critic of the scene, but of a kind that never turns: it walks straight down the stage through the
+        // radius in which another would turn, a unit and a half from the magician, and strikes the box office.
+        Tuning tuning = Scene.WithCritic(critic => critic with { TurnsOnTheMagician = false });
+        Simulation simulation = Shows.WithOneCritic(tuning);
+
+        for (int i = 0; i < Simulation.TicksPerSecond; i++)
+        {
+            simulation.Step(default);
+            Assert.That(simulation.Critics[0].Position.X, Is.EqualTo(Door.X));
+        }
+
+        Assert.That(simulation.MagicianHitPoints, Is.EqualTo(10f));
+        Assert.That(simulation.BoxOfficeHitPoints, Is.LessThan(100f));
+    }
+
+    [Test]
     public void Step_ACriticThatHasTurned_StopsWhereItsCircleTouchesTheMagicians()
     {
-        var simulation = new Simulation(Scene, seed: 1);
+        var simulation = Shows.WithOneCritic(Scene);
 
         Run(simulation, ticks: Simulation.TicksPerSecond);
 
@@ -79,7 +94,7 @@ public class CriticsTurnTests
         // The critic has turned and taken its first step at the magician, who then walks three units in a tick,
         // straight away from the critic's side of the stage: it is four units from the critic.
         Tuning tuning = Scene with { MagicianSpeed = 180f };
-        var simulation = new Simulation(tuning, seed: 1);
+        var simulation = Shows.WithOneCritic(tuning);
         Run(simulation, ticks: 5);
         float toBoxOffice = Vector2.Distance(simulation.Critics[0].Position, tuning.BoxOfficePosition);
 
@@ -96,7 +111,7 @@ public class CriticsTurnTests
     {
         // Half a unit in a tick, straight at the critic: the two circles are half over each other.
         Tuning tuning = Scene with { MagicianSpeed = 30f };
-        var simulation = new Simulation(tuning, seed: 1);
+        var simulation = Shows.WithOneCritic(tuning);
         Run(simulation, ticks: Simulation.TicksPerSecond);
         Vector2 stood = simulation.Critics[0].Position;
 
@@ -110,7 +125,7 @@ public class CriticsTurnTests
     [Test]
     public void Step_ACriticTouchesTheMagician_HurtsItOncePerCooldown()
     {
-        var simulation = new Simulation(Scene, seed: 1);
+        var simulation = Shows.WithOneCritic(Scene);
         Assert.That(simulation.MagicianHitPoints, Is.EqualTo(10f));
 
         // The first blow lands on the tick the critic arrives, and not before.
@@ -140,7 +155,7 @@ public class CriticsTurnTests
         // touches both. It turns on the magician when the test gives it the radius to, and not before.
         Tuning turns = Scene with { MagicianMark = Door + new Vector2(1f, 17.5f) };
         Tuning keepsToTheBoxOffice = turns with { CriticTurnRadius = 0f };
-        var simulation = new Simulation(keepsToTheBoxOffice, seed: 1);
+        var simulation = Shows.WithOneCritic(keepsToTheBoxOffice);
 
         // The first strike, on the tick the critic arrives.
         Run(simulation, ticks: 19);
@@ -172,7 +187,7 @@ public class CriticsTurnTests
         // A Vanish that goes nowhere and leaves no cloud: all there is to it is the quarter of a second, 15 ticks,
         // in which nothing hurts the magician. It is asked for on the tick the critic arrives.
         Tuning tuning = Scene with { VanishDistance = 0f, VanishCloudTime = 0f, VanishInvulnerableTime = 0.25f };
-        var simulation = new Simulation(tuning, seed: 1);
+        var simulation = Shows.WithOneCritic(tuning);
         Run(simulation, ticks: 5);
 
         simulation.Step(Vanish);
@@ -203,7 +218,7 @@ public class CriticsTurnTests
             VanishCloudTime = 1f / Simulation.TicksPerSecond,
             VanishStunTime = 0.75f,
         };
-        var simulation = new Simulation(tuning, seed: 1);
+        var simulation = Shows.WithOneCritic(tuning);
 
         // The first blow, on the tick the critic arrives; then ten ticks more, twenty before the second.
         Run(simulation, ticks: 6);
@@ -240,14 +255,13 @@ public class CriticsTurnTests
             CurtainTime = 0f,
             ThrowRange = 0f,
             VanishDistance = 0f,
-            CriticEntryInterval = 1f,
             CriticStrikeDamage = 0f,
             CriticTouchDamage = 0f,
         };
-        var simulation = new Simulation(tuning, seed: 1);
+        Simulation simulation = Shows.WithACriticEvery(Simulation.TicksPerSecond, tuning);
         Run(simulation, ticks: 40 * Simulation.TicksPerSecond);
 
-        float touching = (tuning.BoxOfficeSize / 2f) + tuning.CriticRadius;
+        float touching = (tuning.BoxOfficeSize / 2f) + tuning.Critic().Radius;
         float FromBoxOffice(Critic critic) => Vector2.Distance(critic.Position, tuning.BoxOfficePosition);
         Assert.That(simulation.Critics.Count(critic => FromBoxOffice(critic) < touching - 0.1f), Is.GreaterThan(0));
 
@@ -267,7 +281,7 @@ public class CriticsTurnTests
     public void Step_TheMagiciansHitPointsRunOut_TheMagicianHasFallenAndTheShowIsNotClosed()
     {
         // Two touches are not enough and the third is more than enough.
-        var simulation = new Simulation(Scene with { MagicianHitPoints = 5f }, seed: 1);
+        var simulation = Shows.WithOneCritic(Scene with { MagicianHitPoints = 5f });
 
         Run(simulation, ticks: 6 + 30);
         Assert.That(simulation.MagicianHitPoints, Is.EqualTo(1f));
@@ -285,7 +299,7 @@ public class CriticsTurnTests
     [Test]
     public void Step_ACriticHurtsTheMagician_ItIsReportedWhereTheMagicianStandsForThatTickOnly()
     {
-        var simulation = new Simulation(Scene, seed: 1);
+        var simulation = Shows.WithOneCritic(Scene);
         Run(simulation, ticks: 5);
         Assert.That(simulation.Events, Is.Empty);
 
@@ -305,13 +319,12 @@ public class CriticsTurnTests
         Tuning tuning = Scene with
         {
             StageDoorWidth = 4f,
-            CriticEntryInterval = 0.25f,
             CriticTurnRadius = 30f,
             MagicianHitPoints = 2f,
             VanishInvulnerableTime = 1f,
             VanishCloudTime = 0f,
         };
-        var simulation = new Simulation(tuning, seed: 1);
+        Simulation simulation = Shows.WithACriticEvery(Simulation.TicksPerSecond / 4, tuning);
         simulation.Step(Vanish);
 
         for (int i = 0; i < 2 * Simulation.TicksPerSecond && !simulation.MagicianHasFallen; i++)
@@ -320,7 +333,7 @@ public class CriticsTurnTests
         }
 
         Assert.That(simulation.MagicianHasFallen, Is.True);
-        float touch = tuning.MagicianRadius + tuning.CriticRadius + Tolerance;
+        float touch = tuning.MagicianRadius + tuning.Critic().Radius + Tolerance;
         Assert.That(
             simulation.Critics.Count(critic => Vector2.Distance(critic.Position, simulation.MagicianPosition) <= touch),
             Is.GreaterThan(1),
@@ -340,7 +353,7 @@ public class CriticsTurnTests
         // No critic turns, and the one critic reaches the box office on the nineteenth tick, inside the second in
         // which nothing hurts the magician: that moment is the magician's and shields nothing else.
         Tuning tuning = Scene with { CriticTurnRadius = 0f, VanishInvulnerableTime = 1f, VanishCloudTime = 0f };
-        var simulation = new Simulation(tuning, seed: 1);
+        var simulation = Shows.WithOneCritic(tuning);
         simulation.Step(Vanish);
 
         Run(simulation, ticks: 18);

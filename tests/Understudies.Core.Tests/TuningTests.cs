@@ -65,7 +65,7 @@ public class TuningTests
     [TestCase("null")]
     public void Parse_NoStageDoor_IsRefusedWithTheKeysName(string doors)
     {
-        // The rules take the first door for granted: without one the game would stop at the first tick.
+        // Without a door nobody could enter.
         JsonNode file = JsonNode.Parse(CommittedTuning.Json)!;
         file["stageDoors"] = JsonNode.Parse(doors);
 
@@ -80,11 +80,59 @@ public class TuningTests
         // The floor starts three units down the stage, and the second door is half a unit up the back wall.
         JsonNode file = JsonNode.Parse(CommittedTuning.Json)!;
         file["stageFloorTop"] = 3;
-        file["stageDoors"] = JsonNode.Parse("""[{ "x": 0, "y": 15 }, { "x": 17, "y": 2.5 }]""");
+        file["stageDoors"] = JsonNode.Parse(
+            """[{ "position": { "x": 0, "y": 15 }, "opensInAct": 1 }, { "position": { "x": 17, "y": 2.5 }, "opensInAct": 3 }]""");
 
         Assert.That(
             () => Tuning.Parse(file.ToJsonString()),
             Throws.TypeOf<JsonException>().With.Message.Contains("'stageDoors'"));
+    }
+
+    [Test]
+    public void Parse_ADoorWithNoActToOpenIn_IsRefusedWithTheKeysName()
+    {
+        JsonNode file = JsonNode.Parse(CommittedTuning.Json)!;
+        file["stageDoors"] = JsonNode.Parse("""[{ "position": { "x": 0, "y": 15 } }]""");
+
+        Assert.That(
+            () => Tuning.Parse(file.ToJsonString()),
+            Throws.TypeOf<JsonException>().With.Message.Contains("'opensInAct'"));
+    }
+
+    [Test]
+    public void Parse_NoDoorOpenInTheFirstAct_IsRefusedWithTheKeysName()
+    {
+        // What the first act buys would have no way in.
+        JsonNode file = JsonNode.Parse(CommittedTuning.Json)!;
+        file["stageDoors"] = JsonNode.Parse("""[{ "position": { "x": 0, "y": 15 }, "opensInAct": 2 }]""");
+
+        Assert.That(
+            () => Tuning.Parse(file.ToJsonString()),
+            Throws.TypeOf<JsonException>().With.Message.Contains("'stageDoors'"));
+    }
+
+    [TestCase("[]")]
+    [TestCase("null")]
+    public void Parse_NoKindOfEnemy_IsRefusedWithTheKeysName(string kinds)
+    {
+        JsonNode file = JsonNode.Parse(CommittedTuning.Json)!;
+        file["enemyKinds"] = JsonNode.Parse(kinds);
+
+        Assert.That(
+            () => Tuning.Parse(file.ToJsonString()),
+            Throws.TypeOf<JsonException>().With.Message.Contains("'enemyKinds'"));
+    }
+
+    [Test]
+    public void Parse_AKindOfEnemyThatCostsNothing_IsRefusedWithTheKeysName()
+    {
+        // An act buys until it can afford nothing more: it would never stop buying this one.
+        JsonNode file = JsonNode.Parse(CommittedTuning.Json)!;
+        file["enemyKinds"]![0]!["cost"] = 0;
+
+        Assert.That(
+            () => Tuning.Parse(file.ToJsonString()),
+            Throws.TypeOf<JsonException>().With.Message.Contains("'enemyKinds'"));
     }
 
     [Test]

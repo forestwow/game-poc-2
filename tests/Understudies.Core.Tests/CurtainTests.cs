@@ -30,7 +30,7 @@ public class CurtainTests
     [Test]
     public void Phase_ANewPerformance_OpensWithTheCurtainOfItsFirstAct()
     {
-        var simulation = new Simulation(Scene, seed: 1);
+        Simulation simulation = Shows.WithACriticEvery(3 * Simulation.TicksPerSecond, Scene, seed: 1);
 
         Assert.That(simulation.Phase, Is.EqualTo(Phase.Curtain));
         Assert.That(simulation.Act, Is.EqualTo(1));
@@ -40,7 +40,7 @@ public class CurtainTests
     [Test]
     public void Step_TheCurtain_IsUpForItsTimeAndThenTheActIsPlayed()
     {
-        var simulation = new Simulation(Scene, seed: 1);
+        Simulation simulation = Shows.WithACriticEvery(3 * Simulation.TicksPerSecond, Scene, seed: 1);
 
         Run(simulation, CurtainTicks / 4);
         Assert.That(simulation.CurtainLeft, Is.EqualTo(0.75f));
@@ -56,7 +56,7 @@ public class CurtainTests
     [Test]
     public void Phase_ACurtainOfNoLength_IsNoCurtain()
     {
-        var simulation = new Simulation(Scene with { CurtainTime = 0f }, seed: 1);
+        Simulation simulation = Shows.WithACriticEvery(3 * Simulation.TicksPerSecond, Scene with { CurtainTime = 0f }, seed: 1);
         Assert.That(simulation.Phase, Is.EqualTo(Phase.Act));
 
         Run(simulation, ActTicks);
@@ -69,7 +69,7 @@ public class CurtainTests
     [Test]
     public void Step_WhileTheCurtainOfTheFirstActIsUp_NoCriticIsLetInAndTheActsTimeStands()
     {
-        var simulation = new Simulation(Scene, seed: 1);
+        Simulation simulation = Shows.WithACriticEvery(3 * Simulation.TicksPerSecond, Scene, seed: 1);
 
         for (int i = 0; i < CurtainTicks; i++)
         {
@@ -100,13 +100,12 @@ public class CurtainTests
         {
             CurtainTime = 1f,
             ActLength = 20f,
-            CriticEntryInterval = 0.7f,
             CriticTurnRadius = 0f,
             ThrownCardSpeed = 1.2f,
             VanishDistance = 0f,
         };
         const int twentySeconds = 20 * Simulation.TicksPerSecond;
-        var simulation = new Simulation(tuning, seed: 1);
+        Simulation simulation = Shows.WithACriticEvery(42, tuning);
         Run(simulation, CurtainTicks + twentySeconds - 10);
         simulation.Step(Vanish);
         Run(simulation, 9);
@@ -146,7 +145,7 @@ public class CurtainTests
     [Test]
     public void Step_AVanishAskedForWhileTheCurtainIsUp_IsNotKeptForTheAct()
     {
-        var simulation = new Simulation(Scene, seed: 1);
+        Simulation simulation = Shows.WithACriticEvery(3 * Simulation.TicksPerSecond, Scene, seed: 1);
         Run(simulation, CurtainTicks - 1);
 
         simulation.Step(Vanish);
@@ -162,7 +161,7 @@ public class CurtainTests
     [Test]
     public void GoOn_BetweenTwoActs_TheNextActBeginsWithItsCurtain()
     {
-        var simulation = new Simulation(Scene, seed: 1);
+        Simulation simulation = Shows.WithACriticEvery(3 * Simulation.TicksPerSecond, Scene, seed: 1);
         Run(simulation, CurtainTicks + ActTicks);
         Assert.That(simulation.Phase, Is.EqualTo(Phase.BetweenActs));
 
@@ -177,7 +176,7 @@ public class CurtainTests
     [Test]
     public void GoOn_WhileTheCurtainIsUp_DoesNothing()
     {
-        var simulation = new Simulation(Scene, seed: 1);
+        Simulation simulation = Shows.WithACriticEvery(3 * Simulation.TicksPerSecond, Scene, seed: 1);
         Run(simulation, CurtainTicks + ActTicks);
         simulation.GoOn();
         Run(simulation, 10);
@@ -195,7 +194,7 @@ public class CurtainTests
         // Left is held from the first tick of the curtain, a quarter of a unit a tick. The understudy's route is
         // the act's two seconds and not the curtain's one as well, and its first place is one step from the mark.
         Tuning tuning = Scene with { MagicianMark = new Vector2(40f, 13f), MagicianSpeed = 15f };
-        var simulation = new Simulation(tuning, seed: 1);
+        Simulation simulation = Shows.WithACriticEvery(3 * Simulation.TicksPerSecond, tuning, seed: 1);
         for (int i = 0; i < CurtainTicks + ActTicks; i++)
         {
             simulation.Step(Left);
@@ -219,7 +218,7 @@ public class CurtainTests
         // A critic that walks and a slow card in the air when the first act ends: each was somewhere else a tick
         // before. From going on, the view has nothing between that place and where each stands.
         Tuning tuning = Scene with { ThrowRange = 30f, ThrownCardSpeed = 1.2f, CurtainTime = 0f };
-        var simulation = new Simulation(tuning, seed: 1);
+        Simulation simulation = Shows.WithACriticEvery(3 * Simulation.TicksPerSecond, tuning, seed: 1);
         Run(simulation, ActTicks);
         Assert.That(simulation.Critics[0].PreviousPosition, Is.Not.EqualTo(simulation.Critics[0].Position));
         Assert.That(simulation.ThrownCards[0].PreviousPosition, Is.Not.EqualTo(simulation.ThrownCards[0].Position));
@@ -235,7 +234,8 @@ public class CurtainTests
     {
         // One seed and one magician in two shows on the committed stage with acts of twenty seconds: one has the
         // committed curtain before every act and the other none. The magician walks a square and vanishes every
-        // fifth second, so the second act's understudy has a route and Vanishes to play again, critics enter at
+        // fifth second, so the second act's understudy has a route and Vanishes to play again, critics enter every
+        // 42 ticks at
         // a door as wide as the committed one (the generator places each), turn on the magician and are thrown
         // at. A curtain's tick touches nothing an act runs on: no countdown, no number of the generator, no
         // recording. So at the same tick of the same act the two shows are one state.
@@ -244,12 +244,11 @@ public class CurtainTests
         Tuning tuning = CommittedTuning.Parse() with
         {
             ActLength = 20f,
-            CriticEntryInterval = 0.7f,
             MagicianHitPoints = 1000f,
         };
         Assert.That(tuning.CurtainTime, Is.GreaterThan(0f));
-        var withCurtains = new Simulation(tuning, seed: 3);
-        var without = new Simulation(tuning with { CurtainTime = 0f }, seed: 3);
+        Simulation withCurtains = Shows.WithACriticEvery(42, tuning, seed: 3);
+        Simulation without = Shows.WithACriticEvery(42, tuning with { CurtainTime = 0f }, seed: 3);
 
         for (int act = 1; act <= 2; act++)
         {
@@ -297,8 +296,8 @@ public class CurtainTests
     {
         // Both shows are in the curtain of their first act and nothing else has happened in either: one curtain
         // has a second left and the other two.
-        var one = new Simulation(Scene with { CurtainTime = 1f }, seed: 7);
-        var other = new Simulation(Scene with { CurtainTime = 2f }, seed: 7);
+        Simulation one = Shows.WithACriticEvery(3 * Simulation.TicksPerSecond, Scene with { CurtainTime = 1f }, seed: 7);
+        Simulation other = Shows.WithACriticEvery(3 * Simulation.TicksPerSecond, Scene with { CurtainTime = 2f }, seed: 7);
 
         Assert.That(other.ComputeStateHash(), Is.Not.EqualTo(one.ComputeStateHash()));
     }
