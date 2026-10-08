@@ -23,7 +23,14 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
 
     // The sprites are pixel art drawn to one measure: the magician's 64 pixels are its three units.
     private const float SpritePixelsPerUnit = 64f / MagicianHeight;
+
+    // A walk goes through its frames at WalkFramesPerSecond for a figure that goes WalkReferenceSpeed units a
+    // second, and faster or slower as the figure does: a stagehand's feet run and a critic's plod. Never slower
+    // than WalkSlowest or faster than WalkFastest, where a walk stands or blurs.
     private const float WalkFramesPerSecond = 12f;
+    private const float WalkReferenceSpeed = 4f;
+    private const float WalkSlowest = 4f;
+    private const float WalkFastest = 20f;
     private const float ShadowOpacity = 0.3f;
     private const float FootlightGap = 4f;
 
@@ -50,6 +57,9 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
     private const float WordsHeight = 1.2f;
     private const float NumberHeight = 0.8f;
 
+    // The back wall's middle line keeps this far from the act's line on its left and the clock on its right.
+    private const float WordsGap = 1f;
+
     // The one caption of a performance, over the head of the first understudy and going where it goes: through
     // the curtain of the second act and for the first seconds of that act, long enough to be read. Where the
     // understudy stands beside the magician the words are clear of the bar over the magician's head.
@@ -65,6 +75,10 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
     private const float RouteWidth = 0.12f;
     private const int RouteStride = 6;
 
+    // The moment after a Vanish in which nothing hurts the magician is seen: the magician is this much there and
+    // washed with the smoke of its cloud, and is itself again when a touch counts again.
+    private const float InvulnerableOpacity = 0.7f;
+
     // A piece of applause is a diamond with a pale heart: this wide, and never fainter than ApplauseFaintest, so
     // that a piece about to go is still seen to be there. Its lower tip is on the place it lies, which is the
     // place the magician's feet must come near.
@@ -78,14 +92,21 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
     private const float ApplauseBarGap = 0.2f;
     private const float ApplauseCountHeight = 0.7f;
 
-    // ponytail: a system font, the first of these files that this machine has: one for macOS, one for Windows and
-    // two for Linux. A font file is shipped with the game when a build leaves the owner's machine.
+    // ponytail: a system font, the first of these files that this machine has: Arial for macOS and for Windows,
+    // and for Linux DejaVu Sans and then Liberation Sans, each where Debian, Fedora and Arch keep it. A Linux that
+    // keeps neither there has no text. A font file is shipped with the game when a build leaves the owner's
+    // machine: which font is the owner's choice.
     private static readonly string[] FontFiles =
     [
         "/System/Library/Fonts/Supplemental/Arial.ttf",
         Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Fonts), "arial.ttf"),
+        "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+        "/usr/share/fonts/dejavu-sans-fonts/DejaVuSans.ttf",
+        "/usr/share/fonts/TTF/DejaVuSans.ttf",
+        "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",
+        "/usr/share/fonts/liberation-sans/LiberationSans-Regular.ttf",
+        "/usr/share/fonts/liberation/LiberationSans-Regular.ttf",
     ];
-
 
     // The floor about the box office where a fall earns no applause: a shade over the boards and a broken line,
     // both quiet. The rows are an eighth of a unit tall, and the line is cut into this many stretches, every
@@ -131,7 +152,9 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
         new(196, 120, 150),
     ];
 
-    private readonly SimulationClock _clock = new();
+    // What the view keeps for one show is set back in StartAgain, every field of it: one added here, or to the
+    // program's screen, is added there.
+    private SimulationClock _clock = new();
     private readonly string? _capturePath;
     private readonly int _captureTicks;
 
@@ -274,11 +297,7 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
         // R starts the show again, on the numbers of now.
         if (Pressed(Keys.R))
         {
-            _simulation = NewShow(Tuning);
-            _juice = new Juice(Random.Shared);
-            _offered = [];
-            _takenLeft = 0f;
-            _guardLeft = 0f;
+            StartAgain();
         }
 
         // M mutes the sound, and M again brings it back.
@@ -360,6 +379,26 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
             _offered = [];
             _simulation.GoOn();
         }
+    }
+
+    /// <summary>
+    /// A new show, and nothing of the last one left in the view: no part of a tick owed, no Vanish asked for, the
+    /// magician facing the viewer, no card lit or shown. What is the player's and not the show's stays: the keys
+    /// that are down, and the sound's mute.
+    /// </summary>
+    private void StartAgain()
+    {
+        _simulation = NewShow(Tuning);
+        _juice = new Juice(Random.Shared);
+        _clock = new SimulationClock();
+        _walkClock = 0f;
+        _magicianToward = Vector2.UnitY;
+        _vanishAsked = false;
+        _offered = [];
+        _highlighted = 0;
+        _taken = 0;
+        _takenLeft = 0f;
+        _guardLeft = 0f;
     }
 
     /// <summary>A show nobody has seen: its seed is the time, which Core never reads.</summary>
@@ -563,8 +602,11 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
             magicianFeet,
             white: _juice.MagicianWhite,
             fallen: _simulation.MagicianHasFallen,
+            opacity: _simulation.MagicianIsInvulnerable ? InvulnerableOpacity : 1f,
+            tint: _simulation.MagicianIsInvulnerable ? CloudPuff : null,
             toward: _magicianToward,
-            walking: magicianStep != Vector2.Zero);
+            walking: magicianStep != Vector2.Zero,
+            speed: Tuning.MagicianSpeed);
         foreach (Understudy understudy in _simulation.Understudies)
         {
             // The magician's own figure through a treatment, and never a figure of its own: washed with the
@@ -580,6 +622,7 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
                     tint: UnderstudyTints[(understudy.Act - 1) % UnderstudyTints.Length],
                     toward: step,
                     walking: step != Vector2.Zero,
+                    speed: Tuning.MagicianSpeed,
                     beat: understudy.Act * 4);
             }
         }
@@ -597,6 +640,7 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
                 white: _juice.CriticWhite(critic.Id),
                 toward: step != Vector2.Zero ? step : Tuning.BoxOfficePosition - critic.Position,
                 walking: step != Vector2.Zero,
+                speed: Tuning.EnemyKinds[critic.Kind].Speed,
                 beat: critic.Id);
         }
 
@@ -655,6 +699,13 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
             }
 
             bool hit = effect.Kind == Juice.Effect.HitBurst;
+            if (!hit && effect.Through < Juice.KillFlashShare)
+            {
+                // Black ink on dark boards is not seen: the splash has a pale flash under it as it opens.
+                float left = 1f - (effect.Through / Juice.KillFlashShare);
+                FillDisc(effect.Middle, Juice.KillFlashRadius, ScrapOfPaper * (Juice.KillFlashOpacity * left));
+            }
+
             Sheet sheet = hit ? _hitBurst : _killBurst;
             int frames = sheet.Columns * sheet.Columns;
             int frame = Math.Min(frames - 1, (int)(effect.Through * frames));
@@ -837,12 +888,24 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
             act += $": {toCome} to come";
         }
 
+        string clock = $"{seconds / 60}:{seconds % 60:00}";
         _spriteBatch.Begin();
         Write(WordsHeight, act, new Vector2(1f, line), 0f, Words);
-        Write(WordsHeight, $"{seconds / 60}:{seconds % 60:00}", new Vector2(Tuning.StageSize.X - 1f, line), 1f, Words);
+        Write(WordsHeight, clock, new Vector2(Tuning.StageSize.X - 1f, line), 1f, Words);
         if (said is not null)
         {
-            Write(WordsHeight, said, new Vector2(Tuning.StageSize.X / 2f, line), 0.5f, Magician);
+            // The three share one line of the wall, and the middle one has what the other two leave: in the
+            // middle of the stage where it has the room, moved aside where it has not, and smaller where it is
+            // longer than all that is left, so that it keeps off the act and the clock (to within the rounding of its
+            // size to a whole pixel, which the gap beside it takes).
+            float from = 1f + Wide(WordsHeight, act) + WordsGap;
+            float to = Tuning.StageSize.X - 1f - Wide(WordsHeight, clock) - WordsGap;
+            float height = WordsHeight * MathF.Min(1f, (to - from) / Wide(WordsHeight, said));
+            float half = MathF.Min(Wide(height, said), to - from) / 2f;
+            // Not Math.Clamp: where the line fills its room the two bounds are one number on paper and can cross by a
+            // hair in float, and a clamp between crossed bounds throws.
+            float middle = MathF.Max(from + half, MathF.Min(Tuning.StageSize.X / 2f, to - half));
+            Write(height, said, new Vector2(middle, line), 0.5f, Magician);
         }
 
         // Beside the bar's end, what it counts: the pieces toward the next encore, over its cost.
@@ -900,12 +963,16 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
         _spriteBatch.DrawString(font, text, new Vector2(MathF.Round(topLeft.X), MathF.Round(topLeft.Y)), color);
     }
 
-    /// <summary>A bar that is <paramref name="share"/> full, from its left end.</summary>
+    /// <summary>How wide <see cref="Write"/> draws <paramref name="text"/> at that height, in world units.</summary>
+    private float Wide(float height, string text) =>
+        _fonts!.GetFont(MathF.Max(1f, MathF.Round(height * _scale))).MeasureString(text).X / _scale;
+
     private Vector2 ApplauseBarTopLeft => new(
         (Tuning.StageSize.X - ApplauseBar.X) / 2f,
         MathF.Max(Tuning.StageFloorTop, WordsHeight + 0.4f + ApplauseBar.Y + (2f * ApplauseBarGap))
             - ApplauseBarGap - ApplauseBar.Y);
 
+    /// <summary>A bar that is <paramref name="share"/> full, from its left end.</summary>
     private void FillBar(Vector2 topLeft, Vector2 size, float share, Color color)
     {
         Fill(topLeft, size, HitPointsLost);
@@ -923,9 +990,13 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
     /// sprite drawn over it that thick, since a tint can only darken.</param>
     /// <param name="fallen">Lying flat where <paramref name="feet"/> is, and not standing on it.</param>
     /// <param name="opacity">All that is drawn of the figure is that much see-through.</param>
-    /// <param name="tint">An understudy: the colour of the act it came from, washed over the magician's figure.</param>
+    /// <param name="tint">A colour washed over the figure: an understudy's is the colour of the act it came from,
+    /// and the magician's own, in the moment nothing hurts it, the smoke's.</param>
     /// <param name="toward">Where the figure faces: toward the viewer when this is nothing.</param>
     /// <param name="walking">Its walk goes through its frames, while an act is played.</param>
+    /// <param name="speed">How fast it walks when it does, in units a second: its kind's number and not what it
+    /// made of it in the last tick, so that its walk does not skip when it is pushed. The faster, the quicker
+    /// its frames.</param>
     /// <param name="beat">Which frame of the walk it is on when the clock is at nothing: two figures with
     /// different beats are out of step.</param>
     private void DrawFigure(
@@ -938,6 +1009,7 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
         Color? tint = null,
         Vector2 toward = default,
         bool walking = false,
+        float speed = WalkReferenceSpeed,
         int beat = 0)
     {
         // Sideways when it goes more across than up or down. The side view faces right and is mirrored for left.
@@ -946,8 +1018,9 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
         Sheet[] views = _sheets[(int)figure];
         Sheet sheet = views[fallen ? 0 : Math.Min((int)facing, views.Length - 1)];
         bool mirrored = sideways && toward.X < 0f && !fallen && views.Length > 1;
+        float rate = Math.Clamp(WalkFramesPerSecond * speed / WalkReferenceSpeed, WalkSlowest, WalkFastest);
         int frame = walking && !fallen && _simulation.Phase == Phase.Act
-            ? (int)(((_walkClock * WalkFramesPerSecond) + beat) % (sheet.Columns * sheet.Columns))
+            ? (int)(((_walkClock * rate) + beat) % (sheet.Columns * sheet.Columns))
             : 0;
         var source = new Rectangle(
             sheet.First.X + (frame % sheet.Columns * sheet.First.Width),
@@ -1078,13 +1151,6 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
             : new Rectangle(0, 0, image.Width / columns, image.Height / columns);
         return new Sheet(image, white, first, columns, block);
     }
-
-    /// <summary>
-    /// What stands on a floor position is drawn upward from there, or from <paramref name="lift"/> above it. What
-    /// stands lower on the screen is in front.
-    /// </summary>
-    private void DrawUpright(Vector2 feet, float width, float height, Color color, float lift = 0f) =>
-        Fill(new Vector2(feet.X - (width / 2f), feet.Y - lift - height), new Vector2(width, height), color, Depth(feet));
 
     /// <summary>Where in a sorted batch what stands on <paramref name="feet"/> is drawn: the lower, the later.</summary>
     private float Depth(Vector2 feet) => Math.Clamp(feet.Y / Tuning.StageSize.Y, 0f, 1f);

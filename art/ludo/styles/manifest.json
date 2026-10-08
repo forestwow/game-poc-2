@@ -251,5 +251,5 @@
       "created_at": "2026-10-08T09:20:11.045Z"
     }
   ],
-  "game_files": "shadow/, collage/, deco/ and dream/ each hold magician.png, critic.png and box-office.png: the pictures of that direction scaled with `sips -Z` to 256, 192 and 384 on the longest side (the collage critic is collage-critic-b). A capture reads one with `--art ludo/styles/<direction>`; the frames are in art/frames/styles/. pixel/ holds the three pixel pictures as returned (768 pixels, one sprite pixel is 12 of them): scaling them would smooth them."
+  "game_files": "shadow/, collage/, deco/ and dream/ each held magician.png, critic.png and box-office.png: the pictures of that direction scaled with `sips -Z` to 256, 192 and 384 on the longest side (the collage critic is collage-critic-b). A capture read one with `--art ludo/styles/<direction>`, and its frames were in art/frames/styles/. pixel/ held the three pixel pictures as returned (768 pixels, one sprite pixel is 12 of them): scaling them would smooth them. All of this is as it was when the round was made: plan T07c removed the five folders, art/frames/styles/ and the `--art` flag (see \"note\"), so none of these paths is in the repository now."
 }
