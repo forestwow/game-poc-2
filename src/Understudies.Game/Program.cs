@@ -1,28 +1,13 @@
 string? capturePath = null;
 int captureTicks = 0;
-string? artFolder = null;
-if (args is ["--capture", var path, "--ticks", var ticks, .. var rest]
-    && int.TryParse(ticks, out captureTicks)
-    && captureTicks >= 0
-    && rest is [] or ["--art", _])
+if (args is ["--capture", var path, "--ticks", var ticks] && int.TryParse(ticks, out captureTicks) && captureTicks >= 0)
 {
     capturePath = path;
-    if (rest is [_, var tool])
-    {
-        // Found as tuning.json is: the repository's own when the game is run from its root, or else beside the
-        // executable. ponytail: nothing copies art/ there yet; the build does when a build leaves the repository.
-        artFolder = Path.Combine(Directory.Exists("art") ? "art" : Path.Combine(AppContext.BaseDirectory, "art"), tool);
-        if (!new[] { "magician.png", "critic.png", "box-office.png" }.All(name => File.Exists(Path.Combine(artFolder, name))))
-        {
-            Console.Error.WriteLine($"No art in {Path.GetFullPath(artFolder)}");
-            return 2;
-        }
-    }
 }
 else if (args.Length > 0)
 {
     // Anything else is refused: a mistyped --capture must not leave the game open on the screen.
-    Console.Error.WriteLine("Usage: Understudies.Game [--capture <file.png> --ticks <n> [--art <tool>]]");
+    Console.Error.WriteLine("Usage: Understudies.Game [--capture <file.png> --ticks <n>]");
     return 2;
 }
 
@@ -32,6 +17,19 @@ if (Understudies.Game.TuningFile.Read() is not { } tuning)
     return 1;
 }
 
-using var game = new Understudies.Game.UnderstudiesGame(tuning, capturePath, captureTicks, artFolder);
+// Found as tuning.json is: the repository's own when the game is run from its root, or else beside the executable.
+string sprites = Path.Combine("art", "ludo", "sprites");
+if (!Directory.Exists(sprites))
+{
+    sprites = Path.Combine(AppContext.BaseDirectory, sprites);
+}
+
+if (!Directory.Exists(sprites))
+{
+    Console.Error.WriteLine($"No sprites in {Path.GetFullPath(sprites)}");
+    return 1;
+}
+
+using var game = new Understudies.Game.UnderstudiesGame(tuning, capturePath, captureTicks, sprites);
 game.Run();
 return 0;
