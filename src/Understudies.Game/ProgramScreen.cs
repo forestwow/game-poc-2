@@ -158,20 +158,9 @@ internal sealed partial class UnderstudiesGame
     /// Space for a Vanish or D to walk, was down the frame before and does nothing until it has been let go. In
     /// the first moment of an encore (<see cref="EncoreGuardTime"/>) the highlight moves and nothing is taken.
     /// </summary>
-    private void ChooseInTheProgram(KeyboardState keys, GamePadState pad)
+    private void ChooseInTheProgram()
     {
-        bool Pressed(Keys key) => keys.IsKeyDown(key) && !_keysBefore.IsKeyDown(key);
-        bool PadPressed(Buttons button) => pad.IsButtonDown(button) && _padBefore.IsButtonUp(button);
-
-        // A stick counts when it comes to a side, as a key does when it goes down.
-        static int Lean(GamePadState pad) =>
-            pad.ThumbSticks.Left.X > StickLean ? 1 : pad.ThumbSticks.Left.X < -StickLean ? -1 : 0;
-
-        int lean = Lean(pad);
-        int step = (lean != Lean(_padBefore) ? lean : 0)
-            + (Pressed(Keys.Right) || Pressed(Keys.D) || PadPressed(Buttons.DPadRight) ? 1 : 0)
-            - (Pressed(Keys.Left) || Pressed(Keys.A) || PadPressed(Buttons.DPadLeft) ? 1 : 0);
-        _highlighted = Math.Clamp(_highlighted + step, 0, _offered.Count - 1);
+        _highlighted = Math.Clamp(_highlighted + StepAcross(), 0, _offered.Count - 1);
         if (_guardLeft > 0f)
         {
             return;

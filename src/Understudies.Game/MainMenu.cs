@@ -1,4 +1,3 @@
-using System.Globalization;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
@@ -78,17 +77,6 @@ internal sealed partial class UnderstudiesGame
     private const float MenuUnderstudiesApart = 2.625f;
     private static readonly float[] MenuUnderstudiesUp = [3.75f, 4.5f, 3.6f, 4.65f, 3.9f];
 
-    // The nights (plan T54), in a row at the right of "Perform": a chip of paper for each night the file has,
-    // the chosen one gold in the pink ring, an open one cream, and one that is still shut dark in a broken border.
-    // ponytail: a row of every night, which three fit and twenty do not. The poster's screen is the next ticket
-    // and takes this row's place.
-    private const float NightsFromTheEntry = 1f;
-    private const float NightTall = 1.2f;
-    private const float NightPad = 0.45f;
-    private const float NightsApart = 0.45f;
-    private const float NightHeight = 0.6f;
-    private const float NightsNoteDrop = 0.75f;
-
     private bool _onTheMenu;
     private int _chosenEntry;
 
@@ -104,12 +92,12 @@ internal sealed partial class UnderstudiesGame
     // The night that the show just ended has opened, for the line that says so; null when it opened none.
     private int? _opened;
 
-    // The night that is played or chosen on the menu. Its tuning is the simulation's: StartAgain makes the next
+    // The night that is played, or whose poster is up (a shut night's too), or that "Perform" opens the poster of. Its tuning is the simulation's: StartAgain makes the next
     // show from that, so R plays the same night again. Null for the capture of a show that asked for no night,
     // which plays the plain tuning as it is.
     private int? _night;
 
-    /// <summary>The nights the menu offers: the one that was asked for, or those the progress has opened.</summary>
+    /// <summary>The nights that are open: the one that was asked for, or those the progress has opened.</summary>
     private IReadOnlyList<int> Unlocked => _askedNight is { } asked ? [asked] : _progress.Unlocked(_nights);
 
     /// <summary>A night is chosen: the numbers are its own from here, for the show behind the menu and the next.</summary>
@@ -198,10 +186,10 @@ internal sealed partial class UnderstudiesGame
 
     /// <summary>
     /// What a show that is over says of the two keys, and before them of the night it has just opened, when it
-    /// has: R plays the same night, and the new one is on the menu.
+    /// has: R is the poster, of the new night when there is one and of this night otherwise.
     /// </summary>
     private string TheWayOn =>
-        (_opened is { } night ? $"Night {night} is open. " : "") + "Esc: the nights  ·  R: this night again.";
+        _opened is { } night ? $"Night {night} is open. R: its poster  ·  Esc: the menu." : "R: the poster  ·  Esc: the menu.";
 
     /// <summary>
     /// The menu, and no show: the one way to it. The show that was played is given up, and the one that stands
@@ -209,7 +197,7 @@ internal sealed partial class UnderstudiesGame
     /// </summary>
     private void ShowTheMenu()
     {
-        // The newest night that is open is the one chosen: a night just opened is there at once.
+        // The newest night that is open is the one "Perform" opens the poster of: a night just opened is there at once.
         ChooseTheNight(Unlocked[^1]);
         StartAgain();
         _onTheMenu = true;
@@ -219,46 +207,19 @@ internal sealed partial class UnderstudiesGame
 
     /// <summary>
     /// A frame's presses on the menu. Up and down (the arrows, W and S, a gamepad's d-pad or its left stick) move
-    /// the choice, and left and right (the arrows, A and D, the d-pad or the stick) the night, among those that
-    /// are open; Enter, Space or the gamepad's A or Start take the chosen entry; Esc or the gamepad's Back quits. Every one of them is a press
-    /// and never a hold, as in the program, and in the menu's first moment (<see cref="MenuGuardTime"/>) the
-    /// choice moves and nothing else is done.
+    /// the choice; Enter, Space or the gamepad's A or Start take the chosen entry; Esc or the gamepad's Back
+    /// quits. Every one of them is a press and never a hold, as in the program, and in the menu's first moment
+    /// (<see cref="MenuGuardTime"/>) the choice moves and nothing else is done.
     /// </summary>
-    private void ChooseOnTheMenu(KeyboardState keys, GamePadState pad)
+    private void ChooseOnTheMenu()
     {
-        // ponytail: the third copy of these two (Update, ChooseInTheProgram, here). The ladder's L4 adds a
-        // fourth screen, the poster: that is where they become one.
-        bool Pressed(Keys key) => keys.IsKeyDown(key) && !_keysBefore.IsKeyDown(key);
-        bool PadPressed(Buttons button) => pad.IsButtonDown(button) && _padBefore.IsButtonUp(button);
-
-        // A stick counts when it comes up or down, as a key does when it goes down. Pushed up it reports +Y.
-        static int Lean(GamePadState pad) =>
-            pad.ThumbSticks.Left.Y > StickLean ? -1 : pad.ThumbSticks.Left.Y < -StickLean ? 1 : 0;
-        static int LeanAcross(GamePadState pad) =>
-            pad.ThumbSticks.Left.X > StickLean ? 1 : pad.ThumbSticks.Left.X < -StickLean ? -1 : 0;
-
-        int leanAcross = LeanAcross(pad);
-        int across = (leanAcross != LeanAcross(_padBefore) ? leanAcross : 0)
-            + (Pressed(Keys.Right) || Pressed(Keys.D) || PadPressed(Buttons.DPadRight) ? 1 : 0)
-            - (Pressed(Keys.Left) || Pressed(Keys.A) || PadPressed(Buttons.DPadLeft) ? 1 : 0);
-        if (across != 0)
-        {
-            int[] open = [.. Unlocked];
-            ChooseTheNight(open[Math.Clamp(Array.IndexOf(open, _night ?? open[0]) + across, 0, open.Length - 1)]);
-        }
-
-        int lean = Lean(pad);
-        int step = (lean != Lean(_padBefore) ? lean : 0)
-            + (Pressed(Keys.Down) || Pressed(Keys.S) || PadPressed(Buttons.DPadDown) ? 1 : 0)
-            - (Pressed(Keys.Up) || Pressed(Keys.W) || PadPressed(Buttons.DPadUp) ? 1 : 0);
-        _chosenEntry = Math.Clamp(_chosenEntry + step, 0, Entries - 1);
+        _chosenEntry = Math.Clamp(_chosenEntry + StepDown(), 0, Entries - 1);
         if (_guardLeft > 0f)
         {
             return;
         }
 
-        // Start takes as A does: it is held on the show's first frame, so it is no edge there and goes on to
-        // nothing, as Enter.
+        // Start takes as A does, here and on the poster.
         bool taken = Pressed(Keys.Enter) || Pressed(Keys.Space) || PadPressed(Buttons.A) || PadPressed(Buttons.Start);
         if (Pressed(Keys.Escape) || PadPressed(Buttons.Back) || (taken && _chosenEntry == Quit))
         {
@@ -266,8 +227,9 @@ internal sealed partial class UnderstudiesGame
         }
         else if (taken)
         {
+            // "Perform" is the poster of the newest night that is open (plan T55): the curtain is raised there.
             // ponytail: a card's chime, which is the chime of a piece of applause picked up.
-            StartAgain();
+            ShowThePoster(_night!.Value);
             _sound.Play(TickEventKind.ApplausePickedUp);
         }
     }
@@ -350,11 +312,12 @@ internal sealed partial class UnderstudiesGame
             line += MenuSentencePitch;
         }
 
-        // The entries. What "Perform" starts is said in the tuning's numbers of now.
-        string acts = string.Create(
-            CultureInfo.InvariantCulture, $"{Tuning.ActsInPerformance} acts of {Tuning.ActLength:0.#} s");
+        // The entries. "Perform" names the night whose poster it opens.
+        string tonight = _nights.First(night => night.Number == _night) is { Name: { } itsName }
+            ? $"Night {_night}: {itsName}"
+            : $"Night {_night}";
         float top = EntriesTop;
-        foreach ((int entry, string name, string note) in new[] { (Perform, "Perform", acts), (Quit, "Quit", "Esc") })
+        foreach ((int entry, string name, string note) in new[] { (Perform, "Perform", tonight), (Quit, "Quit", "Esc") })
         {
             var topLeft = new Vector2(MenuSide, top);
             var size = new Vector2(EntryWide, entry == Perform ? FirstEntryTall : EntryTall);
@@ -375,36 +338,6 @@ internal sealed partial class UnderstudiesGame
                 FaintInk,
                 onPaper: true);
             top += size.Y + EntriesApart;
-        }
-
-        // The nights, beside "Perform": which is chosen, which are open and which are still shut.
-        IReadOnlyList<int> open = Unlocked;
-        var chip = new Vector2(MenuSide + EntryWide + NightsFromTheEntry, EntriesTop + ((FirstEntryTall - NightTall) / 2f));
-        foreach (Night night in _nights)
-        {
-            string name = $"Night {night.Number}";
-            var size = new Vector2(Wide(Face.Sentence, NightHeight, name) + (2f * NightPad), NightTall);
-            bool chosen = night.Number == _night;
-            bool shut = !open.Contains(night.Number);
-            Paper(chip, size, chosen ? Magician : shut ? CastRecording : ThrownCardFace, broken: shut);
-            if (chosen)
-            {
-                RingAbout(chip, size, ApplauseGlow);
-            }
-
-            Write(Face.Sentence, NightHeight, name, chip + (size / 2f), 0.5f, shut ? ClockStands : OutlineInk, onPaper: true);
-            chip.X += size.X + NightsApart;
-        }
-
-        if (open.Count > 1)
-        {
-            Write(
-                Face.Sentence,
-                ControlsHeight,
-                "Left and right choose the night",
-                new Vector2(MenuSide + EntryWide + NightsFromTheEntry, EntriesTop + FirstEntryTall + NightsNoteDrop),
-                0f,
-                Words);
         }
 
         Write(

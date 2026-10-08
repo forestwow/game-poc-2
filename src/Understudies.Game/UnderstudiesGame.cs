@@ -152,7 +152,8 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
     private const float ApplauseFaintest = 0.25f;
 
     // The game's words are in two faces, read from the repository's own files so that every machine shows the
-    // same (plan decision 30, T40): Pixelify Sans Bold for a card's name and, on the main menu, the title and the entries' names (plan T53), and
+    // same (plan decision 30, T40): Pixelify Sans Bold for a card's name, on the main menu the title and the
+    // entries' names (plan T53) and on the poster the night's name and a new kind's (plan T55), and
     // Atkinson Hyperlegible for a sentence, a label and every number that is read in a glance (the act, the clock, the
     // counts, what is held): at the sizes the game has, Pixelify's 5 is read as an S and its 2 as an 8. The files
     // are in the order of Face, under the fonts' folder; the game does not start without every one of them.
@@ -258,6 +259,11 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
     private Simulation _simulation;
     private Juice _juice;
     private bool _captured;
+
+    // The keys and the gamepad as this frame found them and as the frame before did: a press is the one down and
+    // the other up (Pressed, PadPressed, StepAcross, StepDown), on every screen.
+    private KeyboardState _keys;
+    private GamePadState _pad;
     private KeyboardState _keysBefore;
     private GamePadState _padBefore;
     private bool _vanishAsked;
@@ -282,6 +288,7 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
     /// <param name="night">The one night to play whatever the progress says, or null.</param>
     /// <param name="progressPath">The file of the player's progress, or null for a game that keeps none.</param>
     /// <param name="captureTheMenu">The frame is the main menu's, and no tick is played for it.</param>
+    /// <param name="captureThePoster">The frame is the poster's page of that night, and no tick is played for it.</param>
     /// <param name="spritesFolder">Where the figures' images are.</param>
     /// <param name="fontsFolder">Where the two faces' files are.</param>
     /// <param name="cardsFolder">Where the cards' pictures are.</param>
@@ -293,6 +300,7 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
         string? capturePath,
         int captureTicks,
         bool captureTheMenu,
+        int? captureThePoster,
         string spritesFolder,
         string fontsFolder,
         string cardsFolder)
@@ -308,9 +316,10 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
 
         // A capture of a show that asks for no night plays the plain tuning as it is, as before the nights; the
         // game and the menu's frame have a night, the newest that is open.
-        _night = night ?? (capturePath is not null && !captureTheMenu ? null : Unlocked[^1]);
+        _night = captureThePoster ?? night ?? (capturePath is not null && !captureTheMenu ? null : Unlocked[^1]);
         Tuning played = _night is { } number ? Night.Compose(tuning, nights, number) : tuning;
-        _simulation = capturePath is null ? NewShow(played) : new Simulation(played, CaptureSeed);
+        _seed = capturePath is null ? (ulong)DateTime.UtcNow.Ticks : CaptureSeed;
+        _simulation = new Simulation(played, _seed);
         _boxOfficeAtTheActsStart = _simulation.BoxOfficeHitPoints;
         _juice = new Juice(capturePath is null ? Random.Shared : new Random((int)CaptureSeed));
         _sound = new Sound(silent: capturePath is not null);
@@ -321,6 +330,7 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
         // the menu. The show made above stands behind the menu for its numbers and is never played: "Perform"
         // makes another.
         _onTheMenu = capturePath is null || captureTheMenu;
+        _onThePoster = captureThePoster is not null;
         _guardLeft = MenuGuardTime;
         _ = new GraphicsDeviceManager(this)
         {
@@ -399,10 +409,8 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
             return;
         }
 
-        KeyboardState keys = Keyboard.GetState();
-
-        // A key held down counts once.
-        bool Pressed(Keys key) => keys.IsKeyDown(key) && !_keysBefore.IsKeyDown(key);
+        _keys = Keyboard.GetState();
+        _pad = GamePad.GetState(PlayerIndex.One);
 
         // F5 reads tuning.json and nights.json again and the next tick runs on the new numbers, composed for the
         // night that is played or chosen. A file that does not parse, or nights without that night, leave the
@@ -428,16 +436,17 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
             _sound.Muted = !_sound.Muted;
         }
 
-        GamePadState pad = GamePad.GetState(PlayerIndex.One);
-        bool PadPressed(Buttons button) => pad.IsButtonDown(button) && _padBefore.IsButtonUp(button);
-
         // A press does one thing, by the screen and the phase this frame began in: the Space that takes "Perform"
         // finds a show when it is done, and must not be a Vanish as well; the Enter that takes a card finds the
         // stage between two acts, and must not go on as well, and the Space that takes an encore's card finds the
         // act going on, and must not be a Vanish either.
         if (_onTheMenu)
         {
-            ChooseOnTheMenu(keys, pad);
+            ChooseOnTheMenu();
+        }
+        else if (_onThePoster)
+        {
+            ChooseOnThePoster();
         }
         else if (Pressed(Keys.Escape) || PadPressed(Buttons.Back))
         {
@@ -445,15 +454,21 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
             GiveUp();
             ShowTheMenu();
         }
+        else if (Pressed(Keys.R) && _simulation.Phase is Phase.Ovation or Phase.Closed)
+        {
+            // R when the show is over is the way back to the poster (plan T55): of the night this show has just
+            // opened, or else of the night that was played.
+            ShowThePoster(_opened ?? _night!.Value);
+        }
         else if (Pressed(Keys.R))
         {
-            // R starts the same night again, on the numbers of now.
+            // R in a show starts the same night again at once, on the numbers of now.
             GiveUp();
-            StartAgain();
+            RaiseTheCurtain();
         }
         else if (IsOffered)
         {
-            ChooseInTheProgram(keys, pad);
+            ChooseInTheProgram();
         }
         else
         {
@@ -473,19 +488,19 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
             }
         }
 
-        _keysBefore = keys;
-        _padBefore = pad;
+        _keysBefore = _keys;
+        _padBefore = _pad;
 
         // The hit-stop: while the moment of a Vanish holds the world still, a frame's time is dropped. The clock
         // gets none of it and no tick is run, so the frame is drawn as the one before it was.
-        // Nothing is played under the menu: no tick, no juice, no sound of the stage.
+        // Nothing is played under the menu or the poster: no tick, no juice, no sound of the stage.
         double frameSeconds = gameTime.ElapsedGameTime.TotalSeconds;
-        if (!_onTheMenu && !_juice.Holds((float)frameSeconds))
+        if (!_onTheMenu && !_onThePoster && !_juice.Holds((float)frameSeconds))
         {
             // Between two acts the stage stands until the player goes on, and a performance that is over stands as
             // it ended until R: there Step changes nothing. In an encore and in the program it counts the offer's
             // time.
-            Vector2 move = ReadMove(keys, pad);
+            Vector2 move = ReadMove(_keys, _pad);
             int ticks = _clock.Advance(frameSeconds);
             for (int i = 0; i < ticks; i++)
             {
@@ -518,6 +533,10 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
         {
             DrawTheMenu();
         }
+        else if (_onThePoster)
+        {
+            DrawThePoster();
+        }
         else
         {
             DrawStage(alpha);
@@ -538,13 +557,18 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
 
     /// <summary>
     /// A new show, and nothing of the last one left in the view: no part of a tick owed, no Vanish asked for, the
-    /// magician facing the viewer, no card lit or shown, and no menu. What is the player's and not the show's
-    /// stays: the keys that are down, and the sound's mute. The one way a show starts: the menu's "Perform" and R.
+    /// magician facing the viewer, no card lit or shown, and no menu and no poster. What is the player's and not
+    /// the show's stays: the keys that are down, and the sound's mute. The one way a show is made: the one that
+    /// is played (<see cref="RaiseTheCurtain"/>) and the one that stands behind the menu and the poster and is
+    /// never played. With no <paramref name="seed"/> it is a show nobody has seen: its seed is the time, which
+    /// Core never reads.
     /// </summary>
-    private void StartAgain()
+    private void StartAgain(ulong? seed = null)
     {
         _onTheMenu = false;
-        _simulation = NewShow(Tuning);
+        _onThePoster = false;
+        _seed = seed ?? (ulong)DateTime.UtcNow.Ticks;
+        _simulation = new Simulation(Tuning, _seed);
         _juice = new Juice(Random.Shared);
         _clock = new SimulationClock();
         _walkClock = 0f;
@@ -560,8 +584,38 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
         _actKills.Clear();
     }
 
-    /// <summary>A show nobody has seen: its seed is the time, which Core never reads.</summary>
-    private static Simulation NewShow(Tuning tuning) => new(tuning, (ulong)DateTime.UtcNow.Ticks);
+    /// <summary>A key that went down in this frame: one held down counts once.</summary>
+    private bool Pressed(Keys key) => _keys.IsKeyDown(key) && !_keysBefore.IsKeyDown(key);
+
+    /// <summary>A button of the gamepad that went down in this frame.</summary>
+    private bool PadPressed(Buttons button) => _pad.IsButtonDown(button) && _padBefore.IsButtonUp(button);
+
+    /// <summary>
+    /// A frame's step to the side, one to the right or one to the left: the arrows, A and D, the d-pad, or the
+    /// left stick, which counts when it comes to a side as a key does when it goes down.
+    /// </summary>
+    private int StepAcross()
+    {
+        static int Lean(GamePadState pad) =>
+            pad.ThumbSticks.Left.X > StickLean ? 1 : pad.ThumbSticks.Left.X < -StickLean ? -1 : 0;
+
+        int lean = Lean(_pad);
+        return (lean != Lean(_padBefore) ? lean : 0)
+            + (Pressed(Keys.Right) || Pressed(Keys.D) || PadPressed(Buttons.DPadRight) ? 1 : 0)
+            - (Pressed(Keys.Left) || Pressed(Keys.A) || PadPressed(Buttons.DPadLeft) ? 1 : 0);
+    }
+
+    /// <summary>A frame's step down or up, as <see cref="StepAcross"/>: W and S. A stick pushed up reports +Y.</summary>
+    private int StepDown()
+    {
+        static int Lean(GamePadState pad) =>
+            pad.ThumbSticks.Left.Y > StickLean ? -1 : pad.ThumbSticks.Left.Y < -StickLean ? 1 : 0;
+
+        int lean = Lean(_pad);
+        return (lean != Lean(_padBefore) ? lean : 0)
+            + (Pressed(Keys.Down) || Pressed(Keys.S) || PadPressed(Buttons.DPadDown) ? 1 : 0)
+            - (Pressed(Keys.Up) || Pressed(Keys.W) || PadPressed(Buttons.DPadUp) ? 1 : 0);
+    }
 
     private static Vector2 ReadMove(KeyboardState keys, GamePadState pad)
     {
@@ -1350,7 +1404,7 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
     /// <summary>The faces of the game's words, in the order of <see cref="FaceFiles"/>.</summary>
     private enum Face
     {
-        /// <summary>Pixelify Sans Bold: a card's name, and the menu's title and entries.</summary>
+        /// <summary>Pixelify Sans Bold: a card's name, the menu's title and entries, and on the poster the night's name and a new kind's.</summary>
         Heading,
 
         /// <summary>Atkinson Hyperlegible: a sentence, and a number that is read in a glance.</summary>
