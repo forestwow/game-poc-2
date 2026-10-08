@@ -12,7 +12,16 @@ public enum Phase
     /// <summary>An act is being played.</summary>
     Act,
 
-    /// <summary>An act is over and the next has not begun: the world stands until <see cref="Simulation.GoOn"/>.</summary>
+    /// <summary>
+    /// An act is over and its applause has paid for cards: the world stands while the program offers them, until
+    /// <see cref="Simulation.Pick"/> or the end of the program's time. An act that picked up nothing has no program.
+    /// </summary>
+    Program,
+
+    /// <summary>
+    /// An act is over, and its card taken if it earned one, and the next has not begun: the world stands until
+    /// <see cref="Simulation.GoOn"/>.
+    /// </summary>
     BetweenActs,
 
     /// <summary>The last act was played to its end: the performance is over, in a standing ovation.</summary>

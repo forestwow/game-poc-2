@@ -11,6 +11,9 @@ public enum RngStream : ulong
 
     /// <summary>Where along its door each critic enters.</summary>
     DoorPlaces = 2,
+
+    /// <summary>Which cards each program offers.</summary>
+    Program = 3,
 }
 
 /// <summary>

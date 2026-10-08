@@ -59,5 +59,12 @@
   "applauseTime": 4,
   "applausePickUpReach": 0.4,
   "applauseFirstThreshold": 0.15,
-  "applauseSecondThreshold": 0.35
+  "applauseSecondThreshold": 0.35,
+  "programTime": 12,
+  "cardDamage": 0.5,
+  "cardAttackSpeed": 0.2,
+  "cardRange": 1.5,
+  "cardVanishCooldown": 0.25,
+  "cardChorusDamage": 0.5,
+  "cardChorusChance": 0.2
 }

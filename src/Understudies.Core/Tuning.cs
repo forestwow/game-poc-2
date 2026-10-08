@@ -78,6 +78,24 @@ namespace Understudies.Core;
 /// The share of an act's enemies, from 0 to 1, that its applause has to reach for the first band.
 /// </param>
 /// <param name="ApplauseSecondThreshold">The same for the second band.</param>
+/// <param name="ProgramTime">Seconds the program waits for a pick before it takes its leftmost card.</param>
+/// <param name="CardDamage">The hit points one damage card adds to what a thrown card takes off a critic.</param>
+/// <param name="CardAttackSpeed">
+/// What one attack speed card adds to the rate of the throw, as a share of the rate without cards: with 0.2 one
+/// card makes the time from throw to throw the cooldown over 1.2, and two over 1.4.
+/// </param>
+/// <param name="CardRange">The units one range card adds to the throw's range.</param>
+/// <param name="CardVanishCooldown">
+/// What one Vanish cooldown card adds to the rate at which the Vanish comes back, counted as
+/// <paramref name="CardAttackSpeed"/> is.
+/// </param>
+/// <param name="CardChorusDamage">
+/// The hit points one chorus card adds to what a card thrown by an understudy takes off a critic.
+/// </param>
+/// <param name="CardChorusChance">
+/// The chance, from 0 to 1, that a place of an offer of the second band is the chorus card and not a self card,
+/// while the offer has none yet.
+/// </param>
 public sealed record Tuning(
     float ActLength,
     int ActsInPerformance,
@@ -114,7 +132,14 @@ public sealed record Tuning(
     float ApplauseTime,
     float ApplausePickUpReach,
     float ApplauseFirstThreshold,
-    float ApplauseSecondThreshold)
+    float ApplauseSecondThreshold,
+    float ProgramTime,
+    float CardDamage,
+    float CardAttackSpeed,
+    float CardRange,
+    float CardVanishCooldown,
+    float CardChorusDamage,
+    float CardChorusChance)
 {
     // ponytail: the serializer reads the types by reflection; a trimmed or AOT build needs a source-generated context.
     private static readonly JsonSerializerOptions Options = new()

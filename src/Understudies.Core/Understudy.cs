@@ -8,15 +8,23 @@ namespace Understudies.Core;
 /// </summary>
 public sealed class Understudy
 {
-    internal Understudy(int act, IReadOnlyList<Vector2> route, IReadOnlyList<(int Tick, Vector2 Place)> vanishes)
+    internal Understudy(
+        int act, IReadOnlyList<Vector2> route, IReadOnlyList<(int Tick, Vector2 Place)> vanishes, SelfCards cards)
     {
         Act = act;
+        Cards = cards;
         Route = route;
         Vanishes = vanishes;
     }
 
     /// <summary>The number of the act it came from: the first is 1.</summary>
     public int Act { get; }
+
+    /// <summary>
+    /// The self cards the magician had in that act: the understudy throws by them for ever, whatever the magician
+    /// takes later.
+    /// </summary>
+    public SelfCards Cards { get; }
 
     /// <summary>
     /// Where the magician stood after each tick of that act, from its first: as many places as the act was played
