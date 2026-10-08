@@ -31,6 +31,7 @@ public sealed class Simulation(Tuning tuning, ulong seed)
     private Vector2 _facing = Vector2.UnitY;
     private int _ticksToNextVanish;
     private int _ticksInvulnerable;
+    private int _curtainTicksLeft = Ticks(tuning.CurtainTime);
 
     /// <summary>
     /// The numbers the rules run on. New ones may be set between ticks: the state stays as it is and the next tick
@@ -39,14 +40,15 @@ public sealed class Simulation(Tuning tuning, ulong seed)
     public Tuning Tuning { get; set; } = tuning;
 
     /// <summary>
-    /// Where the performance stands. A closed show is closed whatever its act's timer says; an act whose time has
-    /// run out is over, and after the last act of the performance comes the ovation. Only in an act does
-    /// <see cref="Step"/> change anything.
+    /// Where the performance stands. A closed show is closed whatever its act's timer says; every act begins with
+    /// its curtain; an act whose time has run out is over, and after the last act of the performance comes the
+    /// ovation. Only in an act does <see cref="Step"/> change anything but the curtain's own time.
     /// </summary>
     // ponytail: the phase is read off the other state and not kept, so a reload of the tuning with another number of
     // acts can move it without a tick (an ovation back to between two acts). Keep it as state if that ever matters.
     public Phase Phase =>
         ShowClosed ? Phase.Closed
+        : _curtainTicksLeft > 0 ? Phase.Curtain
         : ActTicksLeft > 0 ? Phase.Act
         : Act < Tuning.ActsInPerformance ? Phase.BetweenActs
         : Phase.Ovation;
@@ -58,6 +60,13 @@ public sealed class Simulation(Tuning tuning, ulong seed)
     /// What the act has left of its time, in ticks: all of its length when it begins, and nothing when it is over.
     /// </summary>
     public int ActTicksLeft { get; private set; } = Ticks(tuning.ActLength);
+
+    /// <summary>
+    /// How much of the curtain's time is left, as a share of the whole: 1 when it rises, and 0 when the act is
+    /// played.
+    /// </summary>
+    public float CurtainLeft =>
+        _curtainTicksLeft == 0 ? 0f : MathF.Min(1f, (float)_curtainTicksLeft / Ticks(Tuning.CurtainTime));
 
     /// <summary>The middle of the magician's circle on the floor, after the last tick.</summary>
     public Vector2 MagicianPosition { get; private set; } = tuning.MagicianMark;
@@ -108,12 +117,19 @@ public sealed class Simulation(Tuning tuning, ulong seed)
     public bool ShowClosed => BoxOfficeHitPoints <= 0f || MagicianHasFallen;
 
     /// <summary>
-    /// Plays one tick of an act. Between two acts and when the performance is over the world stands: the tick
-    /// reports nothing and changes nothing.
+    /// Plays one tick of an act. While the curtain is up the tick only counts the curtain's time: nothing moves,
+    /// strikes or is released, the act's own time stands and the input is not taken, nor kept for later. Between
+    /// two acts and when the performance is over the world stands: the tick reports nothing and changes nothing.
     /// </summary>
     public void Step(MagicianInput input)
     {
         _events.Clear();
+        if (Phase == Phase.Curtain)
+        {
+            _curtainTicksLeft--;
+            return;
+        }
+
         if (Phase != Phase.Act)
         {
             return;
@@ -164,9 +180,9 @@ public sealed class Simulation(Tuning tuning, ulong seed)
     }
 
     /// <summary>
-    /// Between two acts, begins the next one: the magician is whole and on its mark, facing the audience, with the
-    /// Vanish ready. Everything else on the stage is as the last act left it, the critics too (plan decision 17).
-    /// In any other phase this does nothing.
+    /// Between two acts, begins the next one, with its curtain: the magician is whole and on its mark, facing the
+    /// audience, with the Vanish ready. Everything else on the stage is as the last act left it, the critics too
+    /// (plan decision 17). In any other phase this does nothing.
     /// </summary>
     public void GoOn()
     {
@@ -188,8 +204,21 @@ public sealed class Simulation(Tuning tuning, ulong seed)
             understudy.TicksToNextThrow = 0;
         }
 
+        // Nor is there anything behind a critic or a card: the view draws nothing of the next act from where the
+        // last tick of the old one found them.
+        foreach (Critic critic in _critics)
+        {
+            critic.PreviousPosition = critic.Position;
+        }
+
+        foreach (ThrownCard card in _thrownCards)
+        {
+            card.PreviousPosition = card.Position;
+        }
+
         Act++;
         ActTicksLeft = Ticks(Tuning.ActLength);
+        _curtainTicksLeft = Ticks(Tuning.CurtainTime);
 
         // Both positions: there is nothing between where the magician stood and the mark for the view to draw.
         MagicianPosition = Tuning.MagicianMark;
@@ -237,6 +266,7 @@ public sealed class Simulation(Tuning tuning, ulong seed)
         hasher.AddInt((int)Phase);
         hasher.AddInt(Act);
         hasher.AddInt(ActTicksLeft);
+        hasher.AddInt(_curtainTicksLeft);
         AddPoint(MagicianPosition);
         AddPoint(_facing);
         hasher.AddInt(_ticksToNextVanish);

@@ -18,9 +18,12 @@ public class ThrownCardTests
     /// hour away, and no critic turns on the magician. The second card is an hour away too, and a card flies one
     /// unit a tick. The stage has no back wall: its floor starts at the top edge, where the door is, so a test
     /// can put the magician right below the door or in the edge itself, where a wall would not let it stand.
+    /// The curtain has no length, which is no curtain: these tests count their ticks from the first
+    /// tick of an act, and the curtain has tests of its own.
     /// </summary>
     private Tuning Scene { get; } = CommittedTuning.Parse() with
     {
+        CurtainTime = 0f,
         StageFloorTop = 0f,
         StageDoors = [Door],
         StageDoorWidth = 0f,

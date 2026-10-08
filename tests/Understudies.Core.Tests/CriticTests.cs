@@ -8,9 +8,15 @@ public class CriticTests
 
     /// <summary>
     /// The committed numbers with a magician that reaches nobody and that no critic turns on: these are the critics
-    /// left to themselves.
+    /// left to themselves. The curtain has no length, which is no curtain: these tests count their ticks from the first
+    /// tick of an act, and the curtain has tests of its own.
     /// </summary>
-    private Tuning Tuning { get; } = CommittedTuning.Parse() with { ThrowRange = 0f, CriticTurnRadius = 0f };
+    private Tuning Tuning { get; } = CommittedTuning.Parse() with
+    {
+        CurtainTime = 0f,
+        ThrowRange = 0f,
+        CriticTurnRadius = 0f,
+    };
 
     [Test]
     public void Step_TheFirstTick_ACriticEntersAtTheFirstDoor()

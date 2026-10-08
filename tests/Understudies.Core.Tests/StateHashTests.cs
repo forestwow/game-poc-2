@@ -4,7 +4,11 @@ namespace Understudies.Core.Tests;
 
 public class StateHashTests
 {
-    private Tuning Tuning { get; } = CommittedTuning.Parse();
+    /// <summary>
+    /// The committed numbers. The curtain has no length, which is no curtain: these tests count their ticks from the first
+    /// tick of an act, and the curtain has tests of its own.
+    /// </summary>
+    private Tuning Tuning { get; } = CommittedTuning.Parse() with { CurtainTime = 0f };
 
     /// <summary>
     /// A show in which everything happens at once: the box office stands just inside the first door, so a critic

@@ -23,10 +23,12 @@ public class ActTests
     /// stage, to a box office it touches 17.5 units below the door: it strikes on the nineteenth tick and every half
     /// second after, one of the box office's thousand hit points a strike. The second critic is an hour away. The
     /// magician is far from all of it on <see cref="Mark"/>, throws at nobody, and no critic turns on it; a Vanish
-    /// takes it six units.
+    /// takes it six units. The curtain has no length, which is no curtain: these tests count their ticks from the first
+    /// tick of an act, and the curtain has tests of its own.
     /// </summary>
     private Tuning Scene { get; } = CommittedTuning.Parse() with
     {
+        CurtainTime = 0f,
         ActLength = 2f,
         ActsInPerformance = 3,
         StageFloorTop = 0f,
@@ -203,8 +205,10 @@ public class ActTests
         // nobody turning on the magician, which throws from its mark beside the box office: cards so slow that one
         // is in the air when the act ends. Ten ticks before twenty seconds are up, a Vanish that goes nowhere leaves
         // its cloud on the critics nearest the mark. One show's act ends there; the other's is twice as long.
+        // No curtain: it would stand between the two acts of one show and not in the one act of the other.
         Tuning tuning = CommittedTuning.Parse() with
         {
+            CurtainTime = 0f,
             CriticEntryInterval = 0.7f,
             CriticTurnRadius = 0f,
             ThrownCardSpeed = 1.2f,

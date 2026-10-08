@@ -6,7 +6,11 @@ public class SimulationTests
 {
     private const float Tolerance = 1e-4f;
 
-    private Tuning Tuning { get; } = CommittedTuning.Parse();
+    /// <summary>
+    /// The committed numbers. The curtain has no length, which is no curtain: these tests count their ticks from the first
+    /// tick of an act, and the curtain has tests of its own.
+    /// </summary>
+    private Tuning Tuning { get; } = CommittedTuning.Parse() with { CurtainTime = 0f };
 
     [Test]
     public void Step_NoInput_TheMagicianStaysOnTheMark()
