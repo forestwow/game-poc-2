@@ -12,10 +12,9 @@ namespace Understudies.Game;
 // The base class is spelled out because `Game` alone means this namespace here.
 internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
 {
-    // The window the game opens in is the sprites' own measure: a sprite pixel is one screen pixel in it, and two
-    // in a window twice as wide.
-    private const int WindowWidth = 1024;
-    private const int WindowHeight = 576;
+    // The window the game opens in, and the size of a captured frame (plan T42).
+    private const int WindowWidth = 1280;
+    private const int WindowHeight = 720;
     private const float MagicianHeight = 3f;
 
     // The box office's bar is this far above its roof: clear of the critics that stand behind it.

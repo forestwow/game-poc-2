@@ -28,7 +28,9 @@ internal sealed partial class UnderstudiesGame
     private const float PanelRaise = 0.4f;
     private const float PanelFrame = 0.2f;
 
-    private const float NameHeight = 1.2f;
+    // A card's name is Pixelify Sans, which is crisp at 28 screen pixels and not at 32: 1.05 units in a window
+    // 1280 wide.
+    private const float NameHeight = 1.05f;
     private const float SmallWordsHeight = 0.8f;
 
     // The flavour is the smaller face, under the name; what the card does is the larger, under that, and starts
