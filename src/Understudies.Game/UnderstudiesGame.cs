@@ -12,13 +12,19 @@ namespace Understudies.Game;
 // The base class is spelled out because `Game` alone means this namespace here.
 internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
 {
-    private const int WindowWidth = 1280;
-    private const int WindowHeight = 720;
+    // The window the game opens in is the sprites' own measure: a sprite pixel is one screen pixel in it, and two
+    // in a window twice as wide.
+    private const int WindowWidth = 1024;
+    private const int WindowHeight = 576;
     private const float MagicianHeight = 3f;
-    private const float CriticBodyHeight = 1.4f;
-    private const float CriticHeadSize = 0.6f;
-    private const float StagehandBodyHeight = 0.9f;
-    private const float StagehandHeadSize = 0.5f;
+
+    // The box office's bar is this far above its roof: clear of the critics that stand behind it.
+    private const float BoxOfficeBarLift = 2f;
+
+    // The sprites are pixel art drawn to one measure: the magician's 64 pixels are its three units.
+    private const float SpritePixelsPerUnit = 64f / MagicianHeight;
+    private const float WalkFramesPerSecond = 12f;
+    private const float ShadowOpacity = 0.3f;
     private const float ThrownCardWidth = 0.5f;
     private const float ThrownCardHeight = 0.35f;
 
@@ -79,19 +85,12 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
     private static readonly Color Floor = new(96, 74, 58);
     private static readonly Color OpenDoor = new(222, 180, 104);
     private static readonly Color ShutDoor = new(66, 50, 42);
-    private static readonly Color BoxOffice = new(150, 44, 52);
     private static readonly Color HitPoints = new(132, 204, 110);
     private static readonly Color HitPointsLost = new(30, 22, 30);
     private static readonly Color Magician = new(250, 226, 120);
     private static readonly Color VanishBar = new(150, 214, 236);
     private static readonly Color CloudPuff = new(236, 232, 244);
-    private static readonly Color CriticBody = new(62, 88, 156);
     private static readonly Color CriticStunnedBody = new(168, 180, 212);
-    private static readonly Color CriticHead = new(226, 216, 200);
-
-    // A stagehand is told from a critic at a glance: shorter and narrower, and rust where a critic is blue.
-    private static readonly Color StagehandBody = new(226, 112, 52);
-    private static readonly Color StagehandStunnedBody = new(240, 200, 176);
     private static readonly Color ThrownCardFace = new(250, 246, 236);
     private static readonly Color ScrapOfPaper = new(244, 238, 222);
     private static readonly Color Words = new(236, 228, 210);
@@ -122,11 +121,16 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
     private readonly string? _capturePath;
     private readonly int _captureTicks;
 
-    // The art spike (plan T07b): null draws every figure as shapes.
-    private readonly string? _artFolder;
+    private readonly string _spritesFolder;
 
-    // By Figure: the image and the part of it that is not empty. A figure that has none is drawn as shapes.
-    private readonly (Texture2D Image, Rectangle Opaque)?[] _sprites = new (Texture2D, Rectangle)?[4];
+    // By Figure and then by Facing; a figure with one view has that one alone.
+    private readonly Sheet[][] _sheets = new Sheet[4][];
+
+    // The view's own time, in seconds: what a walk's frames are counted by.
+    private float _walkClock;
+
+    // Where the magician last went: it keeps facing there while it stands.
+    private Vector2 _magicianToward = Vector2.UnitY;
     private readonly Sound _sound;
     private Simulation _simulation;
     private Juice _juice;
@@ -145,10 +149,10 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
     private FontSystem? _fonts;
 
     /// <summary>With a <paramref name="capturePath"/> the game does not play: it saves one frame there and exits.</summary>
-    /// <param name="artFolder">Where the figures' images are; null draws them as shapes.</param>
-    public UnderstudiesGame(Tuning tuning, string? capturePath, int captureTicks, string? artFolder)
+    /// <param name="spritesFolder">Where the figures' images are.</param>
+    public UnderstudiesGame(Tuning tuning, string? capturePath, int captureTicks, string spritesFolder)
     {
-        _artFolder = artFolder;
+        _spritesFolder = spritesFolder;
         _simulation = capturePath is null ? NewShow(tuning) : new Simulation(tuning, CaptureSeed);
         _juice = new Juice(capturePath is null ? Random.Shared : new Random((int)CaptureSeed));
         _sound = new Sound(silent: capturePath is not null);
@@ -175,12 +179,16 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
         _pixel = new Texture2D(GraphicsDevice, 1, 1);
         _pixel.SetData([Color.White]);
 
-        if (_artFolder is not null)
-        {
-            _sprites[(int)Figure.Magician] = ReadSprite("magician.png");
-            _sprites[(int)Figure.Critic] = ReadSprite("critic.png");
-            _sprites[(int)Figure.BoxOffice] = ReadSprite("box-office.png");
-        }
+        // A walk is a sheet of three rows of three frames, a file pixel to a sprite pixel. The side view faces
+        // right. The stagehand has one walk, toward the viewer, and the box office is one picture as the tool
+        // returned it: twelve file pixels to one of its own, drawn six to a sprite pixel so that it is as wide as
+        // its four units. ponytail: its pixels are twice the figures'; plan T07d makes the set and may make it anew.
+        _sheets[(int)Figure.Magician] =
+            [ReadSheet("magician-down.png", 3), ReadSheet("magician-up.png", 3), ReadSheet("magician-side.png", 3)];
+        _sheets[(int)Figure.Critic] =
+            [ReadSheet("critic-down.png", 3), ReadSheet("critic-up.png", 3), ReadSheet("critic-side.png", 3)];
+        _sheets[(int)Figure.Stagehand] = [ReadSheet("stagehand-down.png", 3)];
+        _sheets[(int)Figure.BoxOffice] = [ReadSheet("box-office.png", 1, block: 6f)];
 
         if (FontFiles.FirstOrDefault(File.Exists) is { } fontFile)
         {
@@ -288,6 +296,7 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
             // The juice goes on whatever the phase: between two acts, as after the show, what flew still settles,
             // a flash ends and a shaken stage comes to rest, while the simulation stands.
             _juice.Advance((float)frameSeconds);
+            _walkClock += (float)frameSeconds;
         }
 
         _takenLeft = MathF.Max(0f, _takenLeft - (float)frameSeconds);
@@ -398,6 +407,7 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
             // shows the scraps and the flashes that would be on the screen at that moment. Nothing holds a capture
             // still: it is counted in ticks.
             _juice.Advance(1f / second);
+            _walkClock += 1f / second;
         }
 
         using var frame = new RenderTarget2D(GraphicsDevice, WindowWidth, WindowHeight);
@@ -428,7 +438,8 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
         GraphicsDevice.Clear(Surround);
 
         // The back wall, the floor below it and what lies flat on the floor.
-        _spriteBatch.Begin(transformMatrix: worldToScreen);
+        // Every batch that draws a sprite takes its pixels as they are: a sprite is never smoothed.
+        _spriteBatch.Begin(samplerState: SamplerState.PointClamp, transformMatrix: worldToScreen);
         var floorTopLeft = new Vector2(0f, Tuning.StageFloorTop);
         var across = new Vector2(Tuning.StageSize.X + (2f * past.X), 0f);
         Fill(-past, across with { Y = Tuning.StageFloorTop + past.Y }, BackWall);
@@ -481,7 +492,7 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
         _spriteBatch.End();
 
         // What stands on the floor: the lower on the screen, the later it is drawn (Depth says how late).
-        _spriteBatch.Begin(SpriteSortMode.FrontToBack, transformMatrix: worldToScreen);
+        _spriteBatch.Begin(SpriteSortMode.FrontToBack, samplerState: SamplerState.PointClamp, transformMatrix: worldToScreen);
 
         // The box office is drawn from halfway between the middle of its circle and the circle's front. A critic
         // that touches the circle from in front then overlaps the foot of the box, one at a side stands against its
@@ -493,19 +504,35 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
         const float hair = 0.001f;
         DrawFigure(Figure.BoxOffice, boxOfficeFeet - new Vector2(0f, hair), white: _juice.BoxOfficeWhite);
         Vector2 magicianFeet = Vector2.Lerp(_simulation.MagicianPreviousPosition, _simulation.MagicianPosition, alpha);
+        Vector2 magicianStep = _simulation.MagicianPosition - _simulation.MagicianPreviousPosition;
+        if (magicianStep != Vector2.Zero)
+        {
+            _magicianToward = magicianStep;
+        }
+
         DrawFigure(
-            Figure.Magician, magicianFeet, white: _juice.MagicianWhite, fallen: _simulation.MagicianHasFallen);
+            Figure.Magician,
+            magicianFeet,
+            white: _juice.MagicianWhite,
+            fallen: _simulation.MagicianHasFallen,
+            toward: _magicianToward,
+            walking: magicianStep != Vector2.Zero);
         foreach (Understudy understudy in _simulation.Understudies)
         {
-            // The magician's own figure through a treatment, and never a figure of its own: tinted by the act it
-            // came from and half there. The magician is the one bright figure on the stage.
+            // The magician's own figure through a treatment, and never a figure of its own: washed with the
+            // colour of the act it came from and half there. It walks as its route goes, out of step with the
+            // understudy of the act before.
             if (understudy.IsOnStage)
             {
+                Vector2 step = understudy.Position - understudy.PreviousPosition;
                 DrawFigure(
                     Figure.Magician,
                     Feet(understudy, alpha),
                     opacity: UnderstudyOpacity,
-                    tint: UnderstudyTints[(understudy.Act - 1) % UnderstudyTints.Length]);
+                    tint: UnderstudyTints[(understudy.Act - 1) % UnderstudyTints.Length],
+                    toward: step,
+                    walking: step != Vector2.Zero,
+                    beat: understudy.Act * 4);
             }
         }
 
@@ -515,7 +542,16 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
             // ponytail: the view knows the kinds by their places in enemyKinds, the critic first and the stagehand
             // second. A third kind is drawn as a stagehand until it has a figure of its own.
             Figure figure = critic.Kind == 0 ? Figure.Critic : Figure.Stagehand;
-            DrawFigure(figure, feet, pale: critic.IsStunned, white: _juice.CriticWhite(critic.Id));
+            // A critic that stands is at its work: it faces the box office.
+            Vector2 step = critic.Position - critic.PreviousPosition;
+            DrawFigure(
+                figure,
+                feet,
+                pale: critic.IsStunned,
+                white: _juice.CriticWhite(critic.Id),
+                toward: step != Vector2.Zero ? step : Tuning.BoxOfficePosition - critic.Position,
+                walking: step != Vector2.Zero,
+                beat: critic.Id);
         }
 
         foreach (ThrownCard card in _simulation.ThrownCards)
@@ -580,7 +616,7 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
 
         var bar = new Vector2(Tuning.BoxOfficeSize, 0.4f);
         Vector2 barTopLeft = boxOfficeFeet
-            - new Vector2(bar.X / 2f, Tuning.BoxOfficeSize + CriticBodyHeight + CriticHeadSize + bar.Y);
+            - new Vector2(bar.X / 2f, Tuning.BoxOfficeSize + BoxOfficeBarLift + bar.Y);
         FillBar(barTopLeft, bar, _simulation.BoxOfficeHitPoints / Tuning.BoxOfficeHitPoints, HitPoints);
 
         // The magician has two small bars, told apart by place and by colour. Its hit points are under its feet, in
@@ -786,17 +822,20 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
 
     /// <summary>
     /// The one call that draws a figure. Whatever is asked of a figure's look is asked of this call, and nothing
-    /// outside it knows that a figure is rectangles: no flash, no body and no fade paints over a figure with a
-    /// shape of its own. When figures become sprites (T07c) the five things asked here must go on working:
-    /// <paramref name="pale"/> is a tint; <paramref name="white"/> is a white copy of the sprite drawn over it,
-    /// that thick, since a tint can only darken; <paramref name="fallen"/> is the sprite laid on its side, or a
-    /// sprite of its own; <paramref name="opacity"/> is all that is drawn of the figure, that much see-through; and
-    /// <paramref name="tint"/> is the colour an understudy's sprite is multiplied by.
+    /// outside it knows how a figure is drawn: no flash, no body and no fade paints over a figure with a shape of
+    /// its own. A figure is a frame of a sprite sheet, drawn at a whole number of screen pixels to a sprite pixel
+    /// and from a whole screen pixel, with a shadow on the floor under it while it stands.
     /// </summary>
     /// <param name="pale">A stunned critic: it has gone pale all over.</param>
-    /// <param name="white">The flash of a figure that was hurt a moment ago: how far to white, from 0 to 1.</param>
+    /// <param name="white">The flash of a figure that was hurt a moment ago, from 0 to 1: a white copy of the
+    /// sprite drawn over it that thick, since a tint can only darken.</param>
     /// <param name="fallen">Lying flat where <paramref name="feet"/> is, and not standing on it.</param>
-    /// <param name="tint">An understudy: the magician's figure in the colour of the act it came from.</param>
+    /// <param name="opacity">All that is drawn of the figure is that much see-through.</param>
+    /// <param name="tint">An understudy: the colour of the act it came from, washed over the magician's figure.</param>
+    /// <param name="toward">Where the figure faces: toward the viewer when this is nothing.</param>
+    /// <param name="walking">Its walk goes through its frames, while an act is played.</param>
+    /// <param name="beat">Which frame of the walk it is on when the clock is at nothing: two figures with
+    /// different beats are out of step.</param>
     private void DrawFigure(
         Figure figure,
         Vector2 feet,
@@ -804,90 +843,83 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
         float white = 0f,
         bool fallen = false,
         float opacity = 1f,
-        Color? tint = null)
+        Color? tint = null,
+        Vector2 toward = default,
+        bool walking = false,
+        int beat = 0)
     {
-        // A fallen figure is as long on the floor as it stood tall, with its middle where its feet were.
-        float tall = figure switch
-        {
-            Figure.Magician => MagicianHeight,
-            Figure.Critic => CriticBodyHeight + CriticHeadSize,
-            Figure.Stagehand => StagehandBodyHeight + StagehandHeadSize,
-            _ => Tuning.BoxOfficeSize,
-        };
+        // Sideways when it goes more across than up or down. The side view faces right and is mirrored for left.
+        bool sideways = MathF.Abs(toward.X) > MathF.Abs(toward.Y);
+        Facing facing = sideways ? Facing.Side : toward.Y < 0f ? Facing.Up : Facing.Down;
+        Sheet[] views = _sheets[(int)figure];
+        Sheet sheet = views[fallen ? 0 : Math.Min((int)facing, views.Length - 1)];
+        bool mirrored = sideways && toward.X < 0f && !fallen && views.Length > 1;
+        int frame = walking && !fallen && _simulation.Phase == Phase.Act
+            ? (int)(((_walkClock * WalkFramesPerSecond) + beat) % (sheet.Columns * sheet.Columns))
+            : 0;
+        var source = new Rectangle(
+            sheet.First.X + (frame % sheet.Columns * sheet.First.Width),
+            sheet.First.Y + (frame / sheet.Columns * sheet.First.Height),
+            sheet.First.Width,
+            sheet.First.Height);
 
-        if (_sprites[(int)figure] is var (image, opaque))
+        // A sprite pixel is a whole number of screen pixels, the nearest to its measure that the window gives.
+        // ponytail: a figure is so up to a third smaller or larger than its units say, with the window's size, and
+        // larger still in a window narrower than 1024. A stage drawn to a target of its own at the sprites' measure
+        // and scaled whole would end that.
+        float pixel = MathF.Max(1f, MathF.Round(_scale / SpritePixelsPerUnit)) / _scale;
+        float unit = pixel / sheet.Block;
+        float width = source.Width * unit;
+        var onAPixel = new Vector2(MathF.Round(feet.X * _scale), MathF.Round(feet.Y * _scale)) / _scale;
+
+        if (!fallen)
         {
-            // As tall as the shapes were, and as wide as the image makes it. ponytail: the flash is not drawn on a
-            // sprite, and a tint only darkens one; the white copy and the understudy's treatment are plan T07c.
-            float unit = tall / opaque.Height;
-            float width = opaque.Width * unit;
-            Color color = (pale ? CriticStunnedBody : tint ?? Color.White) * opacity;
-            // Standing: the bottom middle of the image is on the feet. Fallen: turned onto its side, its middle
-            // where the shapes have theirs.
+            FillDisc(onAPixel, width * 0.3f, Color.Black * (ShadowOpacity * opacity), flat: 0.4f);
+        }
+
+        // Standing: the bottom middle of the frame is on the feet. Fallen: turned onto its side, lying along the
+        // floor with its middle where the feet were.
+        void Copy(Texture2D image, Color color, float depth) =>
             _spriteBatch.Draw(
                 image,
-                fallen ? feet - new Vector2(0f, width / 2f) : feet,
-                opaque,
+                fallen ? onAPixel - new Vector2(0f, width / 2f) : onAPixel,
+                source,
                 color,
                 fallen ? MathF.PI / 2f : 0f,
-                new Microsoft.Xna.Framework.Vector2(opaque.Width / 2f, fallen ? opaque.Height / 2f : opaque.Height),
+                new Microsoft.Xna.Framework.Vector2(source.Width / 2f, fallen ? source.Height / 2f : source.Height),
                 unit,
-                SpriteEffects.None,
-                Depth(feet));
-            return;
+                mirrored ? SpriteEffects.FlipHorizontally : SpriteEffects.None,
+                depth);
+
+        Copy(sheet.Image, Color.White * opacity, Depth(feet));
+
+        // A sorted batch keeps no order between two textures at one depth: what is drawn over a figure stands a
+        // hair in front of it. ponytail: a neighbour whose feet are within that hair below comes between a figure
+        // and its wash for a frame; a wash made in a shader would be the figure's own.
+        float over = MathF.Min(1f, Depth(feet) + 0.0001f);
+
+        // A tint can only darken a sprite, so an understudy's colour and a stunned critic's pallor are washed over
+        // it as the flash is.
+        if ((pale ? CriticStunnedBody : tint) is { } wash)
+        {
+            Copy(sheet.White, wash * (0.5f * opacity), over);
         }
 
-        void Part(float width, float height, Color color, float lift = 0f)
+        if (white > 0f)
         {
-            color = Color.Lerp(color, Color.White, white) * opacity;
-            if (fallen)
-            {
-                // What was `lift` above the feet is as far along the floor, and every part lies on the floor.
-                Fill(
-                    new Vector2(feet.X - (tall / 2f) + lift, feet.Y - width),
-                    new Vector2(height, width),
-                    color,
-                    Depth(feet));
-            }
-            else
-            {
-                DrawUpright(feet, width, height, color, lift);
-            }
-        }
-
-        switch (figure)
-        {
-            case Figure.Magician:
-                Part(Tuning.MagicianRadius * 2f, MagicianHeight, tint ?? Magician);
-                break;
-
-            // A body with a paler head on it, so that the critics of a crowd can be told apart.
-            case Figure.Critic:
-                // As wide as its kind's circle.
-                Part(Tuning.EnemyKinds[0].Radius * 2f, CriticBodyHeight, pale ? CriticStunnedBody : CriticBody);
-                Part(CriticHeadSize, CriticHeadSize, CriticHead, lift: CriticBodyHeight);
-                break;
-
-            // The same two parts, smaller and in its own colour, and as wide as its own kind's circle. After a
-            // reload that leaves one kind in the file a stagehand is of that kind, as the simulation has it.
-            case Figure.Stagehand:
-                float radius = Tuning.EnemyKinds[Math.Min(1, Tuning.EnemyKinds.Count - 1)].Radius;
-                Part(radius * 2f, StagehandBodyHeight, pale ? StagehandStunnedBody : StagehandBody);
-                Part(StagehandHeadSize, StagehandHeadSize, CriticHead, lift: StagehandBodyHeight);
-                break;
-
-            case Figure.BoxOffice:
-                Part(Tuning.BoxOfficeSize, Tuning.BoxOfficeSize, BoxOffice);
-                break;
+            Copy(sheet.White, Color.White * (white * opacity), over);
         }
     }
 
-    /// <summary>An image of the art folder, and the rectangle of it that anything is drawn in.</summary>
-    private (Texture2D Image, Rectangle Opaque) ReadSprite(string name)
+    /// <summary>A sheet of the sprites' folder: its picture, a white copy of it, and where its first frame is.</summary>
+    /// <param name="columns">How many frames a row has, and how many rows there are; 1 is one picture, of which the
+    /// part that is not empty is the frame.</param>
+    /// <param name="block">How many of the file's pixels are drawn to one sprite pixel.</param>
+    private Sheet ReadSheet(string name, int columns, float block = 1f)
     {
         // The batch blends colours that are already multiplied by their alpha.
         Texture2D image = Texture2D.FromFile(
-            GraphicsDevice, Path.Combine(_artFolder!, name), DefaultColorProcessors.PremultiplyAlpha);
+            GraphicsDevice, Path.Combine(_spritesFolder, name), DefaultColorProcessors.PremultiplyAlpha);
         var pixels = new Color[image.Width * image.Height];
         image.GetData(pixels);
         int left = image.Width, top = image.Height, right = -1, bottom = -1;
@@ -899,6 +931,9 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
                 (int x, int y) = (i % image.Width, i / image.Width);
                 (left, top, right, bottom) = (Math.Min(left, x), Math.Min(top, y), Math.Max(right, x), Math.Max(bottom, y));
             }
+
+            // The white copy: the same shape, as see-through, in white.
+            pixels[i] = new Color(pixels[i].A, pixels[i].A, pixels[i].A, pixels[i].A);
         }
 
         if (right < 0)
@@ -906,7 +941,12 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
             throw new InvalidDataException($"{name} is empty");
         }
 
-        return (image, new Rectangle(left, top, right - left + 1, bottom - top + 1));
+        var white = new Texture2D(GraphicsDevice, image.Width, image.Height);
+        white.SetData(pixels);
+        Rectangle first = columns == 1
+            ? new Rectangle(left, top, right - left + 1, bottom - top + 1)
+            : new Rectangle(0, 0, image.Width / columns, image.Height / columns);
+        return new Sheet(image, white, first, columns, block);
     }
 
     /// <summary>
@@ -920,7 +960,8 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
     private float Depth(Vector2 feet) => Math.Clamp(feet.Y / Tuning.StageSize.Y, 0f, 1f);
 
     /// <summary>A filled circle in world units, flat on the floor.</summary>
-    private void FillDisc(Vector2 middle, float radius, Color color)
+    /// <param name="flat">How tall it is for its width: under 1 it is a shadow's oval.</param>
+    private void FillDisc(Vector2 middle, float radius, Color color, float flat = 1f)
     {
         // Strips that lie side by side and never on one another: where two overlapped, a see-through colour would
         // show twice as thick.
@@ -930,7 +971,10 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
             // Each strip is as wide as the circle is at the strip's own middle.
             float y = ((i + 0.5f) * height) - radius;
             float halfWidth = MathF.Sqrt((radius * radius) - (y * y));
-            Fill(middle + new Vector2(-halfWidth, y - (height / 2f)), new Vector2(2f * halfWidth, height), color);
+            Fill(
+                middle + new Vector2(-halfWidth, (y - (height / 2f)) * flat),
+                new Vector2(2f * halfWidth, height * flat),
+                color);
         }
     }
 
@@ -944,6 +988,19 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
     private void FillTurned(Vector2 middle, Vector2 size, float turn, Color color, float depth = 0f) =>
         _spriteBatch.Draw(
             _pixel, middle, null, color, turn, new Microsoft.Xna.Framework.Vector2(0.5f), size, SpriteEffects.None, depth);
+
+    /// <summary>The views a figure has a sheet for, in the order the sheets are kept.</summary>
+    private enum Facing
+    {
+        Down,
+        Up,
+        Side,
+    }
+
+    /// <param name="First">The first frame; the others follow it across and then down.</param>
+    /// <param name="Block">How many of the file's pixels are one sprite pixel.</param>
+    /// <param name="Columns">How many frames a row has; there are as many rows.</param>
+    private sealed record Sheet(Texture2D Image, Texture2D White, Rectangle First, int Columns, float Block);
 
     /// <summary>What <see cref="DrawFigure"/> can draw.</summary>
     private enum Figure
