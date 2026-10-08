@@ -38,11 +38,12 @@ static string? Found(string folder, string what, params string[] files)
 }
 
 if (Found(Path.Combine("art", "ludo", "sprites"), "sprites") is not { } sprites
-    || Found("fonts", "fonts", Understudies.Game.UnderstudiesGame.FaceFiles) is not { } fonts)
+    || Found("fonts", "fonts", Understudies.Game.UnderstudiesGame.FaceFiles) is not { } fonts
+    || Found(Path.Combine("art", "ludo", "cards"), "cards' pictures", Understudies.Game.UnderstudiesGame.CardFiles) is not { } cards)
 {
     return 1;
 }
 
-using var game = new Understudies.Game.UnderstudiesGame(tuning, capturePath, captureTicks, sprites, fonts);
+using var game = new Understudies.Game.UnderstudiesGame(tuning, capturePath, captureTicks, sprites, fonts, cards);
 game.Run();
 return 0;

@@ -39,6 +39,22 @@ A figure is an ordinary theatre person or thing with one part that is something 
 
 `ludo image create --image-type sprite-vfx --art-style "16-Bit" --aspect-ratio ar_1_1 --n 2`, the effect "captured at its peak, centred, seen flat, no character, no text, no ground", then `ludo sprite animate --image-type sprite-vfx --model forge-pixel --duration 1 --frames 9 --no-loop --frame-size <32 or 64>` with a motion like "bursts outward ... and everything fades away to nothing". A burst that flies apart comes back well; a still shape (a star) hardly moves and does not fade, so the game fades it.
 
+## A card's picture
+
+A card has a picture of what it does, not an emblem (plan T47): the pierce is a line through two critics with the card out the far side, the ricochet a V that bounces off one critic to the next.
+
+`ludo image create --image-type item-icon --art-style "16-Bit" --perspective "Any perspective" --aspect-ratio ar_1_1 --n 2`, the scene and then:
+
+> Pixel art game icon with a thick dark outline and a small limited palette of black, white, red, blue-grey and gold, big bold simple shapes that read at a very small size, seen flat, centred and filling the frame, on a plain empty background, no text, no letters, no numbers, no border, no frame.
+
+- It comes back as a figure does: 768 pixels, exactly twelve to a sprite pixel from the corner, on a transparent background.
+- Say where each thing is in the frame, not what it has done. "The card has already passed through the first critic" came back with the card short of both; "one long straight line runs across the whole picture, through the chest of the first critic and of the second, and at its end on the right a card flies on" came back right. A path is asked for by its shape ("a V-shaped path, like a ball bouncing ... diagonal lines only, one sharp corner"): "a zigzag" came back as right angles.
+- The critic is described in full every time ("a short stout man in a blue-grey overcoat whose whole head is one huge white eyeball with a blue iris under a small black bowler hat"), and "complete from bowler hat to shoes" when there are three, or the outer two come back as loose eyeballs.
+- A thing is long or large only against something small: the long arm reads once a tiny critic stands at its end.
+- A scene with figures fills a third of its frame and a hand or a hat fills it, whatever "filling the frame" and "from edge to edge" ask. All nine are kept at one scale, so the scenes are small on a card: the impact on one critic is 32 by 34 sprite pixels beside an arm of 60 by 62.
+- Afterimages and motion blur come back half see-through, and one of them came back smoothed, with no pixel grid at all: look before picking.
+- Into the game: one pixel from each twelve-pixel cell (no smoothing; first check that every cell is one colour), cut to what is drawn, set in the middle of a transparent square of 62 pixels, and saved as `art/ludo/cards/<the card's name in the Card enum, lower case>.png`. `art/ludo/cards/manifest.json` says which candidate each is.
+
 ## Into the game
 
 The file goes to `art/ludo/sprites/` under the name `ReadSheet` is given in `UnderstudiesGame.LoadContent`, and the stills that were returned to `art/ludo/sprites/raw/` (the set's to `art/ludo/set/raw/`, an effect's to `art/ludo/effects/raw/`).

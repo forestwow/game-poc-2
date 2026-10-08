@@ -1,5 +1,6 @@
 using System.Globalization;
 using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using Understudies.Core;
 
@@ -41,13 +42,13 @@ internal sealed partial class UnderstudiesGame
     // Where the lines of a card are, from its top. The flavour is the smaller face, under the name; what the card
     // does is the larger, under that, and starts at one height on every card: under two lines of flavour. A line
     // of either is no wider than the card less CardMargin at each side. The foot's line is the flavour's size.
-    // The picture's place (plan S5a, T47): a square of 124 screen pixels (4.65 units: a picture of 62 sprite
-    // pixels at two screen pixels each) under the head strip, in the middle of the card's width, its top 1.95
-    // from the card's, with the name, the flavour and what the card does under it. Nothing is drawn for it today,
-    // and the words stand in the middle of the card's body, with as much room over the name as under three lines
-    // of what the card does. With the picture NameLine is 7.45, and every line under it moves with it: three
-    // lines of what the card does then end just over the foot's line.
-    private const float NameLine = 5f;
+    // The picture (plan S5a, T47) is a square of 124 screen pixels in a window 1280 wide (4.65 units: a picture
+    // of 62 sprite pixels at two screen pixels each) under the head strip, in the middle of the card's width, its
+    // top 1.95 from the card's, with the name, the flavour and what the card does under it: three lines of what
+    // the card does end just over the foot's line.
+    private const float PictureTop = 1.95f;
+    private const float PictureSide = 4.65f;
+    private const float NameLine = 7.45f;
     private const float FlavourDrop = 1f;
     private const float SentenceDrop = 2.7f;
     private const float FootLift = 0.6f;
@@ -56,11 +57,13 @@ internal sealed partial class UnderstudiesGame
     private const float SentencePitch = 0.9f;
     private const float CardMargin = 0.6f;
 
-    // Under the cards: the countdown's line, its bar in an ink rim, and the keys, each key a cap: its name in a
+    // Under the cards: the countdown's line, its bar in an ink rim on a track lighter than the dimmed boards, so
+    // that how much of the time is gone is read from the bar, and the keys, each key a cap: its name in a
     // thin cream border.
     private const float CountdownLine = 23.3f;
     private const float CountdownBarTop = 23.95f;
     private static readonly Vector2 CountdownBar = new(18f, 0.375f);
+    private static readonly Color CountdownTrack = new(96, 84, 104);
     private const float KeysLine = 24.95f;
     private const float KeyHeight = 0.825f;
     private const float KeyPad = 0.225f;
@@ -240,6 +243,7 @@ internal sealed partial class UnderstudiesGame
         var barSize = new Vector2(Pixels(CountdownBar.X), Pixels(CountdownBar.Y));
         float rim = Pixels(PaperBorder);
         Fill(bar - new Vector2(rim), barSize + new Vector2(2f * rim), OutlineInk);
+        Fill(bar, barSize, CountdownTrack);
         Fill(bar, barSize with { X = MathF.Round(barSize.X * left) }, accent);
 
         // The keys of the cards there are: one card has no choosing, and two have no 3.
@@ -306,6 +310,26 @@ internal sealed partial class UnderstudiesGame
             OutlineInk,
             onPaper: true);
 
+        // The card's picture, unsmoothed and from a whole screen pixel, in the middle of the card's width. A
+        // sprite pixel is a whole number of screen pixels where the window makes it one, as a figure's is.
+        // ponytail: elsewhere the pixels are uneven (1.6 screen pixels at 1024 wide), as DrawFigure's are. A
+        // picture drawn at the whole number below, in a smaller place, if that is seen.
+        Texture2D picture = _cardPictures[(int)card];
+        float asked = PictureSide * _scale / picture.Width;
+        float whole = MathF.Max(1f, MathF.Round(asked));
+        float pixel = MathF.Abs(asked - whole) <= WholeWithin ? whole : asked;
+        Vector2 pictureAt = OnAPixel(centre + new Vector2(0f, PictureTop));
+        _spriteBatch.Draw(
+            picture,
+            new Vector2(pictureAt.X - MathF.Round(picture.Width * pixel / 2f), pictureAt.Y),
+            null,
+            Color.White,
+            0f,
+            Microsoft.Xna.Framework.Vector2.Zero,
+            pixel,
+            SpriteEffects.None,
+            0f);
+
         // The name, no wider than the card; under it the flavour in the smaller face, and under that what the
         // card does, which is what is read first: the larger face and the darker ink.
         float room = CardSize.X - (2f * CardMargin);
@@ -350,7 +374,7 @@ internal sealed partial class UnderstudiesGame
         Write(
             Face.Sentence,
             FlavourHeight,
-            held == 0 ? $"{has} none yet" : chorus || Tuning.CardMaxCopies <= 0 ? $"{has} {held}" : $"{has} {held} of {Tuning.CardMaxCopies}",
+            held == 0 ? $"{has} none yet" : LimitOf(card) == 0 ? $"{has} {held}" : $"{has} {held} of {LimitOf(card)}",
             centre + new Vector2(0f, CardSize.Y - FootLift),
             0.5f,
             FaintInk,
@@ -446,6 +470,12 @@ internal sealed partial class UnderstudiesGame
     };
 
     /// <summary>
+    /// How many of a card may be held (plan T41), and 0 for no limit: the chorus card has none, and a tuning
+    /// whose limit is nothing has none for any.
+    /// </summary>
+    private int LimitOf(Card card) => card == Card.ChorusDamage ? 0 : Math.Max(0, Tuning.CardMaxCopies);
+
+    /// <summary>
     /// A card as the player reads it (plan decision 29; the texts are the card catalogue's): its stage name, the
     /// sentence that says what one more of it does, in the numbers of now, and its line of flavour, which says
     /// nothing of the rule.
@@ -463,7 +493,7 @@ internal sealed partial class UnderstudiesGame
         int withThis = Held(card) + 1;
 
         // "Each copy again" is not said of the last copy the limit lets the magician hold (plan T41).
-        string again = withThis == Tuning.CardMaxCopies ? string.Empty : " Each copy again.";
+        string again = withThis == LimitOf(card) ? string.Empty : " Each copy again.";
         return card switch
         {
             Card.Damage => (
