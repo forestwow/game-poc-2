@@ -24,7 +24,7 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
     // window 1280 wide, where the magician's 66 pixels are 4.95 units. What is drawn of a figure or at its chest
     // grows by it; no footprint, range or radius does. At 1 the figures are as they were before plan T42 (the
     // frames of art/frames/s2-before).
-    internal const float FiguresMeasure = 1f;
+    internal const float FiguresMeasure = 1.6f;
 
     // The box office's bar is this far above its roof: clear of the critics that stand behind it.
     private const float BoxOfficeBarLift = 2f * FiguresMeasure;
