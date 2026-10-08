@@ -122,7 +122,7 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
     private readonly string _spritesFolder;
 
     // By Figure and then by Facing; a figure with one view has that one alone.
-    private readonly Sheet[][] _sheets = new Sheet[7][];
+    private readonly Sheet[][] _sheets = new Sheet[Enum.GetValues<Figure>().Length][];
 
     // The set's two pictures that are laid side by side: the boards of the floor and the curtain of the back wall.
     private Sheet _floor = null!;
@@ -184,7 +184,7 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
         // A walk is a sheet of three rows of three frames, a file pixel to a sprite pixel. The side view faces
         // right. The stagehand has one walk, toward the viewer, and the box office is one picture as the tool
         // returned it: twelve file pixels to one of its own, drawn six to a sprite pixel so that it is as wide as
-        // its four units. ponytail: its pixels are twice the figures'; plan T07d makes the set and may make it anew.
+        // its four units.
         _sheets[(int)Figure.Magician] =
             [ReadSheet("magician-down.png", 3), ReadSheet("magician-up.png", 3), ReadSheet("magician-side.png", 3)];
         _sheets[(int)Figure.Critic] =
@@ -195,6 +195,9 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
         // The set (plan T07d). The doors are stills like the box office and drawn at its pixel size, a footlight at
         // the figures'. The floor's picture is sixteen file pixels to a sprite pixel. The curtain's own pixel is
         // twelve, and it is drawn four to a sprite pixel, which makes it as tall as the back wall.
+        // ponytail: the box office's and the doors' pixels are so twice the figures' and the curtain's three times.
+        // A still comes back from the tool at one size whatever it shows; pictures made to the figures' measure
+        // (through the tool's animation export, as the walks are) would end it.
         _sheets[(int)Figure.ShutDoor] = [ReadSheet("door-shut.png", 1, block: 6f)];
         _sheets[(int)Figure.OpenDoor] = [ReadSheet("door-open.png", 1, block: 6f)];
         _sheets[(int)Figure.Footlight] = [ReadSheet("footlight.png", 1, block: 12f)];
@@ -462,8 +465,20 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
         Lay(_curtain, new Vector2(-past.X, Tuning.StageFloorTop - curtainHeight), across with { Y = curtainHeight });
         _spriteBatch.End();
 
-        // What lies flat on the floor.
+        // What lies flat on the floor, and the doors, which are of the set and hide nobody: whoever stands at a
+        // door is drawn over it.
         _spriteBatch.Begin(samplerState: SamplerState.PointClamp, transformMatrix: worldToScreen);
+        for (int i = 0; i < Tuning.StageDoors.Count; i++)
+        {
+            // A door's foot is half its width below where its critics enter, and kept within the stage's sides: a
+            // critic comes in on its doorway. It is lit while it is open.
+            Vector2 mouth = Tuning.StageDoors[i].Position;
+            float half = Tuning.StageDoorWidth / 2f;
+            DrawFigure(
+                _simulation.DoorIsOpen(i) ? Figure.OpenDoor : Figure.ShutDoor,
+                new Vector2(Math.Clamp(mouth.X, half, Tuning.StageSize.X - half), mouth.Y + half));
+        }
+
 
         foreach (Understudy understudy in _simulation.Understudies)
         {
@@ -514,19 +529,9 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
         // office stands a hair behind its foot line, so whoever stands exactly on that line is in front.
         const float hair = 0.001f;
         DrawFigure(Figure.BoxOffice, boxOfficeFeet - new Vector2(0f, hair), white: _juice.BoxOfficeWhite);
-        for (int i = 0; i < Tuning.StageDoors.Count; i++)
-        {
-            // A door stands on the floor in front of where its critics enter, half its width before them and kept
-            // within the stage's sides: who enters comes out from behind it. It is lit while it is open.
-            Vector2 mouth = Tuning.StageDoors[i].Position;
-            float half = Tuning.StageDoorWidth / 2f;
-            DrawFigure(
-                _simulation.DoorIsOpen(i) ? Figure.OpenDoor : Figure.ShutDoor,
-                new Vector2(Math.Clamp(mouth.X, half, Tuning.StageSize.X - half), mouth.Y + half));
-        }
-
-        // The footlights, along the stage's front edge and in front of all that stands on it.
-        for (float x = FootlightGap / 2f; x < Tuning.StageSize.X; x += FootlightGap)
+        // The footlights, along the stage's front edge and in front of all that stands on it. A program writes its
+        // last line there, so they are out while one is read.
+        for (float x = FootlightGap / 2f; x < Tuning.StageSize.X && _simulation.Phase != Phase.Program; x += FootlightGap)
         {
             DrawFigure(Figure.Footlight, new Vector2(x, Tuning.StageSize.Y));
         }
@@ -943,7 +948,8 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
 
     /// <summary>
     /// A picture laid side by side over a rectangle of the stage, its first copy's corner on the stage's own corner
-    /// across, so that a shaken stage carries its boards with it. For a batch that lets a picture go round.
+    /// across, so that a shaken stage carries its boards with it. For a batch that lets a picture go round, and for
+    /// a picture that fills its file from side to side.
     /// </summary>
     private void Lay(Sheet sheet, Vector2 topLeft, Vector2 size)
     {
