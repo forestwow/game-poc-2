@@ -10,6 +10,8 @@
 
   <ItemGroup>
     <!-- The capture is played by the doors player of the guard: the one file, not a copy of it. -->
+    <!-- ponytail: the whole file ships, the orbit player and the players' runner too; the players move to a file of
+         their own that both projects take when that ever matters. -->
     <Compile Include="..\..\tests\Understudies.Core.Tests\ScriptedPlayers.cs" Link="ScriptedPlayers.cs" />
   </ItemGroup>
 

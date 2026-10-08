@@ -400,13 +400,14 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
         }
     }
 
-    /// <summary>Walks a fixed script, draws the frame it ends on and saves it as a PNG.</summary>
+    /// <summary>Plays the doors player for the capture's ticks, draws the frame it ends on and saves it as a PNG.</summary>
     private void Capture(string path)
     {
         // Nobody is here to press a key, so the capture is played by the doors player of the guard (plan decision
         // 22; `ScriptedPlayers.cs`, the tests' own file, compiled into the game as well): it goes out to the
-        // newest door, picks up its applause and takes its cards by the players' one order. The guard holds it to
-        // winning on the committed numbers, so a capture reaches every act, whatever the tuning becomes.
+        // newest door, picks up its applause and takes its cards by the players' one order. The capture's seed is one
+        // the guard plays, and on the committed numbers that performance reaches the ovation. The guard lets four
+        // seeds of twenty lose: if a retuning makes this one lose, CaptureSeed gets one that wins.
         // Every act opens with its curtain, whose ticks are counted here with the rest.
         const int second = Simulation.TicksPerSecond;
         Phase before = _simulation.Phase;
@@ -415,12 +416,11 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
             // A card is taken and the next act gone on to before the tick, and not after it, so neither takes any
             // of a capture's ticks, and a capture that ends on the tick an encore or a program opens shows that
             // screen. The pick is the simulation's own and not the view's, so no capture shows a card just taken.
-            if (_simulation.Offer.Count > 0)
-            {
-                _simulation.Pick(Core.Tests.ScriptedPlayers.Choose(_simulation.Offer));
-            }
-
+            _simulation.Pick(Core.Tests.ScriptedPlayers.Choose(_simulation.Offer));
             GoOn();
+
+            // Read again after the pick, so that an encore that opens on the tick after another is told as well.
+            before = _simulation.Phase;
             Tick(Core.Tests.ScriptedPlayers.Doors(_simulation));
 
             // Where a screen is, for whoever wants a frame of it: the console is told the tick each opens on.
@@ -428,8 +428,6 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
             {
                 Console.WriteLine($"Capture: {_simulation.Phase} in act {_simulation.Act} on tick {i + 1}");
             }
-
-            before = _simulation.Phase;
 
             // Each tick is a sixtieth of a second to the juice, as in a game that runs a tick a frame: the frame
             // shows the scraps and the flashes that would be on the screen at that moment. Nothing holds a capture
