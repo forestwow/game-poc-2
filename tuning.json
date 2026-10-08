@@ -74,15 +74,15 @@
       "name": "headliner",
       "speed": 1.5,
       "radius": 0.9,
-      "hitPoints": 300,
-      "hitPointsPerAct": 150,
-      "strikeDamage": 2,
+      "hitPoints": 30,
+      "hitPointsPerAct": 15,
+      "strikeDamage": 3,
       "cost": 1,
-      "weight": 1,
+      "weight": 0,
       "fromAct": 8,
       "turnsOnTheMagician": false,
-      "understudyDamageShare": 1,
-      "inAnAct": 0
+      "understudyDamageShare": 0.03,
+      "inAnAct": 16
     }
   ],
   "firstActBudget": 40,

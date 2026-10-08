@@ -116,7 +116,12 @@ public class WaveTests
                 }
                 else
                 {
-                    Assert.That(plan[act - 1].Select(entry => entry.Kind), Has.Some.EqualTo(kind), $"seed {seed}, act {act}");
+                    // A kind an act has a number of (plan T46: the headliner) is there that many times.
+                    int inAnAct = Tuning.EnemyKinds[kind].InAnAct;
+                    Assert.That(
+                        plan[act - 1].Count(entry => entry.Kind == kind),
+                        inAnAct > 0 ? Is.EqualTo(inAnAct) : Is.GreaterThan(0),
+                        $"seed {seed}, act {act}");
                 }
             }
         }
