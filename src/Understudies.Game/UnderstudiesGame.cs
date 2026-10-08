@@ -62,6 +62,10 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
     // every sixth place of the route to the next: a tenth of a second, under a unit at the magician's speed.
     private const float UnderstudyOpacity = 0.5f;
     private const float RouteOpacity = 0.22f;
+
+    // The moment after a Vanish in which nothing hurts the magician is seen: the magician is this much there and
+    // washed with the smoke of its cloud, and is itself again when a touch counts again.
+    private const float InvulnerableOpacity = 0.55f;
     private const float RouteWidth = 0.12f;
     private const int RouteStride = 6;
 
@@ -569,6 +573,8 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
             magicianFeet,
             white: _juice.MagicianWhite,
             fallen: _simulation.MagicianHasFallen,
+            opacity: _simulation.MagicianIsInvulnerable ? InvulnerableOpacity : 1f,
+            tint: _simulation.MagicianIsInvulnerable ? CloudPuff : null,
             toward: _magicianToward,
             walking: magicianStep != Vector2.Zero);
         foreach (Understudy understudy in _simulation.Understudies)
@@ -931,7 +937,8 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
     /// sprite drawn over it that thick, since a tint can only darken.</param>
     /// <param name="fallen">Lying flat where <paramref name="feet"/> is, and not standing on it.</param>
     /// <param name="opacity">All that is drawn of the figure is that much see-through.</param>
-    /// <param name="tint">An understudy: the colour of the act it came from, washed over the magician's figure.</param>
+    /// <param name="tint">A colour washed over the figure: an understudy's is the colour of the act it came from,
+    /// and the magician's own, in the moment nothing hurts it, the smoke's.</param>
     /// <param name="toward">Where the figure faces: toward the viewer when this is nothing.</param>
     /// <param name="walking">Its walk goes through its frames, while an act is played.</param>
     /// <param name="beat">Which frame of the walk it is on when the clock is at nothing: two figures with
