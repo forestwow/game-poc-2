@@ -18,6 +18,12 @@ namespace Understudies.Core.Tests;
 /// </param>
 /// <param name="WalkedTo">Of the pieces picked up, the others: those the magician had to go to.</param>
 /// <param name="MostCritics">The most enemies there were on the stage at once in the act, of every kind.</param>
+/// <param name="Kills">The enemies that fell to a card the magician itself threw.</param>
+/// <param name="KillsWithin3">
+/// Of those, the ones that had been on the stage for no more than three seconds of play when they fell; the two
+/// after it are the same for five seconds and for eight (plan T37: what a rule that pays only for a fresh critic
+/// would pay).
+/// </param>
 /// <param name="StateHash">The simulation's state hash at that moment.</param>
 internal readonly record struct ActRecord(
     int Entries,
@@ -29,6 +35,10 @@ internal readonly record struct ActRecord(
     int FellInReach,
     int WalkedTo,
     int MostCritics,
+    int Kills,
+    int KillsWithin3,
+    int KillsWithin5,
+    int KillsWithin8,
     ulong StateHash);
 
 /// <summary>A scripted performance played to its end: the ovation or the close.</summary>
@@ -45,8 +55,8 @@ internal sealed record Performance(
 }
 
 /// <summary>
-/// The two players that measure the design (plan T19 and decision 22), and the runner that plays a performance
-/// with one. A player is a function from what a person at the screen sees, the simulation's public surface, to
+/// The three players that measure the design (plan T19, T37 and decision 22), and the runner that plays a
+/// performance with one. A player is a function from what a person at the screen sees, the simulation's public surface, to
 /// the input of one tick: it keeps nothing between two ticks and draws nothing, so the same seed and player give
 /// the same performance. Like Core, the players use only + − × ÷ and the square root (plan decision 9).
 /// </summary>
@@ -60,10 +70,10 @@ internal static class ScriptedPlayers
     public static readonly IReadOnlyList<float> OrbitRadii = [0.5f, 3f, 5f];
 
     /// <summary>
-    /// How far from where it stands the doors player goes for a piece of applause: a second's walk, and as far
-    /// as the committed throw reaches, so that what it fells from its post it fetches. With 6 it left most of its
-    /// own applause lying, where its cards and its understudies' fell critics at the far end of the throw. From
-    /// further than this it walks back before anything else.
+    /// How far from where it stands the doors player goes for a piece of applause, at the most: a second's walk.
+    /// With 6 it left most of its own applause lying, where its cards and its understudies' fell critics at the
+    /// far end of the throw. It never goes into its doorway for one (<see cref="Doors"/>), and from further than
+    /// this it walks back before anything else. The kiter's reach from its circle is the same.
     /// </summary>
     public const float DoorsReach = 9f;
 
@@ -80,6 +90,13 @@ internal static class ScriptedPlayers
     public const float DoorsDefenceDistance = 6f;
 
     /// <summary>
+    /// The doors player's post is at its door: no further in from it than this share of the way to the box
+    /// office (plan T37). A throw's range in, as it was, put the posts of the second and third committed doors
+    /// 6.3 and 5.6 from the box office, on the floor where no fall earns applause.
+    /// </summary>
+    public const float DoorsPostShare = 1f / 3f;
+
+    /// <summary>
     /// A player is crowded, and vanishes if it can, when this many critics that turn on it are within
     /// <see cref="CrowdReach"/> of its centre and not stunned.
     /// </summary>
@@ -89,7 +106,7 @@ internal static class ScriptedPlayers
     public const float CrowdReach = 2f;
 
     /// <summary>
-    /// The one order both players pick cards by, the most wanted first: of an offer they take the card that
+    /// The one order every player picks cards by, the most wanted first: of an offer they take the card that
     /// comes first here, so the result depends on the route and not on a taste.
     /// </summary>
     public static readonly IReadOnlyList<Card> CardOrder =
@@ -97,9 +114,13 @@ internal static class ScriptedPlayers
         Card.OneMoreCard, Card.ChorusDamage, Card.Damage, Card.AttackSpeed, Card.Range, Card.VanishCooldown,
     ];
 
-    /// <summary>The place in <paramref name="offer"/> of the card that comes first in <see cref="CardOrder"/>.</summary>
-    public static int Choose(IReadOnlyList<Card> offer)
+    /// <summary>
+    /// The place in <paramref name="offer"/> of the card that comes first in <paramref name="order"/>, which is
+    /// <see cref="CardOrder"/> unless the instrument asks what another order does.
+    /// </summary>
+    public static int Choose(IReadOnlyList<Card> offer, IReadOnlyList<Card>? order = null)
     {
+        order ??= CardOrder;
         int best = 0;
         for (int place = 1; place < offer.Count; place++)
         {
@@ -111,17 +132,17 @@ internal static class ScriptedPlayers
 
         return best;
 
-        static int Wanted(Card card)
+        int Wanted(Card card)
         {
-            for (int i = 0; i < CardOrder.Count; i++)
+            for (int i = 0; i < order.Count; i++)
             {
-                if (CardOrder[i] == card)
+                if (order[i] == card)
                 {
                     return i;
                 }
             }
 
-            return CardOrder.Count;
+            return order.Count;
         }
     }
 
@@ -165,45 +186,134 @@ internal static class ScriptedPlayers
     };
 
     /// <summary>
-    /// The strategy the design wants to win (vision 4). It holds the door that opened last, standing a throw's
-    /// range inside it, so that what comes in is thrown at as it enters, and leaves the older doors to its
-    /// understudies; while a critic is at the box office it goes back and stands by the box office instead, and
-    /// returns to its door when none is (<see cref="DoorsStand"/>). It steps to a piece of applause within
-    /// <see cref="DoorsReach"/> of where it stands and goes back. It steps back from a critic that has turned
-    /// on it and is within <see cref="DoorsStepBackReach"/>, and when it is crowded all the same it vanishes
-    /// away from the crowd.
+    /// The strategy the design wants to win (vision 4). It holds the door that opened last, standing at it
+    /// (<see cref="DoorsPost"/>), so that what comes in is thrown at as it enters, and leaves the older doors to
+    /// its understudies; while a critic is at the box office it goes back and stands by the box office instead, and
+    /// returns to its door when none is (<see cref="DoorsStand"/>). It steps to a piece of applause that lies no
+    /// further from where it stands than <see cref="DoorsReach"/> and no further than its post is from its door,
+    /// and goes back: it fetches up to its door and never into the doorway, where a crowd comes in on one tick.
+    /// That is the owner's own play (plan T37): "I do not always go for a crystal at any cost, so as not to lose
+    /// life, so some of them are lost to me". It steps back from a critic that has turned on it and is within
+    /// <see cref="DoorsStepBackReach"/>, and when it is crowded all the same it vanishes away from the crowd.
     /// </summary>
     public static MagicianInput Doors(Simulation simulation)
     {
-        Vector2 position = simulation.MagicianPosition;
-
-        // Away from the middle of those upon it; from the very middle of them, back towards the box office.
-        if (IsCrowded(simulation, CrowdSize, CrowdReach, out Vector2 crowd) && simulation.VanishCooldownLeft == 0f)
+        if (Dodge(simulation) is MagicianInput dodge)
         {
-            return new MagicianInput(Away(crowd), Vanish: true);
-        }
-
-        if (IsCrowded(simulation, size: 1, DoorsStepBackReach, out Vector2 near))
-        {
-            return new MagicianInput(Direction(Away(near), out _));
+            return dodge;
         }
 
         Vector2 stand = DoorsStand(simulation);
-        Direction(position - stand, out float fromStand);
-        return fromStand <= DoorsReach && NearestApplause(simulation, stand, DoorsReach) is Vector2 piece
+        Direction(simulation.MagicianPosition - stand, out float fromStand);
+        Direction(DoorsPost(simulation) - NewestDoor(simulation).Position, out float postFromDoor);
+        float reach = MathF.Min(DoorsReach, postFromDoor);
+        return fromStand <= reach && NearestApplause(simulation, stand, reach) is Vector2 piece
             ? Walk(simulation, piece)
             : Walk(simulation, stand);
-
-        Vector2 Away(Vector2 from) =>
-            position == from ? simulation.Tuning.BoxOfficePosition - position : position - from;
     }
 
     /// <summary>
-    /// Where the doors player stands in the act that is played: a throw's range, as the tuning has it without
-    /// cards, in from the door that opened last, on the straight line to the box office, which is the way its
-    /// critics walk. Of two doors that opened together it is the later on the list.
+    /// How far outside the floor where no fall earns applause the kiter's circle lies: its radius is the
+    /// tuning's <c>applauseBoxOfficeRadius</c> and this. On the committed numbers that is a circle of 8.4, the
+    /// widest the floor has room for: the back wall is nine units from the box office's middle and the magician's
+    /// circle is kept on the floor. A wider circle is cut by the wall, and whoever walks it crawls along the wall.
+    /// </summary>
+    public const float KiterMargin = 0.4f;
+
+    /// <summary>
+    /// The rival of going out to the doors (plan T37): the player that stays as near the box office as it can
+    /// and still earns applause, and does not go to the doors. It walks round the box office on a circle just
+    /// outside the floor where no fall earns any (<see cref="KiterMargin"/>), and dodges as the doors player does
+    /// (<see cref="Dodge"/>). It steps out to a piece of applause that lies within <see cref="DoorsReach"/> of
+    /// its place on the circle and goes back, but to no piece that lies nearer an open door than the doors
+    /// player's post at that door is: the floor before a door is the doors player's. Its place on the circle is
+    /// the point of it nearest to where it is, so a piece it has set out for stays in reach until it is picked up.
+    /// </summary>
+    public static MagicianInput Kiter(Simulation simulation) => RoundTheRing(simulation, leavesTheDoors: true);
+
+    /// <summary>
+    /// The kiter without its bound, outside the guard: it fetches any piece within <see cref="DoorsReach"/> of
+    /// its place on the circle, which takes it 17.4 units from the box office and up to the second and third
+    /// doors. It is no player that stays near the box office: it follows the applause out and comes back between
+    /// two pieces. Plan T37 first took it for the kiter.
+    /// </summary>
+    public static MagicianInput Roamer(Simulation simulation) => RoundTheRing(simulation, leavesTheDoors: false);
+
+    private static MagicianInput RoundTheRing(Simulation simulation, bool leavesTheDoors)
+    {
+        if (Dodge(simulation) is MagicianInput dodge)
+        {
+            return dodge;
+        }
+
+        Tuning tuning = simulation.Tuning;
+        Vector2 centre = tuning.BoxOfficePosition;
+        float radius = tuning.ApplauseBoxOfficeRadius + KiterMargin;
+        Vector2 outward = Direction(simulation.MagicianPosition - centre, out _);
+        Vector2 place = centre + (outward * radius);
+
+        // The nearest piece in reach that is not a door's, and of two as near the one dropped first.
+        Vector2? nearest = null;
+        float nearestApart = float.PositiveInfinity;
+        foreach (Applause piece in simulation.ApplauseOnTheFloor)
+        {
+            Direction(piece.Position - place, out float fromPlace);
+            Direction(piece.Position - simulation.MagicianPosition, out float apart);
+            if (fromPlace <= DoorsReach && apart < nearestApart && !(leavesTheDoors && IsADoors(piece.Position)))
+            {
+                nearest = piece.Position;
+                nearestApart = apart;
+            }
+        }
+
+        if (nearest is Vector2 there)
+        {
+            return Walk(simulation, there);
+        }
+
+        // Round the circle as the orbit player goes, from wherever a piece or a critic has taken it.
+        var onward = new Vector2(-outward.Y, outward.X);
+        float step = tuning.MagicianSpeed / Simulation.TicksPerSecond;
+        return Walk(simulation, centre + (Direction(outward + (onward * (step / radius)), out _) * radius));
+
+        bool IsADoors(Vector2 piece)
+        {
+            for (int door = 0; door < tuning.StageDoors.Count; door++)
+            {
+                Direction(piece - tuning.StageDoors[door].Position, out float fromDoor);
+                if (simulation.DoorIsOpen(door) && fromDoor < PostFromDoor(tuning, tuning.StageDoors[door]))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// Where the doors player stands in the act that is played: at the door that opened last, in from it on the
+    /// straight line to the box office, which is the way its critics walk, by a throw's range as the tuning has
+    /// it without cards and never by more than <see cref="DoorsPostShare"/> of the way to the box office. Of two
+    /// doors that opened together it is the later on the list.
     /// </summary>
     public static Vector2 DoorsPost(Simulation simulation)
+    {
+        Tuning tuning = simulation.Tuning;
+        StageDoor newest = NewestDoor(simulation);
+        Vector2 inside = Direction(tuning.BoxOfficePosition - newest.Position, out _);
+        return newest.Position + (inside * PostFromDoor(tuning, newest));
+    }
+
+    /// <summary>How far in from <paramref name="door"/> the doors player's post at it is.</summary>
+    private static float PostFromDoor(Tuning tuning, StageDoor door)
+    {
+        Direction(tuning.BoxOfficePosition - door.Position, out float toBoxOffice);
+        return MathF.Min(tuning.ThrowRange, toBoxOffice * DoorsPostShare);
+    }
+
+    /// <summary>The door that opened last, and of two that opened together the later on the list.</summary>
+    private static StageDoor NewestDoor(Simulation simulation)
     {
         Tuning tuning = simulation.Tuning;
 
@@ -217,8 +327,7 @@ internal static class ScriptedPlayers
             }
         }
 
-        Vector2 inside = Direction(tuning.BoxOfficePosition - newest.Position, out _);
-        return newest.Position + (inside * tuning.ThrowRange);
+        return newest;
     }
 
     /// <summary>
@@ -253,9 +362,11 @@ internal static class ScriptedPlayers
     /// <summary>
     /// Plays one performance with <paramref name="player"/> to its end. In an encore it does what a person does:
     /// takes the card <see cref="Choose"/> names, at once. Between two acts it takes the program's card, at once,
-    /// and goes on.
+    /// and goes on. The cards are taken by <paramref name="order"/>, which is <see cref="CardOrder"/> unless
+    /// the instrument asks what another order does.
     /// </summary>
-    public static Performance Play(Tuning tuning, ulong seed, Func<Simulation, MagicianInput> player)
+    public static Performance Play(
+        Tuning tuning, ulong seed, Func<Simulation, MagicianInput> player, IReadOnlyList<Card>? order = null)
     {
         var simulation = new Simulation(tuning, seed);
         var acts = new List<ActRecord>();
@@ -270,13 +381,36 @@ internal static class ScriptedPlayers
         int fellInReach = 0;
         int walkedTo = 0;
         int mostCritics = 0;
+
+        // The tick of play each enemy entered on, by its id, which counts them as they enter; and how many of the
+        // magician's own kills fell within three, five and eight seconds of entering, and at all.
+        var entered = new List<int>();
+        int ticksPlayed = 0;
+        int[] kills = new int[4];
         while (true)
         {
+            ticksPlayed += simulation.Phase == Phase.Act ? 1 : 0;
             simulation.Step(player(simulation));
             mostCritics = Math.Max(mostCritics, simulation.Critics.Count);
+            foreach (Critic critic in simulation.Critics)
+            {
+                if (critic.Id >= entered.Count)
+                {
+                    entered.Add(ticksPlayed);
+                }
+            }
+
             foreach (TickEvent happened in simulation.Events)
             {
-                if (happened.Kind == TickEventKind.ApplauseDropped)
+                if (happened.Kind == TickEventKind.Kill && happened.Thrower == TickEvent.TheMagician)
+                {
+                    int age = ticksPlayed - entered[happened.CriticId];
+                    kills[0] += age <= 3 * Simulation.TicksPerSecond ? 1 : 0;
+                    kills[1] += age <= 5 * Simulation.TicksPerSecond ? 1 : 0;
+                    kills[2] += age <= 8 * Simulation.TicksPerSecond ? 1 : 0;
+                    kills[3]++;
+                }
+                else if (happened.Kind == TickEventKind.ApplauseDropped)
                 {
                     dropped++;
                     Direction(happened.Position - simulation.MagicianPosition, out float apart);
@@ -300,7 +434,7 @@ internal static class ScriptedPlayers
 
             if (simulation.Phase == Phase.Encore)
             {
-                int place = Choose(simulation.Offer);
+                int place = Choose(simulation.Offer, order);
                 taken.Add(simulation.Offer[place]);
                 simulation.Pick(place);
             }
@@ -323,6 +457,10 @@ internal static class ScriptedPlayers
                 fellInReach,
                 walkedTo,
                 mostCritics,
+                kills[3],
+                kills[0],
+                kills[1],
+                kills[2],
                 simulation.ComputeStateHash()));
             if (simulation.Phase != Phase.BetweenActs)
             {
@@ -333,7 +471,31 @@ internal static class ScriptedPlayers
             taken = [];
             inReach.Clear();
             dropped = fellInReach = walkedTo = mostCritics = 0;
+            kills = new int[4];
         }
+    }
+
+    /// <summary>
+    /// What the doors player and the kiter do before anything else, or nothing when no critic is upon them:
+    /// crowded (<see cref="CrowdSize"/>) they vanish, if they can, away from the middle of the crowd, and
+    /// otherwise they step back from a critic that has turned on them and is within
+    /// <see cref="DoorsStepBackReach"/>. From the very middle of those upon them it is back towards the box
+    /// office.
+    /// </summary>
+    private static MagicianInput? Dodge(Simulation simulation)
+    {
+        Vector2 position = simulation.MagicianPosition;
+        if (IsCrowded(simulation, CrowdSize, CrowdReach, out Vector2 crowd) && simulation.VanishCooldownLeft == 0f)
+        {
+            return new MagicianInput(Away(crowd), Vanish: true);
+        }
+
+        return IsCrowded(simulation, size: 1, DoorsStepBackReach, out Vector2 near)
+            ? new MagicianInput(Direction(Away(near), out _))
+            : null;
+
+        Vector2 Away(Vector2 from) =>
+            position == from ? simulation.Tuning.BoxOfficePosition - position : position - from;
     }
 
     /// <summary>
