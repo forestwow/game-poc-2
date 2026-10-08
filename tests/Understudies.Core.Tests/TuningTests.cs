@@ -88,6 +88,21 @@ public class TuningTests
     }
 
     [Test]
+    public void Parse_ANumberOfActsThatIsNotWhole_IsRefusedWithTheKeysName()
+    {
+        // The one number of the file that is counted and not measured: three acts are read as three.
+        JsonNode file = JsonNode.Parse(CommittedTuning.Json)!;
+        file["actsInPerformance"] = 3;
+        Assert.That(Tuning.Parse(file.ToJsonString()).ActsInPerformance, Is.EqualTo(3));
+
+        file["actsInPerformance"] = 10.5;
+
+        Assert.That(
+            () => Tuning.Parse(file.ToJsonString()),
+            Throws.TypeOf<JsonException>().With.Message.Contains("actsInPerformance"));
+    }
+
+    [Test]
     public void Parse_AFileThatSaysNull_IsRefused()
     {
         Assert.That(() => Tuning.Parse("null"), Throws.TypeOf<JsonException>());
