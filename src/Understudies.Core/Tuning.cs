@@ -78,7 +78,10 @@ namespace Understudies.Core;
 /// The share of an act's enemies, from 0 to 1, that its applause has to reach for the first band.
 /// </param>
 /// <param name="ApplauseSecondThreshold">The same for the second band.</param>
-/// <param name="ProgramTime">Seconds the program waits for a pick before it takes its leftmost card.</param>
+/// <param name="ProgramTime">
+/// Seconds the program waits for a pick before it takes its leftmost card. With no time the program is still up
+/// when the act is over, and the first tick takes the card.
+/// </param>
 /// <param name="CardDamage">The hit points one damage card adds to what a thrown card takes off a critic.</param>
 /// <param name="CardAttackSpeed">
 /// What one attack speed card adds to the rate of the throw, as a share of the rate without cards: with 0.2 one

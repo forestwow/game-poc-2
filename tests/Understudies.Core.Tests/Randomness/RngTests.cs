@@ -32,6 +32,7 @@ public class RngTests
         // A stream's number decides its numbers: renumbering one changes every show ever seeded.
         Assert.That((ulong)RngStream.Waves, Is.EqualTo(1UL));
         Assert.That((ulong)RngStream.DoorPlaces, Is.EqualTo(2UL));
+        Assert.That((ulong)RngStream.Program, Is.EqualTo(3UL));
     }
 
     [Test]
