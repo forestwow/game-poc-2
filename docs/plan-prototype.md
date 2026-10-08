@@ -1105,7 +1105,7 @@ The owner's sixth document, `docs/design/2026-10-08-the-first-twenty-nights.md` 
 
 What follows from it:
 
-- The proof of concept has answered its question. Stops 1 and 2 got no judgement of their own. On the build of T20 the owner said that it works, that the Vanish is on Space, that the magician throws by itself at single enemies, that the sounds are fine and the play is fine too, and that the idea "so far starts to get interesting". Stop 2's question (does an understudy read as "past me"?) has no answer on record.
+- The proof of concept has answered its question. Stops 1 and 2 got no judgement of their own that day. On the build of T20 the owner said that it works, that the Vanish is on Space, that the magician throws by itself at single enemies, that the sounds are fine and the play is fine too, and that the idea "so far starts to get interesting". Stop 2's question (does an understudy read as "past me"?) had no answer on record until T31, below.
 - **The package for outside testers (stop 4) waits.** The owner wants to add a good deal to the game before anything is given out.
 - The owner counts it a gain that the game can go to nearly any platform. As built it is MonoGame DesktopGL, which builds for Windows, macOS and Linux; decision 4's two targets for the testers' build stand, and the check on a real Windows machine (§7) is still open. A phone is another MonoGame project around the same Core, a console that and the platform holder's licence; neither is a part of this plan.
 
@@ -1114,6 +1114,14 @@ What the owner named the same day as missing or open, none of it a ticket yet:
 - Is the stage always the same? (The owner did not know how other games have it.)
 - Effects when the cards are thrown.
 - The upgrades should show more, and there should be many more of them, so that at some point the screen is one great carnage.
+
+### The owner's answer to stop 2 (T31, 2026-10-08)
+
+**Yes.** Asked on the build of `main` after T50 (the understudy of T43 with its act's number and the route ahead, the HUD's cast, the program's panels), with two frames beside the question (`art/frames/stop-2/`: act five with four understudies, tick 19400, and the program after act four, tick 18240), the owner answered (spelling corrected here and below): "tak, domyślam się że dublerzy to dawne ja" (yes, I gather that the understudies are the past me). He was asked to play that build before answering; whether he did, or answered from the two frames, is not on record, and a stop is a question answered by playing. The frames were taken on that day's `main` and are a record of what was asked, not frames a later ticket retakes.
+
+What the answer does and does not say. It is the owner's, who has known what an understudy is since the vision: to gather it is not for a stranger to see it. Whether somebody who was told nothing reads the figure so is G1's question and stays open, and the frame of act five shows the known weakness: understudy 3 stands behind the magician and only its number is seen.
+
+**In the same answer the owner asked for an introduction:** "w ostatecznej wersji będę chciał wprowadzić pewnego rodzaju 1-2 akty wprowadzające dla gracza, swego rodzaju tutorial" (in the final version I will want one or two introductory acts for the player, a tutorial of a kind). This is for the final version and is no ticket yet. It meets the ladder's document, whose §5 teaches without a tutorial (night 1 withholds the third door, the stagehand, the crowds and every rule, and the plan "wants no more" than two captions): the two are to be squared when night 1 is built (the ladder's L5), and the question for the owner then is whether the introductory acts are night 1's own first acts, said in words on the stage, or a thing before night 1.
 
 ## 7. Not yet specified
 
