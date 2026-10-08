@@ -40,8 +40,6 @@ internal sealed class UnderstudiesGame : Microsoft.Xna.Framework.Game
     [
         "/System/Library/Fonts/Supplemental/Arial.ttf",
         Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Fonts), "arial.ttf"),
-        "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
-        "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",
     ];
 
     private static readonly Color Surround = new(24, 18, 28);
@@ -187,12 +185,9 @@ internal sealed class UnderstudiesGame : Microsoft.Xna.Framework.Game
                 _vanishAsked = false;
             }
 
-            // Between two acts the juice stands with the stage, to go on with it. When the performance is over it
-            // goes on by itself: what flew when the show closed still settles.
-            if (_simulation.Phase != Phase.BetweenActs)
-            {
-                _juice.Advance((float)frameSeconds);
-            }
+            // The juice goes on whatever the phase: between two acts, as after the show, what flew still settles,
+            // a flash ends and a shaken stage comes to rest, while the simulation stands.
+            _juice.Advance((float)frameSeconds);
         }
 
         base.Update(gameTime);
@@ -259,11 +254,8 @@ internal sealed class UnderstudiesGame : Microsoft.Xna.Framework.Game
 
             // Each tick is a sixtieth of a second to the juice, as in a game that runs a tick a frame: the frame
             // shows the scraps and the flashes that would be on the screen at that moment. Nothing holds a capture
-            // still: it is counted in ticks. Between two acts the juice stands, as it does in the game.
-            if (_simulation.Phase != Phase.BetweenActs)
-            {
-                _juice.Advance(1f / second);
-            }
+            // still: it is counted in ticks.
+            _juice.Advance(1f / second);
         }
 
         using var frame = new RenderTarget2D(GraphicsDevice, WindowWidth, WindowHeight);
@@ -381,7 +373,8 @@ internal sealed class UnderstudiesGame : Microsoft.Xna.Framework.Game
             FillTurned(scrap.Middle, Juice.ScrapSize, scrap.Turn, ScrapOfPaper * scrap.Opacity);
         }
 
-        if (_simulation.Phase is Phase.Ovation or Phase.Closed)
+        // Only a closed show goes dark: an ovation is told from a loss at a glance.
+        if (_simulation.Phase == Phase.Closed)
         {
             Fill(Vector2.Zero, Tuning.StageSize, Color.Black * 0.6f);
         }

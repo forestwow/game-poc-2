@@ -128,6 +128,8 @@ public sealed record Tuning(
     {
         Tuning tuning = JsonSerializer.Deserialize<Tuning>(json, Options) ?? throw new JsonException("The tuning is null.");
 
+        // ponytail: no number is checked for making sense. An act of no length starts between two acts, and a
+        // performance of no acts or fewer plays one. Check ranges here when a file is edited by more than its owner.
         // The rules take the first door for granted.
         if (tuning.StageDoors is not { Count: > 0 })
         {

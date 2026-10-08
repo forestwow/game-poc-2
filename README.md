@@ -13,7 +13,7 @@ A prototype of a short roguelite for PC. You are a stage magician defending the 
 
 ## Requirements
 
-The .NET SDK named in `global.json` (10.0.1xx). Nothing else: MonoGame comes from NuGet.
+The .NET SDK named in `global.json` (10.0.1xx). Nothing else: MonoGame and the text library come from NuGet.
 
 ## Running
 
@@ -23,7 +23,7 @@ WASD, the arrows or a gamepad's left stick walk the magician. The dark band alon
 
 A blow is shown as well as counted. A critic that a card hurts flashes white; one that falls bursts into scraps of paper and lies where it fell, fading. A thrown card trails a streak. The magician flashes when a touch hurts it, the box office when it is struck, and the whole stage shakes with either: a little for one blow, more under a crowd's, and no more than that however big the crowd. A Vanish holds everything still for a moment and puffs scraps where the magician left and where it arrives. None of this is a rule, so its numbers are not in `tuning.json`: they are the constants at the top of `src/Understudies.Game/Juice.cs`, and a changed one needs the game started again.
 
-A performance is ten acts of seventy-five seconds (`actsInPerformance` and `actLength` in `tuning.json`); the back wall says which act it is and how much of its time is left. An act ends when its time runs out, whatever is on the stage. The stage then stands, the scraps in the air with it, until Enter, or a gamepad's Start, goes on to the next act: the magician begins it whole and on its mark, and the critics of the last act are still where they stood. After the last act the performance ends in a standing ovation. R starts a new performance, at any time. Esc quits.
+A performance is ten acts of seventy-five seconds (`actsInPerformance` and `actLength` in `tuning.json`); the back wall says which act it is and how much of its time is left. An act ends when its time runs out, whatever is on the stage. The stage then stands, while what was in the air settles, until Enter, or a gamepad's Start, goes on to the next act: the magician begins it whole and on its mark, and the critics of the last act are still where they stood. After the last act the performance ends in a standing ovation. R starts a new performance, at any time. Esc quits.
 
 The words are drawn in a system font found at start-up: Arial on macOS and Windows, DejaVu Sans or Liberation Sans on Linux. On a machine with none of them the game runs without its words and says so on the console.
 
