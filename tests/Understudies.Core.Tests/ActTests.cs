@@ -369,26 +369,6 @@ public class ActTests
         Assert.That(simulation.Phase, Is.EqualTo(Phase.Closed));
     }
 
-    [Test]
-    public void Step_TheMagicianFallsInAnAct_TheShowCloses()
-    {
-        // The critic turns on the magician wherever it is, and one touch is all this magician can take.
-        Tuning tuning = Scene with { CriticTurnRadius = 100f, MagicianHitPoints = 1f };
-        var simulation = new Simulation(tuning, seed: 1);
-
-        Run(simulation, ticks: ActTicks / 2);
-
-        Assert.That(simulation.MagicianHasFallen, Is.True);
-        Assert.That(simulation.ShowClosed, Is.True);
-        Assert.That(simulation.Phase, Is.EqualTo(Phase.Closed));
-        Assert.That(simulation.ActTicksLeft, Is.GreaterThan(ActTicks / 2));
-
-        // No next act makes it whole again.
-        simulation.GoOn();
-        Assert.That(simulation.MagicianHasFallen, Is.True);
-        Assert.That(simulation.Act, Is.EqualTo(1));
-    }
-
     /// <summary>All that is on the stage but the magician.</summary>
     private static object[] Stage(Simulation simulation) =>
     [

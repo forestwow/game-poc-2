@@ -263,7 +263,7 @@ public class CriticsTurnTests
     }
 
     [Test]
-    public void Step_TheMagiciansHitPointsRunOut_TheMagicianHasFallenAndTheShowCloses()
+    public void Step_TheMagiciansHitPointsRunOut_TheMagicianHasFallenAndTheShowIsNotClosed()
     {
         // Two touches are not enough and the third is more than enough.
         var simulation = new Simulation(Scene with { MagicianHitPoints = 5f }, seed: 1);
@@ -277,7 +277,7 @@ public class CriticsTurnTests
         Run(simulation, ticks: 30);
         Assert.That(simulation.MagicianHitPoints, Is.Zero);
         Assert.That(simulation.MagicianHasFallen, Is.True);
-        Assert.That(simulation.ShowClosed, Is.True);
+        Assert.That(simulation.ShowClosed, Is.False);
         Assert.That(simulation.BoxOfficeHitPoints, Is.EqualTo(100f));
     }
 
@@ -299,8 +299,8 @@ public class CriticsTurnTests
     public void Step_SeveralBlowsAreReadyOnTheTickTheMagicianFalls_OnlyTheOneThatFellsItLands()
     {
         // Critics gather round a magician that nothing hurts for a second, each keeping its blow ready, and one
-        // blow is all the magician can take. On the first tick it can be hurt the first of them fells it: the show
-        // is closed there and then, and the others deal nothing.
+        // blow is all the magician can take. On the first tick it can be hurt the first of them fells it: it is
+        // not there for a critic from then on, and the others deal nothing.
         Tuning tuning = Scene with
         {
             StageDoorWidth = 4f,
@@ -326,7 +326,11 @@ public class CriticsTurnTests
             "The scene needs more than one critic touching the magician when it falls.");
         Assert.That(
             simulation.Events,
-            Is.EqualTo(new[] { new TickEvent(TickEventKind.MagicianHurt, simulation.MagicianPosition) }));
+            Is.EqualTo(new[]
+            {
+                new TickEvent(TickEventKind.MagicianHurt, simulation.MagicianPosition),
+                new TickEvent(TickEventKind.MagicianFell, simulation.MagicianPosition),
+            }));
     }
 
     [Test]

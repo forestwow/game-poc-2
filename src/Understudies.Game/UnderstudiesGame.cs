@@ -501,10 +501,13 @@ internal sealed class UnderstudiesGame : Microsoft.Xna.Framework.Game
     // understudies at most, for the curtain's one second. Keep each route's lengths when a frame feels it.
     private Vector2 Rewound(Understudy understudy, float alpha)
     {
-        // The act just over is the newest understudy's: an older route that is longer than that act was left at
-        // the act's last tick, and a shorter one at its own last place.
+        // From its route's last place: where the act's last tick left it, or where it left the stage when its
+        // own act was cut short by the magician's fall.
+        // ponytail: an act played shorter than an older route (F5 with a smaller actLength) left that understudy
+        // part-way along it, and the rewind starts from the route's end all the same. The simulation would have
+        // to say how long the last act was played for.
         IReadOnlyList<Vector2> route = understudy.Route;
-        int end = Math.Min(route.Count, _simulation.Understudies[^1].Route.Count) - 1;
+        int end = route.Count - 1;
 
         // The frame is drawn a part of a tick behind the last tick, like everything else.
         float curtainTicks = MathF.Max(1f, Tuning.CurtainTime * Simulation.TicksPerSecond);
@@ -535,8 +538,8 @@ internal sealed class UnderstudiesGame : Microsoft.Xna.Framework.Game
     }
 
     /// <summary>
-    /// The words of the screen: along the back wall the act, a line when no act is played, and the act's time
-    /// left; in the curtain of the second act the one caption; and the box office's hit points as a number at
+    /// The words of the screen: along the back wall the act, a line when no act is played or the magician has
+    /// fallen in the one that is, and the act's time left; in the curtain of the second act the one caption; and the box office's hit points as a number at
     /// <paramref name="besideTheBar"/>, the point just to the right of the middle of its bar's end. They are drawn in screen pixels, so they stay sharp: the font is asked
     /// for at the size the window makes of it, and <paramref name="scale"/> and <paramref name="corner"/> only say
     /// where on the screen a point of the stage is.
@@ -569,8 +572,9 @@ internal sealed class UnderstudiesGame : Microsoft.Xna.Framework.Game
         {
             Phase.BetweenActs => $"Act {_simulation.Act} is over. Press Enter or Start to go on.",
             Phase.Ovation => "A standing ovation! R starts a new performance.",
-            Phase.Closed when _simulation.MagicianHasFallen => "The magician fell. R starts a new performance.",
             Phase.Closed => "The box office fell. R starts a new performance.",
+            Phase.Act when _simulation.MagicianHasFallen =>
+                "The magician has fallen. The understudies carry on to the end of the act.",
             _ => null,
         };
 

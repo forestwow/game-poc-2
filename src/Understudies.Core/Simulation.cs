@@ -17,11 +17,14 @@ public sealed class Simulation(Tuning tuning, ulong seed)
     private readonly List<Understudy> _understudies = [];
 
     // The recording of the act that is played: where the magician stood after each of its ticks so far, and each
-    // Vanish of it. The route's length is the number of ticks played of the act.
+    // Vanish of it. It stops when the magician falls: its last place is where the magician fell.
     private List<Vector2> _route = [];
     private List<(int Tick, Vector2 Place)> _vanishes = [];
     private readonly List<TickEvent> _events = [];
     private int _ticksPlayed;
+
+    // How many ticks of the act that is played have been played: the number of the next, the first being 0.
+    private int _actTicksPlayed;
     private int _criticsEntered;
     private int _ticksToNextCritic;
     private int _ticksToNextThrow;
@@ -41,8 +44,9 @@ public sealed class Simulation(Tuning tuning, ulong seed)
 
     /// <summary>
     /// Where the performance stands. A closed show is closed whatever its act's timer says; every act begins with
-    /// its curtain; an act whose time has run out is over, and after the last act of the performance comes the
-    /// ovation. Only in an act does <see cref="Step"/> change anything but the curtain's own time.
+    /// its curtain; an act whose time has run out is over, whether the magician stands or has fallen, and after
+    /// the last act of the performance comes the ovation. Only in an act does <see cref="Step"/> change anything
+    /// but the curtain's own time.
     /// </summary>
     // ponytail: the phase is read off the other state and not kept, so a reload of the tuning with another number of
     // acts can move it without a tick (an ovation back to between two acts). Keep it as state if that ever matters.
@@ -104,17 +108,21 @@ public sealed class Simulation(Tuning tuning, ulong seed)
     /// <summary>What the magician has left: never less than nothing.</summary>
     public float MagicianHitPoints { get; private set; } = tuning.MagicianHitPoints;
 
-    /// <summary>The magician has nothing left.</summary>
+    /// <summary>
+    /// The magician has nothing left, from the tick of its fall until the next act begins. It lies where it fell
+    /// and takes no input: it does not walk, vanish or throw, the act is no longer recorded, and no critic turns
+    /// on it or touches it. The act goes on to its timer all the same.
+    /// </summary>
     public bool MagicianHasFallen => MagicianHitPoints <= 0f;
 
     /// <summary>What the box office has left: never less than nothing.</summary>
     public float BoxOfficeHitPoints { get; private set; } = tuning.BoxOfficeHitPoints;
 
     /// <summary>
-    /// The box office has nothing left, or the magician has fallen. The show is over: <see cref="Step"/> changes
-    /// nothing any more.
+    /// The box office has nothing left. The show is over: <see cref="Step"/> changes nothing any more. The
+    /// magician's fall does not close it.
     /// </summary>
-    public bool ShowClosed => BoxOfficeHitPoints <= 0f || MagicianHasFallen;
+    public bool ShowClosed => BoxOfficeHitPoints <= 0f;
 
     /// <summary>
     /// Plays one tick of an act. While the curtain is up the tick only counts the curtain's time: nothing moves,
@@ -139,7 +147,15 @@ public sealed class Simulation(Tuning tuning, ulong seed)
         // left. And the magician moves before the critics walk, so the cloud of a Vanish stuns on the tick of it, and
         // a critic turns on the magician, and touches it, where this tick has put it.
         ThinTheClouds();
-        MoveTheMagician(input);
+        if (MagicianHasFallen)
+        {
+            // It lies where it fell, whatever is asked of it: there is nothing behind it for the view to draw.
+            MagicianPreviousPosition = MagicianPosition;
+        }
+        else
+        {
+            MoveTheMagician(input);
+        }
 
         // The understudies take their places right after the magician has moved, for the magician's own reasons:
         // the cloud of an understudy's Vanish stuns on the tick of it, and an understudy throws from where this
@@ -154,8 +170,9 @@ public sealed class Simulation(Tuning tuning, ulong seed)
 
         // The magician throws first, then each understudy in the order of their acts: the cards fly in the order
         // they were thrown, so of the cards that reach one critic on one tick the magician's own lands first, and
-        // a fall it could have had is its own. Once a blow of this tick has closed the show nobody throws.
-        if (!ShowClosed)
+        // a fall it could have had is its own. Once a blow of this tick has closed the show nobody throws, and a
+        // magician that a blow of this tick has felled does not.
+        if (!ShowClosed && !MagicianHasFallen)
         {
             _ticksToNextThrow = ThrowACard(MagicianPosition, _ticksToNextThrow, byTheMagician: true);
         }
@@ -177,6 +194,7 @@ public sealed class Simulation(Tuning tuning, ulong seed)
         }
 
         _ticksPlayed++;
+        _actTicksPlayed++;
 
         // The act's time is counted last: its last tick is played in full, and the act is over when that tick is,
         // whatever is on the stage. A blow of that very tick may still have closed the show.
@@ -201,6 +219,7 @@ public sealed class Simulation(Tuning tuning, ulong seed)
         _understudies.Add(new Understudy(Act, _route, _vanishes));
         _route = [];
         _vanishes = [];
+        _actTicksPlayed = 0;
         foreach (Understudy understudy in _understudies)
         {
             Place(understudy, tick: 0);
@@ -265,6 +284,7 @@ public sealed class Simulation(Tuning tuning, ulong seed)
         }
 
         hasher.AddInt(_ticksPlayed);
+        hasher.AddInt(_actTicksPlayed);
 
         // The phase beside the act's number and time: whether an act that is over was the last is not in those.
         hasher.AddInt((int)Phase);
@@ -306,8 +326,7 @@ public sealed class Simulation(Tuning tuning, ulong seed)
         }
 
         // Every recording whole, an understudy's and that of the act that is played, which is the next
-        // understudy: where everybody stands now does not say where each will stand a tick from now. The length
-        // of the last is the count of ticks into the act.
+        // understudy: where everybody stands now does not say where each will stand a tick from now.
         // ponytail: the hash walks every place of every act on every call, 45,000 of them by the tenth act. It is
         // for the tests and the scripted players, not for the game's frame; a hash kept per finished recording
         // replaces the walk when something asks for the hash on every tick.
@@ -371,7 +390,7 @@ public sealed class Simulation(Tuning tuning, ulong seed)
             _ticksInvulnerable = Ticks(Tuning.VanishInvulnerableTime);
             _events.Add(new TickEvent(TickEventKind.Vanish, from));
             LeaveACloud(from);
-            _vanishes.Add((_route.Count, from));
+            _vanishes.Add((_actTicksPlayed, from));
         }
 
         // The floor's edge stops the magician, a walk and a blink alike: the whole circle stays on the floor, which
@@ -390,12 +409,9 @@ public sealed class Simulation(Tuning tuning, ulong seed)
 
     private void PlaceTheUnderstudies()
     {
-        // The magician's place for this tick has just been recorded, so the recording's length less one is the
-        // tick of the act that is played, the first being 0.
-        // ponytail: the act's tick is read off the recording, which today grows on every tick of the act. When a
-        // recording stops early (the magician's fall, T13) this count stops with it and every understudy would
-        // freeze where it stands; the act then needs a counter of its own.
-        int tick = _route.Count - 1;
+        // The act's own count and not the length of its recording, which stops when the magician falls: the
+        // understudies play on.
+        int tick = _actTicksPlayed;
         foreach (Understudy understudy in _understudies)
         {
             Place(understudy, tick);
@@ -558,9 +574,11 @@ public sealed class Simulation(Tuning tuning, ulong seed)
 
             // A critic nearer to the magician than the turn radius has turned on it: it walks at the magician and
             // not at the box office. That is asked anew on every tick, so it goes back to the box office the moment
-            // the magician is out of the radius. A stunned critic does not turn.
+            // the magician is out of the radius. A stunned critic does not turn, and nobody turns on a magician
+            // that has fallen: from the blow that felled it on, in this very tick, it is not there for a critic.
             Vector2 apart = MagicianPosition - critic.Position;
             bool turned = !critic.IsStunned
+                && !MagicianHasFallen
                 && (apart.X * apart.X) + (apart.Y * apart.Y) < Tuning.CriticTurnRadius * Tuning.CriticTurnRadius;
 
             // Straight at whichever it is, as far as where the two circles touch. From the box office a critic is
@@ -603,6 +621,10 @@ public sealed class Simulation(Tuning tuning, ulong seed)
             {
                 MagicianHitPoints = MathF.Max(0f, MagicianHitPoints - Tuning.CriticTouchDamage);
                 _events.Add(new TickEvent(TickEventKind.MagicianHurt, MagicianPosition));
+                if (MagicianHasFallen)
+                {
+                    _events.Add(new TickEvent(TickEventKind.MagicianFell, MagicianPosition));
+                }
             }
             else
             {
