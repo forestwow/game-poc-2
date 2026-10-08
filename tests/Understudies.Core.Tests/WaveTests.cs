@@ -71,6 +71,23 @@ public class WaveTests
     }
 
     [Test]
+    public void Plan_TheCommittedKinds_NoStagehandInActOne_AndFromActTwoAMixWithCriticsTheLargerPart()
+    {
+        foreach (ulong seed in Seeds)
+        {
+            IReadOnlyList<IReadOnlyList<PlannedEntry>> plan = Waves.Plan(Tuning, seed);
+
+            Assert.That(plan[0].Select(entry => entry.Kind), Has.All.EqualTo(0), $"seed {seed}");
+            for (int act = 2; act <= plan.Count; act++)
+            {
+                int stagehands = plan[act - 1].Count(entry => entry.Kind == 1);
+
+                Assert.That(stagehands, Is.InRange(1, (plan[act - 1].Count - 1) / 2), $"seed {seed}, act {act}");
+            }
+        }
+    }
+
+    [Test]
     public void Plan_TwoKindsOfOneCostWithWeightsOfThreeToOne_AreBoughtThreeToOne()
     {
         // Both can be afforded for as long as either can, so the weights alone decide: of some ten thousand

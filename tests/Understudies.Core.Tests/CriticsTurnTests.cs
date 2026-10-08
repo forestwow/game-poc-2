@@ -76,6 +76,25 @@ public class CriticsTurnTests
     }
 
     [Test]
+    public void Step_AStagehandInsideTheTurnRadius_KeepsWalkingToTheBoxOfficeAndStrikesIt()
+    {
+        // The stagehand as the committed file has it, on the scene's way down the stage: a unit and a half from the
+        // magician as it runs by, well inside the three in which a critic turns. At eight units a second it touches
+        // the box office, 17.6 units below the door, in a little over two seconds.
+        Tuning tuning = Scene with { EnemyKinds = [Scene.Critic(), CommittedTuning.Parse().Stagehand()] };
+        Simulation simulation = Shows.WithOneOfKind(tuning, kind: 1);
+
+        for (int i = 0; i < 3 * Simulation.TicksPerSecond; i++)
+        {
+            simulation.Step(default);
+            Assert.That(simulation.Critics[0].Position.X, Is.EqualTo(Door.X));
+        }
+
+        Assert.That(simulation.MagicianHitPoints, Is.EqualTo(10f));
+        Assert.That(simulation.BoxOfficeHitPoints, Is.LessThan(100f));
+    }
+
+    [Test]
     public void Step_ACriticThatHasTurned_StopsWhereItsCircleTouchesTheMagicians()
     {
         var simulation = Shows.WithOneCritic(Scene);

@@ -149,6 +149,22 @@ public class StateHashTests
     }
 
     [Test]
+    public void ComputeStateHash_TwoCriticsOfTwoKinds_AreTwoHashes()
+    {
+        // Two kinds with the same numbers today: one critic has entered each show at the same place, and all the
+        // two differ in is which kind it is, which a reload of the tuning could make two different things.
+        Tuning twoKinds = Tuning with { EnemyKinds = [Tuning.Critic(), Tuning.Critic()] };
+        Simulation ofTheFirst = Shows.WithOneOfKind(twoKinds, kind: 0);
+        Simulation ofTheSecond = Shows.WithOneOfKind(twoKinds, kind: 1);
+
+        ofTheFirst.Step(default);
+        ofTheSecond.Step(default);
+
+        Assert.That(ofTheSecond.Critics[0].Position, Is.EqualTo(ofTheFirst.Critics[0].Position));
+        Assert.That(ofTheSecond.ComputeStateHash(), Is.Not.EqualTo(ofTheFirst.ComputeStateHash()));
+    }
+
+    [Test]
     public void ComputeStateHash_AnActThatIsOverAndAPerformanceThatIs_AreTwoHashes()
     {
         // The first act of both shows has just run out. It was the first of two acts of one performance and all
