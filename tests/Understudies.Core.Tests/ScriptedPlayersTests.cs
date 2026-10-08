@@ -338,7 +338,8 @@ public class ScriptedPlayersTests
             Assert.That(furthest, Is.GreaterThan(radius + 1f), "it left its circle");
             Assert.That(furthest, Is.LessThanOrEqualTo(radius + ScriptedPlayers.DoorsReach + Tuning.VanishDistance));
             Assert.That(onTheCircle, Is.GreaterThan(ticks / 4), "ticks on its circle");
-            Assert.That(insideAPost, Is.LessThan(played / 100), "ticks on the floor before an open door, which it leaves alone");
+            // A dodge or a Vanish can carry it inside for a tick or two (three in this performance): never to stay.
+            Assert.That(insideAPost, Is.LessThan(played / 1000), "ticks on the floor before an open door, which it leaves alone");
         });
     }
 
@@ -433,7 +434,9 @@ public class ScriptedPlayersTests
     /// and the guard's own floor of 16 finished lets four collapse, which is 320: a tuning between "fine" and
     /// "the guard's floor" is caught here. The second is the card order, which must not be a hidden hinge
     /// (T29's first numbers held by the committed order alone and lost act seven on every seed by any other):
-    /// taking the longer arm first, the doors player still finishes act ten on at least 16 of 20.
+    /// taking the longer arm first, the doors player still finishes act ten on at least 16 of 20. It finishes 18
+    /// (17 on the seeds 101 to 120), and the same tuning drawn otherwise moves that by a seed: the margin is thin on
+    /// purpose, and a break here is a finding about a card or a player, not a floor to lower unread.
     /// </summary>
     [Test]
     public void TheGuard_OnTheCommittedTuning_TheDoorsPlayerKeepsTheBoxOfficeAndFinishesByAnotherCardOrderToo()

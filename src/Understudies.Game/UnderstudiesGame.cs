@@ -640,7 +640,7 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
                 white: _juice.CriticWhite(critic.Id),
                 toward: step != Vector2.Zero ? step : Tuning.BoxOfficePosition - critic.Position,
                 walking: step != Vector2.Zero,
-                speed: Tuning.EnemyKinds[critic.Kind].Speed,
+                speed: Tuning.EnemyKinds[Math.Min(critic.Kind, Tuning.EnemyKinds.Count - 1)].Speed,
                 beat: critic.Id);
         }
 
