@@ -1,0 +1,86 @@
+{
+ "tool": "ludo.ai, through its CLI (ludo 0.1.6)",
+ "ticket": "T57, the scalper",
+ "credits": 3.5,
+ "note": "raw/ keeps the stills as returned (768 pixels, twelve to a sprite pixel). The first two came back with the fan as a pale ruff under a cap, which reads as a fur collar; the second two were asked for 'no head' and an upright fan 'held like a hand of playing cards', and the second of them is the figure. The run is kept only under the name the game reads: three rows of three frames of 50 x 62, a file pixel to a sprite pixel, as returned with --frame-size 32 (the fan is as wide as the frame, so the figure is 57 sprite pixels tall where the stagehand is 46: the tool has no smaller size). A job that returned two pictures is listed twice with the credits of the whole job.",
+ "game_files": {
+  "scalper-down.png": "scalper-walk-down-1.png, the animation of raw/scalper-fan-v2.png, as returned"
+ },
+ "generations_made": [
+  {
+   "returned": "scalper-v1.png",
+   "command": "ludo image create",
+   "settings": {
+    "image_type": "sprite",
+    "art_style": "16-Bit",
+    "perspective": "High Angle",
+    "aspect_ratio": "ar_1_1",
+    "prompt": "A surreal ticket tout: a small hunched man in a mustard-yellow checked overcoat far too long for him, the hem dragging on the floor and the sleeves hanging past his hands, and where his face and head should be a big spread fan of pale paper theatre tickets, as wide as his shoulders, with a small flat cap on top of the fan. Loose tickets stick out of his pockets. Pixel art game sprite with a thick dark outline and a small limited palette, standing upright and facing the viewer, seen from the front and slightly from above as characters are in a top-down action RPG. Full body from head to feet, single subject, centred, no text, no ground, no shadow.",
+    "n": 2
+   },
+   "job_id": "efa99bf5-43f2-4da7-963f-7144c79cdaec",
+   "created_at": "2026-10-08T21:25:11.527Z",
+   "credits_of_the_job": 1
+  },
+  {
+   "returned": "scalper-v2.png",
+   "command": "ludo image create",
+   "settings": {
+    "image_type": "sprite",
+    "art_style": "16-Bit",
+    "perspective": "High Angle",
+    "aspect_ratio": "ar_1_1",
+    "prompt": "A surreal ticket tout: a small hunched man in a mustard-yellow checked overcoat far too long for him, the hem dragging on the floor and the sleeves hanging past his hands, and where his face and head should be a big spread fan of pale paper theatre tickets, as wide as his shoulders, with a small flat cap on top of the fan. Loose tickets stick out of his pockets. Pixel art game sprite with a thick dark outline and a small limited palette, standing upright and facing the viewer, seen from the front and slightly from above as characters are in a top-down action RPG. Full body from head to feet, single subject, centred, no text, no ground, no shadow.",
+    "n": 2
+   },
+   "job_id": "efa99bf5-43f2-4da7-963f-7144c79cdaec",
+   "created_at": "2026-10-08T21:25:11.527Z",
+   "credits_of_the_job": 1
+  },
+  {
+   "returned": "scalper-fan-v1.png",
+   "command": "ludo image create",
+   "settings": {
+    "image_type": "sprite",
+    "art_style": "16-Bit",
+    "perspective": "High Angle",
+    "aspect_ratio": "ar_1_1",
+    "prompt": "A surreal ticket tout with no head: standing straight up out of his collar, where the head should be, is a huge upright fan of seven long rectangular paper theatre tickets, held like a hand of playing cards, twice as wide as his shoulders and as tall as his chest, each ticket a separate pale cream strip with a red stripe and a dark outline. No face, no hat, no hair, no fur. Below it a small man in a mustard-yellow overcoat far too long for him, the hem trailing on the floor and the empty sleeves hanging past his hands. Pixel art game sprite with a thick dark outline and a small limited palette, standing upright and facing the viewer, seen from the front and slightly from above as characters are in a top-down action RPG. Full body from head to feet, single subject, centred, no text, no ground, no shadow.",
+    "n": 2
+   },
+   "job_id": "a328cc3e-4edd-469c-9c23-d007fb903a03",
+   "created_at": "2026-10-08T21:25:39.599Z",
+   "credits_of_the_job": 1
+  },
+  {
+   "returned": "scalper-fan-v2.png",
+   "command": "ludo image create",
+   "settings": {
+    "image_type": "sprite",
+    "art_style": "16-Bit",
+    "perspective": "High Angle",
+    "aspect_ratio": "ar_1_1",
+    "prompt": "A surreal ticket tout with no head: standing straight up out of his collar, where the head should be, is a huge upright fan of seven long rectangular paper theatre tickets, held like a hand of playing cards, twice as wide as his shoulders and as tall as his chest, each ticket a separate pale cream strip with a red stripe and a dark outline. No face, no hat, no hair, no fur. Below it a small man in a mustard-yellow overcoat far too long for him, the hem trailing on the floor and the empty sleeves hanging past his hands. Pixel art game sprite with a thick dark outline and a small limited palette, standing upright and facing the viewer, seen from the front and slightly from above as characters are in a top-down action RPG. Full body from head to feet, single subject, centred, no text, no ground, no shadow.",
+    "n": 2
+   },
+   "job_id": "a328cc3e-4edd-469c-9c23-d007fb903a03",
+   "created_at": "2026-10-08T21:25:39.599Z",
+   "credits_of_the_job": 1
+  },
+  {
+   "returned": "scalper-walk-down-1.png",
+   "command": "ludo sprite animate",
+   "settings": {
+    "initial_image": "scalper-fan-v2.png",
+    "motion_prompt": "running towards the viewer, the long coat flapping",
+    "model": "forge-pixel",
+    "duration": 1,
+    "frames": 9,
+    "frame_size": 32
+   },
+   "job_id": "a0c819cf-6790-4557-80db-067e262ceffa",
+   "created_at": "2026-10-08T21:26:25.112Z",
+   "credits_of_the_job": 1.5
+  }
+ ]
+}

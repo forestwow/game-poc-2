@@ -356,8 +356,8 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
         _pixel.SetData([Color.White]);
 
         // A walk is a sheet of three rows of three frames, a file pixel to a sprite pixel. The side view faces
-        // right. The stagehand and the rival's understudy have one walk each, toward the viewer (a cut-out has no
-        // back and no side, so it is not mirrored), and the box office is one picture as the tool
+        // right. The stagehand, the rival's understudy and the scalper have one walk each, toward the viewer (a
+        // cut-out has no back and no side, so it is not mirrored), and the box office is one picture as the tool
         // returned it: twelve file pixels to one of its own, drawn six to a sprite pixel so that it is as wide as
         // its four units.
         _sheets[(int)Figure.Magician] =
@@ -366,6 +366,7 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
             [ReadSheet("critic-down.png", 3), ReadSheet("critic-up.png", 3), ReadSheet("critic-side.png", 3)];
         _sheets[(int)Figure.Stagehand] = [ReadSheet("stagehand-down.png", 3)];
         _sheets[(int)Figure.Rival] = [ReadSheet("rival-down.png", 3)];
+        _sheets[(int)Figure.Scalper] = [ReadSheet("scalper-down.png", 3)];
         _sheets[(int)Figure.BoxOffice] = [ReadSheet("box-office.png", 1, block: 6f)];
 
         // The set (plan T07d). The doors are stills like the box office and drawn at its pixel size, a footlight at
@@ -691,6 +692,7 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
         // Every act opens with its curtain, whose ticks are counted here with the rest.
         const int second = Simulation.TicksPerSecond;
         Phase before = _simulation.Phase;
+        int eatenToldOf = 0;
         for (int i = 0; i < _captureTicks; i++)
         {
             // A card is taken and the next act gone on to before the tick, and not after it, so neither takes any
@@ -707,6 +709,14 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
             if (_simulation.Phase != before && _simulation.Phase is Phase.Encore or Phase.Program or Phase.Ovation or Phase.Closed)
             {
                 Console.WriteLine($"Capture: {_simulation.Phase} in act {_simulation.Act} on tick {i + 1}");
+            }
+
+            // And the tick a scalper first eats a piece on in each act (plan T57): a frame a few ticks after it
+            // has the scalper and its puff of tickets.
+            if (_simulation.Act > eatenToldOf && _simulation.Events.Any(happened => happened.Kind == TickEventKind.ApplauseEaten))
+            {
+                eatenToldOf = _simulation.Act;
+                Console.WriteLine($"Capture: a piece eaten in act {_simulation.Act} on tick {i + 1}");
             }
 
             // Each tick is a sixtieth of a second to the juice, as in a game that runs a tick a frame: the frame
@@ -1530,7 +1540,7 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
         // set's and, at a measure of 1, a figure's are one and a quarter screen pixels at 1280 wide (every
         // fourth is two), and whole at 1024 and its multiples. A set and figures drawn for 1280, or a stage drawn
         // to a target of its own and scaled whole, would end it.
-        float unit = (measure is { } own ? PixelAt(own) : figure <= Figure.Rival ? FigurePixel : 1f / SetPixelsPerUnit)
+        float unit = (measure is { } own ? PixelAt(own) : figure <= Figure.Scalper ? FigurePixel : 1f / SetPixelsPerUnit)
             / sheet.Block;
         float width = source.Width * unit;
         var onAPixel = new Vector2(MathF.Round(feet.X * _scale), MathF.Round(feet.Y * _scale)) / _scale;
@@ -1595,13 +1605,14 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
 
     /// <summary>The figure an enemy of a kind is drawn as.</summary>
     // ponytail: the view knows the kinds by their places in enemyKinds, the critic first, the stagehand second,
-    // the rival's understudy third and the headliner fourth, which is the rival's cut-out with a wash
-    // (`WashOf`) until it has a picture of its own. A fifth kind is drawn as a stagehand; the kinds need names
-    // to be looked up by when the list is reordered.
+    // the rival's understudy third, the headliner fourth, which is the rival's cut-out with a wash
+    // (`WashOf`) until it has a picture of its own, and the scalper fifth (plan T57). A sixth kind is drawn as a
+    // stagehand; the kinds need names to be looked up by when the list is reordered.
     private static Figure FigureOf(int kind) => kind switch
     {
         0 => Figure.Critic,
         2 or 3 => Figure.Rival,
+        4 => Figure.Scalper,
         _ => Figure.Stagehand,
     };
 
@@ -1781,11 +1792,12 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
     /// <summary>What <see cref="DrawFigure"/> can draw.</summary>
     private enum Figure
     {
-        // The walking figures first, to the rival: DrawFigure tells them from the set by that.
+        // The walking figures first, to the scalper: DrawFigure tells them from the set by that.
         Magician,
         Critic,
         Stagehand,
         Rival,
+        Scalper,
         BoxOffice,
         ShutDoor,
         OpenDoor,

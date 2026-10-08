@@ -38,6 +38,11 @@ namespace Understudies.Core.Tests;
 /// <param name="HeadlinerKills">The headliners that fell in the act to a card the magician threw.</param>
 /// <param name="HeadlinerUnderstudyKills">Those that fell in it to an understudy's card.</param>
 /// <param name="HeadlinerTicksLived">The ticks of play from entering to falling, of all that fell in the act.</param>
+/// <param name="Eaten">The pieces of the act's <paramref name="Dropped"/> that a scalper ate (plan T57).</param>
+/// <param name="Scalpers">The scalpers (the fifth kind of enemy) that entered in the act.</param>
+/// <param name="ScalperKills">The scalpers that fell in the act to a card the magician threw.</param>
+/// <param name="ScalperUnderstudyKills">Those that fell in it to an understudy's card.</param>
+/// <param name="ScalperTicksLived">The ticks of play from entering to falling, of all that fell in the act.</param>
 internal readonly record struct ActRecord(
     int Entries,
     int Applause,
@@ -62,7 +67,12 @@ internal readonly record struct ActRecord(
     int Headliners,
     int HeadlinerKills,
     int HeadlinerUnderstudyKills,
-    int HeadlinerTicksLived);
+    int HeadlinerTicksLived,
+    int Eaten,
+    int Scalpers,
+    int ScalperKills,
+    int ScalperUnderstudyKills,
+    int ScalperTicksLived);
 
 /// <summary>A scripted performance played to its end: the ovation or the close.</summary>
 /// <param name="Ended"><see cref="Phase.Ovation"/> or <see cref="Phase.Closed"/>.</param>
@@ -409,6 +419,7 @@ internal static class ScriptedPlayers
         // when the next begins, and these with it.
         var inReach = new List<Vector2>();
         int dropped = 0;
+        int eaten = 0;
         int fellInReach = 0;
         int walkedTo = 0;
         int mostCritics = 0;
@@ -420,6 +431,10 @@ internal static class ScriptedPlayers
         // Which of them are headliners, the fourth kind (plan T46): who fells those, and how long they stand.
         var headliner = new List<bool>();
         int[] headliners = new int[4];
+
+        // And which are scalpers, the fifth (plan T57): how many enter, who fells them, how long they run.
+        var scalper = new List<bool>();
+        int[] scalpers = new int[4];
         int ticksPlayed = 0;
         int[] kills = new int[4];
         int understudyKills = 0;
@@ -438,6 +453,8 @@ internal static class ScriptedPlayers
                     entered.Add(ticksPlayed);
                     headliner.Add(critic.Kind == 3);
                     headliners[0] += critic.Kind == 3 ? 1 : 0;
+                    scalper.Add(critic.Kind == 4);
+                    scalpers[0] += critic.Kind == 4 ? 1 : 0;
                 }
             }
 
@@ -447,6 +464,12 @@ internal static class ScriptedPlayers
                 {
                     headliners[happened.Thrower == TickEvent.TheMagician ? 1 : 2]++;
                     headliners[3] += ticksPlayed - entered[happened.CriticId];
+                }
+
+                if (happened.Kind == TickEventKind.Kill && scalper[happened.CriticId])
+                {
+                    scalpers[happened.Thrower == TickEvent.TheMagician ? 1 : 2]++;
+                    scalpers[3] += ticksPlayed - entered[happened.CriticId];
                 }
 
                 if (happened.Kind == TickEventKind.Throw && happened.Thrower == TickEvent.TheMagician)
@@ -473,6 +496,10 @@ internal static class ScriptedPlayers
                     {
                         inReach.Add(happened.Position);
                     }
+                }
+                else if (happened.Kind == TickEventKind.ApplauseEaten)
+                {
+                    eaten++;
                 }
                 else if (happened.Kind == TickEventKind.ApplausePickedUp)
                 {
@@ -530,7 +557,12 @@ internal static class ScriptedPlayers
                 headliners[0],
                 headliners[1],
                 headliners[2],
-                headliners[3]));
+                headliners[3],
+                eaten,
+                scalpers[0],
+                scalpers[1],
+                scalpers[2],
+                scalpers[3]));
             if (simulation.Phase != Phase.BetweenActs)
             {
                 return new Performance(simulation.Phase, acts, encores);
@@ -539,9 +571,10 @@ internal static class ScriptedPlayers
             simulation.GoOn();
             taken = [];
             inReach.Clear();
-            dropped = fellInReach = walkedTo = mostCritics = understudyKills = mostCardsAThrow = shortOffers = 0;
+            dropped = eaten = fellInReach = walkedTo = mostCritics = understudyKills = mostCardsAThrow = shortOffers = 0;
             kills = new int[4];
             headliners = new int[4];
+            scalpers = new int[4];
         }
     }
 

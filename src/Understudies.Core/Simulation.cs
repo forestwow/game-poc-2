@@ -1056,12 +1056,26 @@ public sealed class Simulation(Tuning tuning, ulong seed, IReadOnlyList<IReadOnl
             // in a single tick, however deep it stood. Were the box office a wall to it, nobody could reach a
             // magician that stands inside the box office; it becomes a wall to every critic when something keeps
             // the magician out of it too.
+            // A kind that eats applause (plan T57) goes for the nearest piece on the floor while there is one, and
+            // to the box office when there is none: asked anew on every tick, as the turn is. It walks until the
+            // piece's middle is on its own circle, and is not put back out from a piece it stands over. One that
+            // has turned on the magician (no committed kind both turns and eats; a reload can make one) hunts the
+            // magician and eats nothing.
+            // ponytail: it walks straight at the piece, through the box office when that is between the two, and
+            // is not put back out of it while a piece lies, so one that stands inside when the floor is empty is
+            // put out in a single tick, as a critic that turns back is (above). It ends with the box office a wall
+            // to every critic.
+            Applause? piece = kind.EatsApplause && !turned ? NearestApplause(critic.Position) : null;
+            bool stops = turned || piece is not null;
             Vector2 toTarget = Direction(
-                (turned ? MagicianPosition : Tuning.BoxOfficePosition) - critic.Position, out float distance);
-            float gap = distance - (turned ? Tuning.MagicianRadius : Tuning.BoxOfficeSize / 2f) - kind.Radius;
+                (turned ? MagicianPosition : piece?.Position ?? Tuning.BoxOfficePosition) - critic.Position,
+                out float distance);
+            float gap = distance
+                - (turned ? Tuning.MagicianRadius : piece is null ? Tuning.BoxOfficeSize / 2f : 0f)
+                - kind.Radius;
             float step = critic.IsStunned ? 0f : kind.Speed / TicksPerSecond;
             float walk = MathF.Min(gap, step);
-            critic.Position += toTarget * (turned ? MathF.Max(0f, walk) : walk);
+            critic.Position += toTarget * (stops ? MathF.Max(0f, walk) : walk);
 
             // And it is kept on the stage (plan T49), here where its place is last changed in a tick: its whole
             // circle within the two sides, and its middle on the floor, no higher than the foot of the back wall
@@ -1074,6 +1088,21 @@ public sealed class Simulation(Tuning tuning, ulong seed, IReadOnlyList<IReadOnl
             // Nor does it deal a blow, and its time to the next blow stands still.
             if (critic.IsStunned)
             {
+                continue;
+            }
+
+            // The piece it has reached is eaten: gone, and in nobody's count. No blow is dealt on a tick that was
+            // spent going for a piece, and eating waits for no cooldown. The magician picked up before the critics
+            // walked, so a piece both reach on one tick is the magician's; and the cards flew before, so a piece is
+            // there to be eaten on the tick it is dropped.
+            if (piece is not null)
+            {
+                if (gap <= step)
+                {
+                    _applause.Remove(piece);
+                    _events.Add(new TickEvent(TickEventKind.ApplauseEaten, piece.Position, CriticId: critic.Id));
+                }
+
                 continue;
             }
 
@@ -1108,6 +1137,30 @@ public sealed class Simulation(Tuning tuning, ulong seed, IReadOnlyList<IReadOnl
 
             critic.TicksToNextBlow = Ticks(Tuning.CriticBlowCooldown);
         }
+    }
+
+    /// <summary>
+    /// The piece of applause nearest to <paramref name="from"/>, and of two as near the one that was dropped
+    /// first. None when the floor has none.
+    /// </summary>
+    // ponytail: every critic of such a kind looks at every piece on every tick: some fifty of the kind and a
+    // few dozen pieces at the most on the committed numbers. The grid the push-apart waits for serves this too.
+    private Applause? NearestApplause(Vector2 from)
+    {
+        Applause? nearest = null;
+        float nearestSquared = float.PositiveInfinity;
+        foreach (Applause piece in _applause)
+        {
+            Vector2 apart = piece.Position - from;
+            float squared = (apart.X * apart.X) + (apart.Y * apart.Y);
+            if (squared < nearestSquared)
+            {
+                nearest = piece;
+                nearestSquared = squared;
+            }
+        }
+
+        return nearest;
     }
 
     /// <summary>

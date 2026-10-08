@@ -40,6 +40,12 @@ public enum TickEventKind
     /// after it a hit or a kill for each critic the burst hurt, which name the card's thrower as the strike does.
     /// </summary>
     Burst,
+
+    /// <summary>
+    /// A critic of a kind that eats applause reached a piece and ate it (plan T57): the piece is gone, and
+    /// nobody's count has it.
+    /// </summary>
+    ApplauseEaten,
 }
 
 /// <summary>Something that happened in one tick, for the view and the sound to show.</summary>
@@ -47,8 +53,8 @@ public enum TickEventKind
 /// Where on the floor: for a throw, where the card was thrown from; for a hit and for a kill, the middle of the
 /// critic's circle; for a burst, the middle of the circle of the critic the card struck; for a Vanish, where the
 /// magician stood before it; for a hurt magician and for a fallen one, where the magician stands; for a struck
-/// box office, the middle of the circle of the critic that struck it; for applause, dropped or picked up, where
-/// the piece lies.
+/// box office, the middle of the circle of the critic that struck it; for applause, dropped, picked up or
+/// eaten, where the piece lies (or lay).
 /// </param>
 /// <param name="Thrower">
 /// Who threw the card, for a throw, a hit, a kill and a burst: <see cref="TheMagician"/>, or an understudy by
@@ -58,7 +64,7 @@ public enum TickEventKind
 /// <param name="CriticId">
 /// The <see cref="Critic.Id"/> of the critic a card struck, for a hit and a kill, and of the critic that left
 /// the piece, for applause dropped: a critic that has fallen is on the stage no more, and its id is all that is
-/// left to know it by. <see cref="NoCritic"/> for every other kind.
+/// left to know it by. For applause eaten, the critic that ate it. <see cref="NoCritic"/> for every other kind.
 /// </param>
 public readonly record struct TickEvent(
     TickEventKind Kind, Vector2 Position, int Thrower = TickEvent.TheMagician, int CriticId = TickEvent.NoCritic)

@@ -316,6 +316,10 @@ public readonly record struct StageDoor(Vector2 Position, int OpensInAct);
 /// How many of the kind every act from <paramref name="FromAct"/> has whatever is drawn, paid for before anything
 /// is drawn and spread evenly over the act (plan T46): with nothing the kind is only drawn for, by its weight.
 /// </param>
+/// <param name="EatsApplause">
+/// Whether the kind goes for the applause on the floor (plan T57): while a piece lies anywhere it walks to the
+/// nearest and not to the box office, and eats the piece it reaches.
+/// </param>
 public readonly record struct EnemyKind(
     string Name,
     float Speed,
@@ -328,4 +332,5 @@ public readonly record struct EnemyKind(
     int FromAct,
     bool TurnsOnTheMagician,
     float UnderstudyDamageShare,
-    int InAnAct);
+    int InAnAct,
+    bool EatsApplause);

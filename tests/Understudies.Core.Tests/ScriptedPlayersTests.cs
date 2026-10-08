@@ -20,7 +20,8 @@ public class ScriptedPlayersTests
     /// Plan decision 9's question, whether <c>float</c> gives one result on two machines: two scripted
     /// performances, each pinned at the end of its third act and at its end, on macOS ARM and on Linux x64,
     /// both in CI. The earlier pin says how early a disagreement starts. The first is the doors player on the
-    /// committed numbers, asserted to have an encore in it; the second, the orbit player on a circle of ten and a
+    /// committed numbers, asserted to have an encore in it and, since plan T57, a piece of applause eaten by a
+    /// scalper in its third act; the second, the orbit player on a circle of ten and a
     /// quarter with a fuller first act, is asserted to have the Vanish and its cloud, stunned critics and blows on
     /// the box office in it, and an end after its third act. A change to tuning.json, to a rule or to a player
     /// changes them: pin them again from the failure's message, and say so in the pull request. If the two
@@ -37,8 +38,11 @@ public class ScriptedPlayersTests
 
             // An act that stood for an encore is in what is pinned.
             Assert.That(performance.Acts.Sum(act => act.Encores), Is.GreaterThan(0), "encores");
-            Assert.That(performance.Acts[2].StateHash, Is.EqualTo(15201573834497074747UL), "the end of act three");
-            Assert.That(performance.Acts[^1].StateHash, Is.EqualTo(14669672916148839855UL), "the end of the performance");
+
+            // And a piece of applause that a scalper ate (plan T57), by the end of act three already.
+            Assert.That(performance.Acts[2].Eaten, Is.GreaterThan(0), "pieces eaten in act three");
+            Assert.That(performance.Acts[2].StateHash, Is.EqualTo(12702712684919628558UL), "the end of act three");
+            Assert.That(performance.Acts[^1].StateHash, Is.EqualTo(9137874734297419918UL), "the end of the performance");
         });
     }
 
@@ -77,8 +81,8 @@ public class ScriptedPlayersTests
             Assert.That(stunned, Is.GreaterThan(0), "stunned critics");
             Assert.That(performance.Acts.Sum(act => act.Encores), Is.GreaterThan(0), "encores");
             Assert.That(performance.Acts, Has.Count.GreaterThan(3), "acts: the two pins are two");
-            Assert.That(performance.Acts[2].StateHash, Is.EqualTo(4804231357754467498UL), "the end of act three");
-            Assert.That(performance.Acts[^1].StateHash, Is.EqualTo(14242633899946872512UL), "the end of the performance");
+            Assert.That(performance.Acts[2].StateHash, Is.EqualTo(2328840268431754505UL), "the end of act three");
+            Assert.That(performance.Acts[^1].StateHash, Is.EqualTo(4568895241987383333UL), "the end of the performance");
         });
     }
 
@@ -138,7 +142,7 @@ public class ScriptedPlayersTests
                     !last || performance.Ended == Phase.Ovation ? Is.EqualTo(plan[i].Count) : Is.LessThanOrEqualTo(plan[i].Count),
                     $"act {i + 1}: entries");
                 Assert.That(act.FellInReach + act.WalkedTo, Is.EqualTo(act.Applause), $"act {i + 1}: applause");
-                Assert.That(act.Dropped, Is.GreaterThanOrEqualTo(act.Applause), $"act {i + 1}: dropped");
+                Assert.That(act.Dropped, Is.GreaterThanOrEqualTo(act.Applause + act.Eaten), $"act {i + 1}: dropped");
                 Assert.That(act.Encores, Is.EqualTo(taken.Count), $"act {i + 1}: encores");
                 Assert.That(spent, Is.LessThanOrEqualTo(act.Applause), $"act {i + 1}: what its encores cost");
                 Assert.That(taken, Has.None.EqualTo(Card.ChorusDamage), $"act {i + 1}: an encore's cards");
@@ -752,7 +756,11 @@ public class ScriptedPlayersTests
                 if (!players[player].Name.StartsWith("orbit", StringComparison.Ordinal))
                 {
                     table.WriteLine($"       encores by act      {ByAct(acts => Number(acts.Average(act => act.Encores)))}");
-                    table.WriteLine($"       picked up / dropped {ByAct(acts => $"{Number(acts.Average(act => act.Applause), "0")}/{Number(acts.Average(act => act.Dropped), "0")}")}");
+                    table.WriteLine($"       picked up / dropped / eaten {ByAct(acts => $"{Number(acts.Average(act => act.Applause), "0")}/{Number(acts.Average(act => act.Dropped), "0")}/{Number(acts.Average(act => act.Eaten), "0")}")}");
+                    table.WriteLine(
+                        "       scalpers entered/felled by the magician/by an understudy, and seconds one that fell ran "
+                        + ByAct(acts => $"{Number(acts.Average(act => act.Scalpers), "0")}/{Number(acts.Average(act => act.ScalperKills), "0")}/{Number(acts.Average(act => act.ScalperUnderstudyKills), "0")}"
+                            + $" {Number(acts.Sum(act => act.ScalperTicksLived) / (double)Simulation.TicksPerSecond / Math.Max(1, acts.Sum(act => act.ScalperKills + act.ScalperUnderstudyKills)))}s"));
                     table.WriteLine($"       box office by act   {ByAct(acts => Number(acts.Average(act => act.BoxOffice), "0"))}");
                     table.WriteLine($"       fell by act         {ByAct(acts => acts.Count(act => act.Fell).ToString(CultureInfo.InvariantCulture))}");
                     table.WriteLine($"       its kills by act    {ByAct(acts => Number(acts.Average(act => act.Kills), "0"))}");
