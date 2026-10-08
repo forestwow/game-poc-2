@@ -299,9 +299,22 @@ public class ScriptedPlayersTests
         int onTheCircle = 0;
         float furthest = 0f;
 
+        // How much nearer an open door it ever stood than the doors player's post at that door, in any act.
+        float insideAPost = float.NegativeInfinity;
+
         Performance performance = ScriptedPlayers.Play(Tuning, seed: 1, simulation =>
         {
             float fromCentre = Vector2.Distance(simulation.MagicianPosition, centre);
+            for (int door = 0; door < Tuning.StageDoors.Count; door++)
+            {
+                Vector2 at = Tuning.StageDoors[door].Position;
+                float post = MathF.Min(Tuning.ThrowRange, Vector2.Distance(at, centre) / 3f);
+                if (simulation.DoorIsOpen(door))
+                {
+                    insideAPost = MathF.Max(insideAPost, post - Vector2.Distance(simulation.MagicianPosition, at));
+                }
+            }
+
             if (simulation.Act == 1 && simulation.Phase == Phase.Act)
             {
                 ticks++;
@@ -324,6 +337,7 @@ public class ScriptedPlayersTests
             Assert.That(furthest, Is.GreaterThan(radius + 1f), "it left its circle");
             Assert.That(furthest, Is.LessThanOrEqualTo(radius + ScriptedPlayers.DoorsReach + Tuning.VanishDistance));
             Assert.That(onTheCircle, Is.GreaterThan(ticks / 4), "ticks on its circle");
+            Assert.That(insideAPost, Is.LessThanOrEqualTo(0f), "it left the floor before every open door alone");
         });
     }
 
