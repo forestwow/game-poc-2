@@ -602,15 +602,13 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
         DrawTheQuietFloor();
         for (int i = 0; i < Tuning.StageDoors.Count; i++)
         {
-            // A door's foot is half its width below where its critics enter, and kept within the stage's sides: a
-            // critic comes in on its doorway. It is lit while it is open.
-            Vector2 mouth = Tuning.StageDoors[i].Position;
-            float half = Tuning.StageDoorWidth / 2f;
+            // A door's foot is half its width below the line its critics enter on, which is as wide as the picture
+            // (plan T49; `Tuning.Parse` keeps it on the stage): whoever enters stands in the doorway. It is lit
+            // while it is open.
             DrawFigure(
                 _simulation.DoorIsOpen(i) ? Figure.OpenDoor : Figure.ShutDoor,
-                new Vector2(Math.Clamp(mouth.X, half, Tuning.StageSize.X - half), mouth.Y + half));
+                Tuning.StageDoors[i].Position + new Vector2(0f, Tuning.StageDoorWidth / 2f));
         }
-
 
         foreach (Understudy understudy in _simulation.Understudies)
         {

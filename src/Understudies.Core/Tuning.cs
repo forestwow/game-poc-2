@@ -25,7 +25,10 @@ namespace Understudies.Core;
 /// <param name="StageDoors">
 /// The stage doors. No door may be up the back wall, and one must be open in the first act.
 /// </param>
-/// <param name="StageDoorWidth">How much of the edge a door takes: a critic enters anywhere along it.</param>
+/// <param name="StageDoorWidth">
+/// How wide a door is, along the stage's width: a critic enters with its whole circle anywhere within it. No door
+/// may reach past a side of the stage.
+/// </param>
 /// <param name="BoxOfficePosition">The centre of the box office's circle on the floor.</param>
 /// <param name="BoxOfficeSize">The box office is this wide and this tall; its circle's radius is half of it.</param>
 /// <param name="BoxOfficeHitPoints">What the box office has when the show starts.</param>
@@ -217,7 +220,7 @@ public sealed record Tuning(
 
     /// <summary>Reads the text of a tuning.json.</summary>
     /// <exception cref="JsonException">
-    /// The text is not a tuning. For an unknown key, a missing one, no stage door, a door above the floor's top, no
+    /// The text is not a tuning. For an unknown key, a missing one, no stage door, a door above the floor's top or past a side, no
     /// door open in the first act, no kind of enemy and a kind that costs nothing the message names the key.
     /// </exception>
     public static Tuning Parse(string json)
@@ -250,13 +253,19 @@ public sealed record Tuning(
         }
 
         // A door up the back wall would let its critics in on the wall.
-        // ponytail: only a door's middle is looked at. A door in a side edge runs half its width up and down, so
-        // one within that of the wall's foot still lets a critic in a little above the floor; checking a door's
-        // ends needs the rule that says which way it runs, which lives in the simulation.
         if (tuning.StageDoors.Any(door => door.Position.Y < tuning.StageFloorTop))
         {
             throw new JsonException(
                 "'stageDoors' has a door whose y is less than 'stageFloorTop': it would be up the back wall.");
+        }
+
+        // A door runs along the stage's width (plan T49): one that reaches past a side would let a critic in
+        // outside the stage.
+        float half = tuning.StageDoorWidth / 2f;
+        if (tuning.StageDoors.Any(door => door.Position.X < half || door.Position.X > tuning.StageSize.X - half))
+        {
+            throw new JsonException(
+                "'stageDoors' has a door nearer than half of 'stageDoorWidth' to a side of the stage: its critics would enter outside it.");
         }
 
         return tuning;
@@ -265,7 +274,8 @@ public sealed record Tuning(
 
 /// <summary>A stage door: critics enter anywhere along it, in the acts in which it is open.</summary>
 /// <param name="Position">
-/// The door's middle, a point on the floor's edge: the floor's top edge is the foot of the back wall.
+/// The door's middle, a point of the floor: the door runs half its width to either side of it, along the stage's
+/// width (plan T49), and its critics enter on that line.
 /// </param>
 /// <param name="OpensInAct">The number of the first act in which the door is open: it is open ever after.</param>
 public readonly record struct StageDoor(Vector2 Position, int OpensInAct);

@@ -26,11 +26,12 @@ public class CriticTests
 
         simulation.Step(default);
 
-        // The committed first door is on the left edge, so it runs up and down.
+        // A door runs along the stage's width, wherever it is: the critic is on the door's own line.
         Vector2 door = Tuning.StageDoors[0].Position;
         Assert.That(simulation.Critics, Has.Count.EqualTo(1));
-        Assert.That(simulation.Critics[0].Position.X, Is.EqualTo(door.X));
-        Assert.That(simulation.Critics[0].Position.Y, Is.EqualTo(door.Y).Within(Tuning.StageDoorWidth / 2f));
+        Assert.That(simulation.Critics[0].Position.Y, Is.EqualTo(door.Y));
+        Assert.That(simulation.Critics[0].Position.X, Is.EqualTo(door.X).Within(Tuning.StageDoorWidth / 2f));
+        Assert.That(simulation.Critics[0].Position.X, Is.Not.EqualTo(door.X));
         Assert.That(simulation.Critics[0].PreviousPosition, Is.EqualTo(simulation.Critics[0].Position));
     }
 
@@ -51,17 +52,44 @@ public class CriticTests
     }
 
     [Test]
-    public void Step_AFirstDoorInTheRightEdge_TheCriticEntersSomewhereAlongIt()
+    public void Step_EveryCommittedDoorAndKind_WhoeverEntersIsWholeWithinItsDoorsWidthAndOnTheStage()
     {
-        var door = new Vector2(Tuning.StageSize.X, 9f);
-        Tuning tuning = Tuning with { StageDoors = [new StageDoor(door, 1)] };
+        // Plan T49: nobody comes in beside its door or half outside the stage. The widest kind too, on many
+        // seeds: its whole circle is between the door's two ends, which the tuning keeps on the stage.
+        for (int door = 0; door < Tuning.StageDoors.Count; door++)
+        {
+            for (int kind = 0; kind < Tuning.EnemyKinds.Count; kind++)
+            {
+                for (ulong seed = 1; seed <= 50; seed++)
+                {
+                    var simulation = new Simulation(Tuning, seed, [[new PlannedEntry(Tick: 0, Door: door, Kind: kind)]]);
+                    simulation.Step(default);
+
+                    Vector2 at = Tuning.StageDoors[door].Position;
+                    float radius = Tuning.EnemyKinds[kind].Radius;
+                    Vector2 entered = simulation.Critics.Single().Position;
+                    Assert.That(entered.Y, Is.EqualTo(at.Y), $"door {door}, kind {kind}, seed {seed}");
+                    Assert.That(
+                        MathF.Abs(entered.X - at.X) + radius,
+                        Is.LessThanOrEqualTo(Tuning.StageDoorWidth / 2f),
+                        $"door {door}, kind {kind}, seed {seed}");
+                    Assert.That(entered.X - radius, Is.GreaterThanOrEqualTo(0f));
+                    Assert.That(entered.X + radius, Is.LessThanOrEqualTo(Tuning.StageSize.X));
+                }
+            }
+        }
+    }
+
+    [Test]
+    public void Step_AKindWiderThanItsDoor_EntersAtTheDoorsMiddle()
+    {
+        var door = new Vector2(20f, 10f);
+        Tuning tuning = Tuning with { StageDoorWidth = 0.5f, StageDoors = [new StageDoor(door, 1)] };
         var simulation = Shows.WithOneCritic(tuning);
 
         simulation.Step(default);
 
-        Assert.That(simulation.Critics[0].Position.X, Is.EqualTo(door.X));
-        Assert.That(simulation.Critics[0].Position.Y, Is.EqualTo(door.Y).Within(tuning.StageDoorWidth / 2f));
-        Assert.That(simulation.Critics[0].Position.Y, Is.Not.EqualTo(door.Y));
+        Assert.That(simulation.Critics[0].Position, Is.EqualTo(door));
     }
 
     [Test]

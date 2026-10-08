@@ -20,7 +20,7 @@ public class ScriptedPlayersTests
     /// Plan decision 9's question, whether <c>float</c> gives one result on two machines: two scripted
     /// performances, each pinned at the end of its third act and at its end, on macOS ARM and on Linux x64,
     /// both in CI. The earlier pin says how early a disagreement starts. The first is the doors player on the committed
-    /// numbers, asserted to have an encore in it; the second, the orbit player on a circle of nine with a fuller first act, is
+    /// numbers, asserted to have an encore in it; the second, the orbit player on a circle of ten and a half with a fuller first act, is
     /// asserted to have the Vanish and its cloud, stunned critics and blows on the box office in it. A change to tuning.json, to a
     /// rule or to a player changes them: pin them again from the failure's message, and say so in the pull
     /// request. If the two machines ever disagree, that is a finding for the owner and not a test to make pass.
@@ -36,8 +36,8 @@ public class ScriptedPlayersTests
 
             // An act that stood for an encore is in what is pinned.
             Assert.That(performance.Acts.Sum(act => act.Encores), Is.GreaterThan(0), "encores");
-            Assert.That(performance.Acts[2].StateHash, Is.EqualTo(162178741610036784UL), "the end of act three");
-            Assert.That(performance.Acts[^1].StateHash, Is.EqualTo(4282083162319239188UL), "the end of the performance");
+            Assert.That(performance.Acts[2].StateHash, Is.EqualTo(3817376078851298800UL), "the end of act three");
+            Assert.That(performance.Acts[^1].StateHash, Is.EqualTo(3879495594897603074UL), "the end of the performance");
         });
     }
 
@@ -49,10 +49,13 @@ public class ScriptedPlayersTests
         int blows = 0;
         int stunned = 0;
 
-        // On a circle of nine, wider than the guard's: on those no fall leaves applause (plan decision 27), and
-        // an orbit without an encore pins less. Its budget is its own and has no rise: the rise is pinned by the
-        // doors player's performance alone.
-        Func<Simulation, MagicianInput> orbit = ScriptedPlayers.Orbit(9f);
+        // On a circle of ten and a half, wider than the guard's: on those no fall leaves applause (plan decision 27), and
+        // an orbit without an encore pins less. (It was nine until plan T49 moved the side doors in: on nine this
+        // performance now closes in its second act with no encore, and on ten and a half it has five and closes
+        // in its fourth. That circle is cut by the back wall, where its walker crawls, which is pinned as well
+        // as anything.) Its budget is its own and has no rise: the rise is
+        // pinned by the doors player's performance alone.
+        Func<Simulation, MagicianInput> orbit = ScriptedPlayers.Orbit(10.5f);
 
         Performance performance = ScriptedPlayers.Play(Crowded, seed: 1, simulation =>
         {
@@ -69,8 +72,8 @@ public class ScriptedPlayersTests
             Assert.That(blows, Is.GreaterThan(0), "blows on the box office");
             Assert.That(stunned, Is.GreaterThan(0), "stunned critics");
             Assert.That(performance.Acts.Sum(act => act.Encores), Is.GreaterThan(0), "encores");
-            Assert.That(performance.Acts[2].StateHash, Is.EqualTo(14979360235718945559UL), "the end of act three");
-            Assert.That(performance.Acts[^1].StateHash, Is.EqualTo(5419211264143406984UL), "the end of the performance");
+            Assert.That(performance.Acts[2].StateHash, Is.EqualTo(3300869282690139008UL), "the end of act three");
+            Assert.That(performance.Acts[^1].StateHash, Is.EqualTo(4416440448659965522UL), "the end of the performance");
         });
     }
 
