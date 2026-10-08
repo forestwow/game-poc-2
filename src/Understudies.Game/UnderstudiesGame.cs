@@ -12,17 +12,43 @@ namespace Understudies.Game;
 // The base class is spelled out because `Game` alone means this namespace here.
 internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
 {
-    // The window the game opens in is the sprites' own measure: a sprite pixel is one screen pixel in it, and two
-    // in a window twice as wide.
-    private const int WindowWidth = 1024;
-    private const int WindowHeight = 576;
-    private const float MagicianHeight = 3f;
+    // The window the game opens in, and the size of a captured frame (plan T42).
+    private const int WindowWidth = 1280;
+    private const int WindowHeight = 720;
+
+    // The sprites are pixel art, and there are two measures (plan T42). The set's (the curtain, the doors, the
+    // box office, the footlights) is in units whatever the window: 64 sprite pixels are three units.
+    private const float SetPixelsPerUnit = 64f / 3f;
+
+    // The walking figures' own measure is this many times the set's, in units whatever the window as well. At 1
+    // a figure is as large against the stage as before plan T42: the magician's 66 pixels are 3.09 units, one
+    // screen pixel to a sprite pixel in a window 1024 wide and one and a quarter, uneven, in the 1280 the game
+    // opens in. At 1.6 it is the design's: 4.95 units, two screen pixels to a sprite pixel at 1280 (the frames of
+    // art/frames/s2-design). What is drawn of a figure, at its chest or over its head is this many times as
+    // large; no footprint, range or radius is. Which of the two stays is the owner's to say (plan T42).
+    internal const float FiguresMeasure = 1f;
+
+    // A figure's sprite pixel is made a whole number of screen pixels where its measure asks for one to within
+    // this much of a screen pixel, and is the measure's own otherwise.
+    private const float WholeWithin = 0.05f;
+
+    // The boards have no footprint to keep: they are laid at a whole number of screen pixels to a sprite pixel,
+    // the nearest to this many times the set's measure (two in a window 1280 wide, as the design has them).
+    private const float FloorMeasure = 1.6f;
 
     // The box office's bar is this far above its roof: clear of the critics that stand behind it.
-    private const float BoxOfficeBarLift = 2f;
+    private const float BoxOfficeBarLift = 2f * FiguresMeasure;
 
-    // The sprites are pixel art drawn to one measure: the magician's 64 pixels are its three units.
-    private const float SpritePixelsPerUnit = 64f / MagicianHeight;
+    // The line under the curtain, along the top of the boards: four screen pixels in a window 1280 wide.
+    private const float GoldLine = 0.15f;
+
+    // The boards are dimmed with this, so that what stands on them stands out.
+    private static readonly Color BoardsDim = new Color(10, 6, 14) * 0.35f;
+
+    // How strong the footlights are: whole in an act, and less while the stage stands for an encore, and for the
+    // program or between two acts.
+    private const float FootlightsInAnEncore = 0.5f;
+    private const float FootlightsBetweenActs = 0.35f;
 
     // A walk goes through its frames at WalkFramesPerSecond for a figure that goes WalkReferenceSpeed units a
     // second, and faster or slower as the figure does: a stagehand's feet run and a critic's plod. Never slower
@@ -41,10 +67,10 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
     private const float ThrownCardEdge = 0.1f;
 
     // The flick of light at a throwing hand grows to this wide as it goes out.
-    private const float FlickSize = 1.1f;
+    private const float FlickSize = 1.1f * FiguresMeasure;
 
     // A card flies at the height of a critic's chest.
-    private const float ThrownCardLift = 1f;
+    private const float ThrownCardLift = 1f * FiguresMeasure;
 
     // A circle is laid of this many strips: there is no texture but the one pixel.
     private const int DiscStrips = 48;
@@ -62,10 +88,11 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
 
     // The one caption of a performance, over the head of the first understudy and going where it goes: through
     // the curtain of the second act and for the first seconds of that act, long enough to be read. Where the
-    // understudy stands beside the magician the words are clear of the bar over the magician's head.
+    // understudy stands beside the magician the words are clear of the bar over the magician's head: their
+    // middle is CaptionLift above the head.
     private const string Caption = "Your understudy. It repeats your act one, every act.";
     private const float CaptionHeight = 1f;
-    private const float CaptionLift = MagicianHeight + 1.2f;
+    private const float CaptionLift = 1.4f;
     private const float CaptionTimeInTheAct = 3f;
 
     // An understudy is half there, and the line of its route on the floor is fainter still. The line is laid from
@@ -109,8 +136,8 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
         Path.Combine("atkinson-hyperlegible", "AtkinsonHyperlegible-Regular.ttf"),
     ];
 
-    // Words on the stage carry an outline in ink, this wide in world units: two screen pixels in a window 1280
-    // wide, and two as well in the 1024 the window opens at, where 1.6 is rounded; never less than one, and
+    // Words on the stage carry an outline in ink, this wide in world units: two screen pixels in the window of
+    // 1280 the game opens in, and two as well in one 1024 wide, where 1.6 is rounded; never less than one, and
     // never more than one part in SmallestOutlined of the words' height.
     private static readonly Color OutlineInk = new(30, 22, 30);
     private const float OutlineWidth = 0.075f;
@@ -502,7 +529,10 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
 
         // A shake moves the whole picture, bars and all. The wall and the floor are laid as far past the stage's
         // edge as the stage is moved, so the strip of the window a shake uncovers is stage and not the surround.
+        // To a whole screen pixel: a part of one would change which of the set's uneven pixels are the wide ones,
+        // and a shaken set would shimmer.
         corner += _juice.Shake * scale;
+        corner = new Vector2(MathF.Round(corner.X), MathF.Round(corner.Y));
         Vector2 past = Vector2.Abs(_juice.Shake);
         _scale = scale;
         _corner = corner;
@@ -519,9 +549,19 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
         Lay(
             _floor,
             new Vector2(-past.X, Tuning.StageFloorTop),
-            across with { Y = Tuning.StageSize.Y - Tuning.StageFloorTop + past.Y });
-        float curtainHeight = _curtain.First.Height * SpritePixel / _curtain.Block;
-        Lay(_curtain, new Vector2(-past.X, Tuning.StageFloorTop - curtainHeight), across with { Y = curtainHeight });
+            across with { Y = Tuning.StageSize.Y - Tuning.StageFloorTop + past.Y },
+            MathF.Max(1f, MathF.Round((scale * FloorMeasure / SetPixelsPerUnit) - 0.01f)) / scale);
+        Fill(
+            new Vector2(-past.X, Tuning.StageFloorTop),
+            across with { Y = Tuning.StageSize.Y - Tuning.StageFloorTop + past.Y },
+            BoardsDim);
+        float curtainHeight = _curtain.First.Height / (_curtain.Block * SetPixelsPerUnit);
+        Lay(
+            _curtain,
+            new Vector2(-past.X, Tuning.StageFloorTop - curtainHeight),
+            across with { Y = curtainHeight },
+            1f / SetPixelsPerUnit);
+        Fill(new Vector2(-past.X, Tuning.StageFloorTop), across with { Y = GoldLine }, Magician);
         _spriteBatch.End();
 
         // What lies flat on the floor, and the doors, which are of the set and hide nobody: whoever stands at a
@@ -588,14 +628,6 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
         // office stands a hair behind its foot line, so whoever stands exactly on that line is in front.
         const float hair = 0.001f;
         DrawFigure(Figure.BoxOffice, boxOfficeFeet - new Vector2(0f, hair), white: _juice.BoxOfficeWhite);
-        // The footlights, along the stage's front edge and in front of all that stands on it. An offer writes its
-        // last line there, and so does the stage between two acts, so they are out while that line is read.
-        bool lit = !IsOffered && _simulation.Phase != Phase.BetweenActs;
-        for (float x = FootlightGap / 2f; x < Tuning.StageSize.X && lit; x += FootlightGap)
-        {
-            DrawFigure(Figure.Footlight, new Vector2(x, Tuning.StageSize.Y));
-        }
-
         Vector2 magicianFeet = Vector2.Lerp(_simulation.MagicianPreviousPosition, _simulation.MagicianPosition, alpha);
         Vector2 magicianStep = _simulation.MagicianPosition - _simulation.MagicianPreviousPosition;
         if (magicianStep != Vector2.Zero)
@@ -753,7 +785,7 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
                 Color.White * (hit ? 1f - effect.Through : 1f),
                 0f,
                 new Microsoft.Xna.Framework.Vector2(source.Width / 2f, source.Height / 2f),
-                SpritePixel,
+                FigurePixel,
                 SpriteEffects.None,
                 0f);
         }
@@ -774,8 +806,9 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
             FillTurned(scrap.Middle, Juice.ScrapSize, scrap.Turn, ScrapOfPaper * scrap.Opacity);
         }
 
-        // Only a closed show goes dark: an ovation is told from a loss at a glance. Under the program's cards the
-        // stage is dimmed a little and still seen: the critics left standing are what the player chooses against.
+        // A closed show goes dark, and an ovation does not: the two are told apart at a glance. Under an offer's
+        // cards the stage is as dark (the design's six tenths): where a crowd stands is still seen, and not what
+        // it is.
         if (_simulation.Phase == Phase.Closed)
         {
             Fill(Vector2.Zero, Tuning.StageSize, Color.Black * 0.6f);
@@ -783,6 +816,22 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
         else if (ProgramIsShown)
         {
             Fill(Vector2.Zero, Tuning.StageSize, Color.Black * ProgramDim);
+        }
+
+        // The footlights, along the stage's front edge, in front of all that stands on it and of the wash: dimmer
+        // while the stage stands. There the line of what is held is written along that edge, and the lamps it is
+        // written over are out: the words stand in a gap of the row.
+        // ponytail: a gap that is as wide as the words. The line has a place of its own above the lamps when the
+        // HUD is laid out again (plan S3).
+        bool stands = IsOffered || _simulation.Phase == Phase.BetweenActs;
+        float footlights = !stands ? 1f : _simulation.Phase == Phase.Encore ? FootlightsInAnEncore : FootlightsBetweenActs;
+        float wordsHalf = stands ? HeldLines().Max(line => Wide(Face.Sentence, SmallWordsHeight, line)) / 2f : 0f;
+        for (float x = FootlightGap / 2f; x < Tuning.StageSize.X; x += FootlightGap)
+        {
+            if (!stands || MathF.Abs(x - (Tuning.StageSize.X / 2f)) > wordsHalf + (FootlightGap / 4f))
+            {
+                DrawFigure(Figure.Footlight, new Vector2(x, Tuning.StageSize.Y), opacity: footlights);
+            }
         }
 
         var bar = new Vector2(Tuning.BoxOfficeSize, 0.4f);
@@ -793,7 +842,7 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
         // The magician has two small bars, told apart by place and by colour. Its hit points are under its feet, in
         // the colour of the box office's. The Vanish's is over its head: it fills as the Vanish comes back, and a
         // full bar is a Vanish that is ready. A fallen magician has no Vanish to wait for.
-        var smallBar = new Vector2(1.6f, 0.25f);
+        var smallBar = new Vector2(1.6f, 0.25f) * FiguresMeasure;
         Vector2 atTheFeet = magicianFeet - new Vector2(smallBar.X / 2f, 0f);
         FillBar(
             atTheFeet + new Vector2(0f, 0.3f),
@@ -802,8 +851,9 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
             HitPoints);
         if (!_simulation.MagicianHasFallen)
         {
+            // Kept on the stage: a magician at the foot of the back wall has its head above the stage's top edge.
             FillBar(
-                atTheFeet - new Vector2(0f, MagicianHeight + 0.3f + smallBar.Y),
+                atTheFeet with { Y = MathF.Max(0.1f, magicianFeet.Y - MagicianTall - 0.3f - smallBar.Y) },
                 smallBar,
                 1f - _simulation.VanishCooldownLeft,
                 VanishBar);
@@ -962,7 +1012,7 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
                 Face.Sentence,
                 CaptionHeight,
                 Caption,
-                Feet(first, alpha) - new Vector2(0f, CaptionLift),
+                Feet(first, alpha) - new Vector2(0f, MagicianTall + CaptionLift),
                 0.5f,
                 UnderstudyTints[0],
                 keptOnTheStage: true);
@@ -1108,11 +1158,12 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
             sheet.First.Width,
             sheet.First.Height);
 
-        // A sprite pixel is a whole number of screen pixels, the nearest to its measure that the window gives.
-        // ponytail: a figure is so up to a third smaller or larger than its units say, with the window's size, and
-        // larger still in a window narrower than 1024. A stage drawn to a target of its own at the sprites' measure
-        // and scaled whole would end that.
-        float unit = SpritePixel / sheet.Block;
+        // A sprite is in units whatever the window, by the measure of its family, and unsmoothed.
+        // ponytail: its own pixels are so uneven wherever the window does not make a whole number of them: the
+        // set's and, at a measure of 1, a figure's are one and a quarter screen pixels at 1280 wide (every
+        // fourth is two), and whole at 1024 and its multiples. A set and figures drawn for 1280, or a stage drawn
+        // to a target of its own and scaled whole, would end it.
+        float unit = (figure <= Figure.Rival ? FigurePixel : 1f / SetPixelsPerUnit) / sheet.Block;
         float width = source.Width * unit;
         var onAPixel = new Vector2(MathF.Round(feet.X * _scale), MathF.Round(feet.Y * _scale)) / _scale;
 
@@ -1166,17 +1217,32 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
         _ => Figure.Stagehand,
     };
 
-    /// <summary>How long a sprite pixel is in world units in the frame being drawn.</summary>
-    private float SpritePixel => MathF.Max(1f, MathF.Round(_scale / SpritePixelsPerUnit)) / _scale;
+    /// <summary>
+    /// How long a walking figure's sprite pixel is in world units in the frame being drawn: the figures' measure,
+    /// and a whole number of screen pixels where the measure asks for one to within <see cref="WholeWithin"/>.
+    /// </summary>
+    private float FigurePixel
+    {
+        get
+        {
+            float asked = _scale * FiguresMeasure / SetPixelsPerUnit;
+            float whole = MathF.Max(1f, MathF.Round(asked));
+            return (MathF.Abs(asked - whole) <= WholeWithin ? whole : asked) / _scale;
+        }
+    }
+
+    /// <summary>How tall the magician is drawn in the frame being drawn, in world units: what is over its head is over this.</summary>
+    private float MagicianTall => _sheets[(int)Figure.Magician][0].First.Height * FigurePixel;
 
     /// <summary>
     /// A picture laid side by side over a rectangle of the stage, its first copy's corner on the stage's own corner
     /// across, so that a shaken stage carries its boards with it. For a batch that lets a picture go round, and for
     /// a picture that fills its file from side to side.
     /// </summary>
-    private void Lay(Sheet sheet, Vector2 topLeft, Vector2 size)
+    /// <param name="pixel">How long a sprite pixel of the picture is, in world units.</param>
+    private void Lay(Sheet sheet, Vector2 topLeft, Vector2 size, float pixel)
     {
-        float unit = SpritePixel / sheet.Block;
+        float unit = pixel / sheet.Block;
         var source = new Rectangle(
             sheet.First.X + (int)MathF.Round(topLeft.X / unit),
             sheet.First.Y,
@@ -1324,6 +1390,7 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
     /// <summary>What <see cref="DrawFigure"/> can draw.</summary>
     private enum Figure
     {
+        // The walking figures first, to the rival: DrawFigure tells them from the set by that.
         Magician,
         Critic,
         Stagehand,

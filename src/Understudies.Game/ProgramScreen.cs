@@ -28,7 +28,9 @@ internal sealed partial class UnderstudiesGame
     private const float PanelRaise = 0.4f;
     private const float PanelFrame = 0.2f;
 
-    private const float NameHeight = 1.2f;
+    // A card's name is Pixelify Sans, which is crisp at 28 screen pixels and not at 32: 1.05 units in a window
+    // 1280 wide.
+    private const float NameHeight = 1.05f;
     private const float SmallWordsHeight = 0.8f;
 
     // The flavour is the smaller face, under the name; what the card does is the larger, under that, and starts
@@ -45,7 +47,7 @@ internal sealed partial class UnderstudiesGame
     private static readonly Vector2 CountdownBar = new(20f, 0.4f);
 
     // How dark the stage goes under the cards, and how faint the cards not taken are beside the one that was.
-    private const float ProgramDim = 0.3f;
+    private const float ProgramDim = 0.6f;
     private const float NotTakenOpacity = 0.3f;
 
     // Seconds a card just taken stays on the screen before the line between two acts. No go-on is taken in them.
@@ -208,11 +210,7 @@ internal sealed partial class UnderstudiesGame
             0.5f,
             ApplauseHeart);
 
-        // Nine kinds of card do not go in one line: as many lines as it takes, the last where the one line was.
-        string[] held = [.. Enum.GetValues<Card>().Where(card => Held(card) > 0).Select(card => $"{Describe(card).Name} x{Held(card)}")];
-        List<string> holds = held.Length == 0
-            ? ["You hold no card yet."]
-            : Wrapped(Face.Sentence, SmallWordsHeight, ["You hold:", .. held[..^1].Select(card => $"{card},"), held[^1]], Tuning.StageSize.X - 2f);
+        List<string> holds = HeldLines();
         for (int line = 0; line < holds.Count; line++)
         {
             float up = (holds.Count - 1 - line) * HoldsPitch;
@@ -319,6 +317,16 @@ internal sealed partial class UnderstudiesGame
             new Vector2(middle, PanelsBottom + 2.8f),
             0.5f,
             Words);
+    }
+
+    /// <summary>What the magician holds, as the lines written at the stage's bottom edge.</summary>
+    private List<string> HeldLines()
+    {
+        // Nine kinds of card do not go in one line: as many lines as it takes, the last where the one line was.
+        string[] held = [.. Enum.GetValues<Card>().Where(card => Held(card) > 0).Select(card => $"{Describe(card).Name} x{Held(card)}")];
+        return held.Length == 0
+            ? ["You hold no card yet."]
+            : Wrapped(Face.Sentence, SmallWordsHeight, ["You hold:", .. held[..^1].Select(card => $"{card},"), held[^1]], Tuning.StageSize.X - 2f);
     }
 
     /// <summary>

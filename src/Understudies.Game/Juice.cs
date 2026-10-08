@@ -15,8 +15,8 @@ namespace Understudies.Game;
 internal sealed class Juice(Random random)
 {
     // Every number of the juice is here, to be turned by hand: none is a rule, so none is in tuning.json. Times are
-    // in seconds and lengths in world units (a critic is one unit wide, and a unit is some 21 pixels of a window
-    // 1024 wide).
+    // in seconds and lengths in world units (a critic's footprint is one unit wide, and a unit is some 27 pixels of a
+    // window 1280 wide).
 
     // A figure that was hurt is drawn white for FlashTime, and is not made to flash again for FlashRest after
     // that. A crowd deals many blows a second: what it beats blinks, under three times a second, and does not
@@ -42,7 +42,7 @@ internal sealed class Juice(Random random)
     private const float ScrapSlowestShare = 0.4f;
     private const float ScrapDrag = 9f;
     private const float ScrapTime = 0.7f;
-    private const float ScrapLift = 1f;
+    private const float ScrapLift = 1f * UnderstudiesGame.FiguresMeasure;
 
     // What a card does is seen where it does it: a flick of light at the hand that throws it, a burst of its suits
     // where it strikes and a splash of ink and newsprint where its critic falls, each this long. They are at a
@@ -63,7 +63,7 @@ internal sealed class Juice(Random random)
     /// The splash is black ink and grey newsprint, and the boards are dark: under it, for the first
     /// <see cref="KillFlashShare"/> of its time, a pale disc this wide and this thick at first, going out.
     /// </summary>
-    public const float KillFlashRadius = 1.1f;
+    public const float KillFlashRadius = 1.1f * UnderstudiesGame.FiguresMeasure;
     public const float KillFlashOpacity = 0.75f;
     public const float KillFlashShare = 0.5f;
 
