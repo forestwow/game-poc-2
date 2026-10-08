@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>HUD in an act</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;600;700&amp;family=Atkinson+Hyperlegible:wght@400;700&amp;display=swap">
+<style>
+body{margin:0;background:#18121c}
+a{color:#fae278}a:hover{color:#fff3b0}
+.floor{background:linear-gradient(rgba(10,6,14,.35),rgba(10,6,14,.35)),url(/_blob/abc0b06706e9c863fe37bb8c75be28bc);background-size:auto,128px 128px;image-rendering:pixelated}
+.curtain{background:url(/_blob/028584c4a7513c74924194c07c76c820) repeat-x;background-size:auto 80px;image-rendering:pixelated}
+.magician{width:64px;height:132px;background:url(/_blob/2c0ecae2a113228c25ee84a4aea9e756) 0 0/192px 396px no-repeat;image-rendering:pixelated}
+.understudy{width:64px;height:132px;background-color:var(--tint);-webkit-mask:url(/_blob/2c0ecae2a113228c25ee84a4aea9e756) 0 0/192px 396px no-repeat;mask:url(/_blob/2c0ecae2a113228c25ee84a4aea9e756) 0 0/192px 396px no-repeat;opacity:.85}
+.understudy .skin{position:absolute;inset:0;background:url(/_blob/2c0ecae2a113228c25ee84a4aea9e756) 0 0/192px 396px no-repeat;opacity:.45;image-rendering:pixelated}
+.critic{width:64px;height:92px;background:url(/_blob/22d53100e61476e255006e1f6ae923a2) 0 0/192px 276px no-repeat;image-rendering:pixelated}
+.stagehand{width:52px;height:92px;background:url(/_blob/f540f78c6f1ccdb79d490049db574ed8) 0 0/156px 276px no-repeat;image-rendering:pixelated}
+.rival{width:120px;height:136px;background:url(/_blob/81dec6085e74ba1f7cfcc72fe12d0aa4) 0 0/360px 408px no-repeat;image-rendering:pixelated}
+.door{width:80px;height:80px;background:url(/_blob/dde0c0d929a88a9c16b673b13cae26ab) center/contain no-repeat;image-rendering:pixelated}
+.lamp{width:24px;height:24px;background:url(/_blob/6842c9fc854370688ee5d6bcdf5cfcc8) center/contain no-repeat;image-rendering:pixelated}
+.outline{text-shadow:2px 0 #1e161e,-2px 0 #1e161e,0 2px #1e161e,0 -2px #1e161e,2px 2px #1e161e,-2px -2px #1e161e,2px -2px #1e161e,-2px 2px #1e161e}
+.shadow{position:absolute;border-radius:50%;background:rgba(0,0,0,.38)}
+.card{position:absolute;width:8px;height:12px;background:#faf6ec;border:1px solid #1e161e;box-shadow:-10px 0 0 rgba(250,246,236,.35),-20px 0 0 rgba(250,246,236,.15)}
+.applause{position:absolute;width:14px;height:14px;background:#ff48c4;transform:rotate(45deg);box-shadow:0 0 12px 4px rgba(255,72,196,.55);outline:2px solid #ffe2f6;outline-offset:-4px}
+.pip{width:7px;height:7px;background:#84cc6e;outline:1px solid #1e161e}
+.pip.lost{background:#1e161e}
+.chip{display:flex;align-items:center;gap:6px;height:26px;padding:0 10px;background:#faf6ec;color:#1e161e;border:2px solid #1e161e;font:600 15px "Pixelify Sans",monospace;box-shadow:2px 2px 0 #1e161e}
+.cast{width:30px;height:30px;display:flex;align-items:center;justify-content:center;border:2px solid #1e161e;font:700 15px "Pixelify Sans",monospace;color:#1e161e;box-shadow:2px 2px 0 #1e161e}
+</style>
+</helmet>
+<div style="position: relative; width: 1280px; height: 720px; overflow: hidden; background: #18121c; font-family: 'Atkinson Hyperlegible', sans-serif; color: #ece4d2">
+
+  <div class="curtain" style="position: absolute; left: 0; top: 0; width: 1280px; height: 80px"></div>
+  <div style="position: absolute; left: 0; top: 80px; width: 1280px; height: 4px; background: #fae278"></div>
+  <div class="floor" style="position: absolute; left: 0; top: 84px; width: 1280px; height: 636px"></div>
+
+  <div style="position: absolute; left: 614px; top: 107px; width: 426px; height: 426px; border-radius: 50%; background: rgba(0,0,0,.14); border: 2px dashed rgba(236,228,210,.28); box-sizing: border-box"></div>
+
+  <div class="door" style="position: absolute; left: 413px; top: 8px"></div>
+  <div class="door" style="position: absolute; left: -8px; top: 360px"></div>
+  <div class="door" style="position: absolute; left: 1208px; top: 200px"></div>
+
+  <svg style="position: absolute; left: 0; top: 0" width="1280" height="720" viewBox="0 0 1280 720" aria-hidden="true">
+    <polyline points="720,347 560,380 330,420 267,460 300,500" fill="none" stroke="#78c8aa" stroke-width="3" stroke-dasharray="4 10" opacity=".4"></polyline>
+    <polyline points="720,347 480,330 250,340 200,380" fill="none" stroke="#d68478" stroke-width="3" stroke-dasharray="4 10" opacity=".4"></polyline>
+    <polyline points="720,347 900,300 1080,270 1140,300" fill="none" stroke="#b094d6" stroke-width="3" stroke-dasharray="4 10" opacity=".4"></polyline>
+    <polyline points="720,347 940,360 1100,360 1120,320" fill="none" stroke="#a0c46e" stroke-width="3" stroke-dasharray="4 10" opacity=".4"></polyline>
+    <polyline points="720,347 640,440 560,520 600,560" fill="none" stroke="#dc96be" stroke-width="3" stroke-dasharray="4 10" opacity=".4"></polyline>
+  </svg>
+
+  <div class="shadow" style="left: 787px; top: 358px; width: 90px; height: 22px"></div>
+  <img src="/_blob/5535cdaad7da88bc70d0ea9af91c4282" alt="The box office" style="position: absolute; left: 773px; top: 266px; width: 108px; height: 108px; image-rendering: pixelated">
+  <div style="position: absolute; left: 773px; top: 244px; width: 108px; height: 10px; background: #1e161e; outline: 2px solid #1e161e">
+    <div style="width: 88%; height: 100%; background: #84cc6e"></div>
+  </div>
+  <div class="outline" style="position: absolute; left: 888px; top: 236px; font: 600 18px 'Pixelify Sans', monospace; color: #ece4d2">352</div>
+
+  <div class="applause" style="left: 196px; top: 446px"></div>
+  <div class="applause" style="left: 152px; top: 402px"></div>
+  <div class="applause" style="left: 332px; top: 476px"></div>
+  <div class="applause" style="left: 1134px; top: 364px"></div>
+
+  <div class="shadow" style="left: 36px; top: 434px; width: 44px; height: 12px"></div>
+  <div class="critic" style="position: absolute; left: 26px; top: 350px"></div>
+  <div class="critic" style="position: absolute; left: 80px; top: 376px"></div>
+  <div class="critic" style="position: absolute; left: 60px; top: 420px"></div>
+  <div class="critic" style="position: absolute; left: 120px; top: 440px"></div>
+  <div class="critic" style="position: absolute; left: 18px; top: 470px"></div>
+  <div class="critic" style="position: absolute; left: 150px; top: 330px"></div>
+  <div class="critic" style="position: absolute; left: 430px; top: 60px"></div>
+  <div class="critic" style="position: absolute; left: 470px; top: 110px"></div>
+  <div class="critic" style="position: absolute; left: 420px; top: 150px"></div>
+  <div class="stagehand" style="position: absolute; left: 900px; top: 120px"></div>
+  <div class="critic" style="position: absolute; left: 1190px; top: 200px"></div>
+  <div class="critic" style="position: absolute; left: 1150px; top: 240px"></div>
+  <div class="rival" style="position: absolute; left: 1120px; top: 390px"></div>
+
+  <div class="card" style="left: 212px; top: 372px; transform: rotate(-30deg)"></div>
+  <div class="card" style="left: 180px; top: 394px; transform: rotate(-20deg)"></div>
+  <div class="card" style="left: 1160px; top: 330px; transform: rotate(160deg)"></div>
+
+  <div class="understudy" style="position: absolute; left: 268px; top: 368px; --tint: #78c8aa"><div class="skin"></div></div>
+  <div class="understudy" style="position: absolute; left: 188px; top: 248px; --tint: #d68478"><div class="skin"></div></div>
+  <div class="understudy" style="position: absolute; left: 1088px; top: 168px; --tint: #b094d6"><div class="skin"></div></div>
+  <div class="understudy" style="position: absolute; left: 1068px; top: 228px; --tint: #a0c46e"><div class="skin"></div></div>
+  <div class="understudy" style="position: absolute; left: 528px; top: 388px; --tint: #dc96be"><div class="skin"></div></div>
+
+  <div class="shadow" style="left: 245px; top: 376px; width: 44px; height: 12px"></div>
+  <div class="magician" style="position: absolute; left: 235px; top: 253px"></div>
+  <div style="position: absolute; left: 235px; top: 392px; display: flex; gap: 2px">
+    <div class="pip"></div><div class="pip"></div><div class="pip"></div><div class="pip"></div><div class="pip"></div><div class="pip"></div><div class="pip lost"></div><div class="pip lost"></div>
+  </div>
+  <div style="position: absolute; left: 235px; top: 403px; width: 70px; height: 5px; background: #1e161e"><div style="width: 60%; height: 100%; background: #96d6ec"></div></div>
+
+  <div style="position: absolute; left: 24px; top: 10px; display: flex; flex-direction: column; gap: 2px">
+    <div class="outline" style="font: 700 34px/1 'Pixelify Sans', monospace; color: #fae278">Act 6 of 10</div>
+    <div class="outline" style="font-size: 17px; color: #ece4d2">86 critics still to come</div>
+  </div>
+
+  <div style="position: absolute; left: 440px; top: 14px; width: 400px; display: flex; flex-direction: column; align-items: center; gap: 6px">
+    <div class="outline" style="font: 600 17px 'Pixelify Sans', monospace; color: #ffe2f6; letter-spacing: 3px">APPLAUSE TO THE NEXT ENCORE</div>
+    <div style="display: flex; align-items: center; gap: 10px">
+      <div style="width: 300px; height: 14px; background: #1e161e; outline: 2px solid #1e161e; box-shadow: 0 0 10px rgba(255,72,196,.4)"><div style="width: 77%; height: 100%; background: #ff48c4; box-shadow: inset 0 3px 0 #ffe2f6"></div></div>
+      <div class="outline" style="font: 700 22px 'Pixelify Sans', monospace; color: #ffe2f6">23 / 30</div>
+    </div>
+  </div>
+
+  <div style="position: absolute; right: 24px; top: 8px; display: flex; flex-direction: column; align-items: flex-end; gap: 0">
+    <div class="outline" style="font: 700 40px/1 'Pixelify Sans', monospace; color: #ece4d2">0:48</div>
+    <div class="outline" style="font-size: 16px; color: #ece4d2">3 encores tonight</div>
+  </div>
+
+  <div class="outline" style="position: absolute; left: 0; top: 96px; width: 1280px; text-align: center; font: 600 24px 'Pixelify Sans', monospace; color: #fae278">Act 6. The back door opens.</div>
+
+  <div style="position: absolute; left: 20px; top: 640px; display: flex; flex-direction: column; gap: 6px">
+    <div class="outline" style="font: 600 14px 'Pixelify Sans', monospace; color: #ece4d2; letter-spacing: 2px">YOU HOLD</div>
+    <div style="display: flex; gap: 8px">
+      <div class="chip">Sharper cards <span style="color: #a0365f">&times;2</span></div>
+      <div class="chip">Quicker hands <span style="color: #a0365f">&times;1</span></div>
+      <div class="chip">Longer arm <span style="color: #a0365f">&times;1</span></div>
+      <div class="chip" style="background: #d8f0e6">Sharper chorus <span style="color: #a0365f">&times;1</span></div>
+    </div>
+  </div>
+
+  <div style="position: absolute; right: 20px; top: 640px; display: flex; flex-direction: column; align-items: flex-end; gap: 6px">
+    <div class="outline" style="font: 600 14px 'Pixelify Sans', monospace; color: #ece4d2; letter-spacing: 2px">THE CAST ON STAGE</div>
+    <div style="display: flex; gap: 6px">
+      <div class="cast" style="background: #78c8aa">1</div>
+      <div class="cast" style="background: #d68478">2</div>
+      <div class="cast" style="background: #b094d6">3</div>
+      <div class="cast" style="background: #a0c46e">4</div>
+      <div class="cast" style="background: #dc96be">5</div>
+      <div class="cast" style="background: #3a2e3e; color: #ece4d2; border-style: dashed">6</div>
+    </div>
+  </div>
+
+  <div style="position: absolute; left: 0; top: 694px; width: 1280px; display: flex; justify-content: space-around; padding: 0 16px; box-sizing: border-box">
+    <div class="lamp"></div><div class="lamp"></div><div class="lamp"></div><div class="lamp"></div><div class="lamp"></div><div class="lamp"></div><div class="lamp"></div><div class="lamp"></div><div class="lamp"></div><div class="lamp"></div><div class="lamp"></div><div class="lamp"></div><div class="lamp"></div><div class="lamp"></div><div class="lamp"></div><div class="lamp"></div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":720}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

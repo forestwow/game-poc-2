@@ -1,0 +1,19 @@
+{
+  "v": 3,
+  "createdOnFiles": { "v": 1, "at": "2026-10-08T12:00:00Z" },
+  "title": "The Understudies screens",
+  "launch": { "view": "canvas" },
+  "pages": [],
+  "boards": {
+    "Main.dc.html": { "x": 0, "y": 0, "w": 1280, "h": 720, "title": "Main menu", "is_interactive": true },
+    "HUD.dc.html": { "x": 1360, "y": 0, "w": 1280, "h": 720, "title": "HUD in an act" },
+    "Encore.dc.html": { "x": 0, "y": 840, "w": 1280, "h": 720, "title": "Encore: pick a self card", "is_interactive": true },
+    "Program.dc.html": { "x": 1360, "y": 840, "w": 1280, "h": 720, "title": "Program: the chorus card", "is_interactive": true }
+  },
+  "order": ["Main.dc.html", "HUD.dc.html", "Encore.dc.html", "Program.dc.html"],
+  "notes": {
+    "title": { "x": 0, "y": -300, "text": "The Understudies: screens of the prototype", "kind": "title1", "maxW": 2640 },
+    "flow": { "x": 0, "y": -190, "w": 2640, "maxH": 120, "text": "Main menu → act (HUD) → encore opens in the fight when the applause bar fills → program between acts, paid for by an encore. Stage 48 × 27 units on 1280 × 720, sprites at two screen pixels a sprite pixel. Numbers are one mid-show state: act 6 of 10, three encores taken, the back door just opened.", "fill": "orange" }
+  },
+  "designSystems": []
+}

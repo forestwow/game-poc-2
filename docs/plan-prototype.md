@@ -55,6 +55,7 @@ The proof of concept ends at stop 3 (§6). The package for five outside testers 
 | 26 | Upgrades in the act | agreed with the owner on 2026-10-08, who finds that upgrades taken in play draw a player in more: **the encore**. Applause picked up fills a bar; when it is full the act stands for a moment and the magician takes one of three self cards, there and then; every encore taken makes the next cost more. Applause not spent when the act ends is lost, as before. The program between two acts stays and changes its part: one card for the chorus, after an act in which the magician took at least one encore; an act without an encore has no program. (First agreed as a card after every act, always; the owner changed it the same day, 2026-10-08, after a review showed that the free card paid a player that hides: growth without applause, which is the hole the applause rule is there to close.) An understudy takes its act's encores at the ticks the magician took them (T24). This replaces decisions 15 and 21: the thresholds, the bands and "no applause, no card" go. Decision 22's guard stands as it is written and the numbers are tuned to it again |
 | 27 | The waves and where applause is earned | chosen by the owner on 2026-10-08: shown the three ways on after T23 (no applause near the box office, the numbers as they were, dear encores on a gentle ramp), the owner chose **many encores and still more enemies**, and after playing `main` said that the encore does not get in the way and to go on. Three rules, as a player could be told them. **Every act brings more than the last, and the step itself grows**: forty critics, then eighty, and from the third act each step is sixty bigger than the one before (40, 80, 180, 340, 560, 840, 1180, 1580, 2040, 2560). **Every ten seconds a crowd comes in together**: a quarter of an act's critics come that way. **A critic that falls within eight units of the box office leaves no applause**, whoever stands where: the floor there is a shade darker inside a broken line. This replaces the linear budget of T20 and T23 (15 and 200 more an act) and adds to decision 26, whose encore and its cost stand. Decision 22's guard stands as written (T26) |
 | 28 | What is built after the verdict | on 2026-10-08 the owner brought in three documents (the review of the skeleton, the cast and the cards, the chorus's synergies and the notices) and said they are what is to be built: they are the specification of the road in §5. This overturns decision 18 for what they bring: the brute (the cast's "rival's understudy"), the heckler, the Reviewer and the rest of the cast, evolutions and statuses; and it widens decision 20's list of cards to the cast's. Kits other than thrown cards, stage hazards and music stay out. The card catalogue followed the same day and is a fourth |
+| 30 | The screens | on 2026-10-08 the owner brought in a design of four screens (the main menu, the HUD in an act, the encore, the program) as a loose way and a direction, not the final look, and asked for it to be planned and built: `docs/design/2026-10-08-screens/`. It sets the window at 1280 × 720 with the sprites at two screen pixels a sprite pixel, two faces (Pixelify Sans and Atkinson Hyperlegible, both under the Open Font License, shipped in the repository: this answers which font ships), a palette, paper cards and chips with an ink border, and an understudy as a figure filled with its act's tint. The start screen of §7 is its main menu. Where the design and a rule disagree, the rule stands and the ticket says so |
 
 Taken without a question, each a setting or a hypothesis:
 
@@ -454,6 +455,22 @@ What a ticket written from the catalogue must know:
 
 The cast's five open questions for the owner (the three flagged cards, the intern and the cap, the bosses' names, the chorus card's price, the heckler's tomato) are answered when their tickets are taken; the fourth is answered already.
 
+### The screens
+
+Decision 30; the screens in words are in `docs/design/2026-10-08-screens/README.md`. A direction, so each ticket is judged by the owner on captured frames and may leave the design where the game's own needs say so; it says where. View only unless said; each takes the next free number when taken, in this order:
+
+| order | ticket | what | needs |
+|---|---|---|---|
+| S1 | **The faces and the palette** | the two font files in the repository (with their licences) and read from it, so that every machine has the same words; words on the stage outlined in ink; the palette as named colours; nothing else moves | nothing; first, since every later screen is set in these faces |
+| S2 | **The window and the sprites' measure** | the window opens at 1280 × 720 and a sprite pixel is two screen pixels in it. This draws every figure about a third again as large against the stage as now (the magician nearly five units tall where its rule says three): judged on frames of a late act's crowd before it stays, and the footprints, ranges and radii do not change | S1 |
+| S3 | **The HUD** | the act and what is to come, the applause bar with its label and count, the clock and the encores' count, the announcing line; the magician's hit points as pips; "you hold" as chips; the cast's squares | S1, S2 |
+| S4 | **An understudy that reads** | the figure filled with its act's tint over the magician's picture, its route a dashed line: the review's R3, its other half, which the road puts before stop 2 is asked | S1; may be taken before S3 |
+| S5 | **The encore's screen** | the three cards as paper with a head strip, the chosen one lifted and ringed, the timer's bar, the keys as key caps, the clock greyed; a place for the flavour line of decision 29 | S1 to S3, and T25 |
+| S6 | **The program's screen** | the chorus card with the four panels: the act on the books, the understudy that joins with its cards, what the next act brings, the cast at the curtain. The first panel and T30's notices count the same things: when T30 is taken the two are made one | S5; what the act did is tallied in the view from events, or asked of Core where a number is missing |
+| S7 | **The main menu** | the start screen and the way back to it (§7): the title, "Perform", "Quit", the line of the controls, the magician and its cast. "Perform the same seed" needs the last show's seed kept; "Matinee or gala" is a choice of difficulty, which is a rule and has none yet: asked of the owner when this ticket is taken | S1, S2 |
+
+Against the road above: S1 to S4 come next, before more of the cast, since they change what every later frame looks like and S4 is owed before T31; S5 and S6 after T25; S7 last. The limit on copies (after T25) and the rival's second search do not wait for them.
+
 ## 6. Stops
 
 | Stop | After | The question the owner answers by playing |
@@ -484,7 +501,7 @@ What the owner named the same day as missing or open, none of it a ticket yet:
 In scope, but not sharp enough for a ticket yet. The first four wait for the owner's word that the game is ready to be given out (§6):
 
 - The log of a performance (a line per act: time near the box office, applause, cards, whether a second performance was started).
-- The start screen and the way back to it.
+- The start screen and the way back to it (now S7 of "The screens", decision 30: no longer waiting).
 - The two zips, checked on a real Windows machine and a real Mac, with a font file shipped in them.
 - The G1 sheet: what is watched, what is asked, the template of the written judgement.
 - What the owner's judgements at the stops ask to be changed: each becomes a ticket when it is given.

@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Main menu</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;600;700&amp;family=Atkinson+Hyperlegible:wght@400;700&amp;display=swap">
+<style>
+body{margin:0;background:#18121c}
+a{color:#fae278}a:hover{color:#fff3b0}
+.px{image-rendering:pixelated}
+.floor{background:linear-gradient(rgba(10,6,14,.42),rgba(10,6,14,.42)),url(/_blob/abc0b06706e9c863fe37bb8c75be28bc);background-size:auto,128px 128px;image-rendering:pixelated}
+.curtain{background:url(/_blob/028584c4a7513c74924194c07c76c820) repeat-x;background-size:auto 160px;image-rendering:pixelated}
+.magician{width:96px;height:198px;background:url(/_blob/2c0ecae2a113228c25ee84a4aea9e756) 0 0/288px 594px no-repeat;image-rendering:pixelated}
+.understudy{width:64px;height:132px;background-color:var(--tint);-webkit-mask:url(/_blob/2c0ecae2a113228c25ee84a4aea9e756) 0 0/192px 396px no-repeat;mask:url(/_blob/2c0ecae2a113228c25ee84a4aea9e756) 0 0/192px 396px no-repeat;opacity:.88}
+.understudy .skin{position:absolute;inset:0;background:url(/_blob/2c0ecae2a113228c25ee84a4aea9e756) 0 0/192px 396px no-repeat;opacity:.45;image-rendering:pixelated}
+.lamp{width:32px;height:32px;background:url(/_blob/6842c9fc854370688ee5d6bcdf5cfcc8) center/contain no-repeat;image-rendering:pixelated}
+.outline{text-shadow:4px 0 #1e161e,-4px 0 #1e161e,0 4px #1e161e,0 -4px #1e161e,4px 4px #1e161e,-4px -4px #1e161e,4px -4px #1e161e,-4px 4px #1e161e}
+.menu a,.menu button{display:flex;align-items:center;justify-content:space-between;box-sizing:border-box;width:380px;height:56px;padding:0 20px;border:3px solid #1e161e;font:600 24px "Pixelify Sans",monospace;color:#1e161e;background:#faf6ec;text-decoration:none;cursor:pointer;box-shadow:4px 4px 0 #1e161e}
+.menu a:hover,.menu button:hover{background:#fff3b0;color:#1e161e}
+.menu a.primary{background:#fae278;height:64px;font-size:30px}
+.menu small{font:400 15px "Atkinson Hyperlegible",sans-serif;color:#5a4d5e}
+.shadow{position:absolute;border-radius:50%;background:rgba(0,0,0,.4)}
+</style>
+</helmet>
+<div style="position: relative; width: 1280px; height: 720px; overflow: hidden; background: #18121c; font-family: 'Atkinson Hyperlegible', sans-serif; color: #ece4d2">
+
+  <div class="curtain" style="position: absolute; left: 0; top: 0; width: 1280px; height: 160px"></div>
+  <div style="position: absolute; left: 0; top: 160px; width: 1280px; height: 8px; background: #fae278; box-shadow: 0 4px 0 #1e161e"></div>
+  <div class="floor" style="position: absolute; left: 0; top: 168px; width: 1280px; height: 552px"></div>
+
+  <div style="position: absolute; left: 0; top: 560px; width: 1280px; height: 160px; background: linear-gradient(rgba(250,226,120,0), rgba(250,226,120,.22))"></div>
+
+  <div style="position: absolute; left: 80px; top: 200px; display: flex; flex-direction: column; gap: 8px">
+    <div style="font: 400 22px 'Pixelify Sans', monospace; color: #ff8ad8; letter-spacing: 4px; text-transform: uppercase">Tonight, at the street corner</div>
+    <h1 class="outline" style="margin: 0; font: 700 104px/0.95 'Pixelify Sans', monospace; color: #fae278; letter-spacing: 2px">The<br>Understudies</h1>
+    <p style="margin: 8px 0 0; font-size: 24px; color: #ece4d2; max-width: 560px">Where you run is what you build. Every act you play leaves a cardboard you that plays it again.</p>
+  </div>
+
+  <nav class="menu" style="position: absolute; left: 80px; top: 452px; display: flex; flex-direction: column; gap: 12px">
+    <a class="primary" href="HUD.dc.html"><span>Perform</span><small>ten acts of 75 s</small></a>
+    <button type="button"><span>Perform the same seed</span><small>last night's show</small></button>
+    <button type="button"><span>Matinee or gala</span><small>easier or harder</small></button>
+    <button type="button"><span>Quit</span><small>Esc</small></button>
+  </nav>
+
+  <div style="position: absolute; left: 700px; top: 330px; width: 520px; height: 300px">
+    <div class="shadow" style="left: 388px; top: 266px; width: 72px; height: 20px"></div>
+    <div class="shadow" style="left: 318px; top: 282px; width: 52px; height: 14px"></div>
+    <div class="shadow" style="left: 248px; top: 262px; width: 52px; height: 14px"></div>
+    <div class="shadow" style="left: 178px; top: 286px; width: 52px; height: 14px"></div>
+    <div class="shadow" style="left: 108px; top: 258px; width: 52px; height: 14px"></div>
+    <div class="shadow" style="left: 38px; top: 278px; width: 52px; height: 14px"></div>
+
+    <div class="understudy" style="position: absolute; left: 32px; top: 154px; --tint: #dc96be"><div class="skin"></div></div>
+    <div class="understudy" style="position: absolute; left: 102px; top: 134px; --tint: #a0c46e"><div class="skin"></div></div>
+    <div class="understudy" style="position: absolute; left: 172px; top: 162px; --tint: #b094d6"><div class="skin"></div></div>
+    <div class="understudy" style="position: absolute; left: 242px; top: 138px; --tint: #d68478"><div class="skin"></div></div>
+    <div class="understudy" style="position: absolute; left: 312px; top: 158px; --tint: #78c8aa"><div class="skin"></div></div>
+    <div class="magician" style="position: absolute; left: 376px; top: 84px"></div>
+  </div>
+
+  <div style="position: absolute; left: 0; top: 684px; width: 1280px; display: flex; justify-content: space-around; padding: 0 20px; box-sizing: border-box">
+    <div class="lamp"></div><div class="lamp"></div><div class="lamp"></div><div class="lamp"></div><div class="lamp"></div><div class="lamp"></div><div class="lamp"></div><div class="lamp"></div><div class="lamp"></div><div class="lamp"></div><div class="lamp"></div><div class="lamp"></div><div class="lamp"></div><div class="lamp"></div><div class="lamp"></div><div class="lamp"></div>
+  </div>
+
+  <div style="position: absolute; left: 0; top: 656px; width: 1280px; text-align: center; font-size: 16px; color: #ece4d2">Move: WASD or the stick &middot; Vanish: Space or A &middot; Go on: Enter or Start &middot; R starts a new show</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":720}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>
