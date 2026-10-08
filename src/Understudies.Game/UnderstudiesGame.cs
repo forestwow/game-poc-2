@@ -1,4 +1,3 @@
-using System.Globalization;
 using FontStashSharp;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
@@ -11,7 +10,7 @@ using Vector2 = System.Numerics.Vector2;
 namespace Understudies.Game;
 
 // The base class is spelled out because `Game` alone means this namespace here.
-internal sealed class UnderstudiesGame : Microsoft.Xna.Framework.Game
+internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
 {
     private const int WindowWidth = 1280;
     private const int WindowHeight = 720;
@@ -44,12 +43,6 @@ internal sealed class UnderstudiesGame : Microsoft.Xna.Framework.Game
     private const float CaptionHeight = 1f;
     private const float CaptionLift = MagicianHeight + 1.2f;
     private const float CaptionTimeInTheAct = 3f;
-
-    // The program's cards are lines of words across the front of the floor, where the least stands in their way:
-    // the first this far above the stage's bottom edge, and each this far below the one before it.
-    // ponytail: plain lines, and the keys 1 to 3 alone pick. T18 draws the cards and takes a gamepad's pick.
-    private const float ProgramLift = 7f;
-    private const float ProgramLineGap = 2f;
 
     // An understudy is half there, and the line of its route on the floor is fainter still. The line is laid from
     // every sixth place of the route to the next: a tenth of a second, under a unit at the magician's speed.
@@ -138,6 +131,10 @@ internal sealed class UnderstudiesGame : Microsoft.Xna.Framework.Game
     private SpriteBatch _spriteBatch = null!;
     private Texture2D _pixel = null!;
 
+    // Where the frame being drawn has the stage: the screen pixels of a world unit, and of the stage's corner.
+    private float _scale;
+    private Vector2 _corner;
+
     // Null on a machine that has none of the font files: the game then runs without its words.
     private FontSystem? _fonts;
 
@@ -218,6 +215,8 @@ internal sealed class UnderstudiesGame : Microsoft.Xna.Framework.Game
         {
             _simulation = NewShow(Tuning);
             _juice = new Juice(Random.Shared);
+            _offered = [];
+            _takenLeft = 0f;
         }
 
         // M mutes the sound, and M again brings it back.
@@ -226,28 +225,31 @@ internal sealed class UnderstudiesGame : Microsoft.Xna.Framework.Game
             _sound.Muted = !_sound.Muted;
         }
 
-        // Space or the gamepad's A is one Vanish for each press. The press waits for a tick to take it: a frame may
-        // run no tick, and it must not be lost, or several, and it must not be asked of each.
         GamePadState pad = GamePad.GetState(PlayerIndex.One);
-        if (Pressed(Keys.Space) || (pad.IsButtonDown(Buttons.A) && _padBefore.IsButtonUp(Buttons.A)))
-        {
-            _vanishAsked = true;
-        }
+        bool PadPressed(Buttons button) => pad.IsButtonDown(button) && _padBefore.IsButtonUp(button);
 
-        // 1, 2 and 3 take the program's card in that place, from the left. The simulation takes a pick in the
-        // program only, and of a place its offer has.
-        for (int place = 0; place < 3; place++)
+        // A press does one thing, by the phase this frame began in: the Enter that takes a card finds the stage
+        // between two acts when it is done, and must not go on as well.
+        if (_simulation.Phase == Phase.Program)
         {
-            if (Pressed(Keys.D1 + place))
+            ChooseInTheProgram(keys, pad);
+        }
+        else
+        {
+            // Space or the gamepad's A is one Vanish for each press. The press waits for a tick to take it: a
+            // frame may run no tick, and it must not be lost, or several, and it must not be asked of each.
+            if (Pressed(Keys.Space) || PadPressed(Buttons.A))
             {
-                _simulation.Pick(place);
+                _vanishAsked = true;
             }
-        }
 
-        // Enter or the gamepad's Start goes on to the next act. The simulation takes it between two acts only.
-        if (Pressed(Keys.Enter) || (pad.IsButtonDown(Buttons.Start) && _padBefore.IsButtonUp(Buttons.Start)))
-        {
-            _simulation.GoOn();
+            // Enter or the gamepad's Start goes on to the next act. The simulation takes it between two acts only,
+            // and the view not while a card just taken is still shown: a press meant for the program that came a
+            // moment after its time ran out must not begin the next act.
+            if ((Pressed(Keys.Enter) || PadPressed(Buttons.Start)) && _takenLeft <= 0f)
+            {
+                GoOn();
+            }
         }
 
         _keysBefore = keys;
@@ -273,6 +275,7 @@ internal sealed class UnderstudiesGame : Microsoft.Xna.Framework.Game
             _juice.Advance((float)frameSeconds);
         }
 
+        _takenLeft = MathF.Max(0f, _takenLeft - (float)frameSeconds);
         base.Update(gameTime);
     }
 
@@ -281,6 +284,16 @@ internal sealed class UnderstudiesGame : Microsoft.Xna.Framework.Game
         // Only an act has a next tick to draw towards, and the curtain, whose rewind goes on between its ticks.
         DrawStage(_simulation.Phase is Phase.Act or Phase.Curtain ? _clock.Alpha : 1f);
         base.Draw(gameTime);
+    }
+
+    /// <summary>Goes on to the next act, where the simulation lets it: the last act's offer is the view's no more.</summary>
+    private void GoOn()
+    {
+        if (_simulation.Phase == Phase.BetweenActs)
+        {
+            _offered = [];
+            _simulation.GoOn();
+        }
     }
 
     /// <summary>A show nobody has seen: its seed is the time, which Core never reads.</summary>
@@ -304,9 +317,21 @@ internal sealed class UnderstudiesGame : Microsoft.Xna.Framework.Game
     /// </summary>
     private void Tick(MagicianInput input)
     {
+        bool inTheProgram = _simulation.Phase == Phase.Program;
         _simulation.Step(input);
         _juice.Feed(_simulation);
         _sound.Feed(_simulation);
+        if (_simulation.Phase == Phase.Program && !inTheProgram)
+        {
+            // A program opens: the view keeps its offer, which the simulation empties with the pick.
+            _offered = [.. _simulation.Offer];
+            _highlighted = 0;
+        }
+        else if (inTheProgram && _simulation.Phase != Phase.Program)
+        {
+            // The program's time ran out in this tick, and the simulation took the leftmost card.
+            Acknowledge(0);
+        }
     }
 
     /// <summary>Walks a fixed script, draws the frame it ends on and saves it as a PNG.</summary>
@@ -332,9 +357,10 @@ internal sealed class UnderstudiesGame : Microsoft.Xna.Framework.Game
             // Nobody is here to press a key between two acts: a program's leftmost card is taken at once, so a
             // program takes none of a capture's ticks. Picking and going on before the tick, and not after it,
             // leaves a capture that ends on an act's last tick in that act's program, or between the two acts
-            // when the act earned none.
+            // when the act earned none: that is how a capture shows the program's screen. The pick is the
+            // simulation's own and not the view's, so no capture shows a card just taken.
             _simulation.Pick(0);
-            _simulation.GoOn();
+            GoOn();
             int length = (int)MathF.Round(Tuning.ActLength * second);
             Tick((_simulation.Act, length - _simulation.ActTicksLeft) switch
             {
@@ -377,6 +403,8 @@ internal sealed class UnderstudiesGame : Microsoft.Xna.Framework.Game
         // edge as the stage is moved, so the strip of the window a shake uncovers is stage and not the surround.
         corner += _juice.Shake * scale;
         Vector2 past = Vector2.Abs(_juice.Shake);
+        _scale = scale;
+        _corner = corner;
         Matrix worldToScreen = Matrix.CreateScale(scale, scale, 1f) * Matrix.CreateTranslation(corner.X, corner.Y, 0f);
 
         GraphicsDevice.Clear(Surround);
@@ -521,10 +549,15 @@ internal sealed class UnderstudiesGame : Microsoft.Xna.Framework.Game
             FillTurned(scrap.Middle, Juice.ScrapSize, scrap.Turn, ScrapOfPaper * scrap.Opacity);
         }
 
-        // Only a closed show goes dark: an ovation is told from a loss at a glance.
+        // Only a closed show goes dark: an ovation is told from a loss at a glance. Under the program's cards the
+        // stage is dimmed a little and still seen: the critics left standing are what the player chooses against.
         if (_simulation.Phase == Phase.Closed)
         {
             Fill(Vector2.Zero, Tuning.StageSize, Color.Black * 0.6f);
+        }
+        else if (ProgramIsShown)
+        {
+            Fill(Vector2.Zero, Tuning.StageSize, Color.Black * ProgramDim);
         }
 
         var bar = new Vector2(Tuning.BoxOfficeSize, 0.4f);
@@ -567,8 +600,14 @@ internal sealed class UnderstudiesGame : Microsoft.Xna.Framework.Game
                 Words);
         }
 
+        // The program's cards lie over everything but the words.
+        if (ProgramIsShown)
+        {
+            DrawProgramPanels();
+        }
+
         _spriteBatch.End();
-        DrawWords(scale, corner, alpha, besideTheBar: barTopLeft + new Vector2(bar.X + 0.3f, bar.Y / 2f));
+        DrawWords(alpha, besideTheBar: barTopLeft + new Vector2(bar.X + 0.3f, bar.Y / 2f));
     }
 
     /// <summary>Where an understudy is drawn: in the curtain's rewind, or between its last two ticks.</summary>
@@ -628,33 +667,13 @@ internal sealed class UnderstudiesGame : Microsoft.Xna.Framework.Game
     /// understudy that is drawn <paramref name="alpha"/> between its last two ticks; and the box office's hit
     /// points as a number at <paramref name="besideTheBar"/>, the point just to the right of the middle of its
     /// bar's end. They are drawn in screen pixels, so they stay sharp: the font is asked for at the size the window
-    /// makes of it, and <paramref name="scale"/> and <paramref name="corner"/> only say where on the screen a point
-    /// of the stage is.
+    /// makes of it (see <see cref="Write"/>).
     /// </summary>
-    private void DrawWords(float scale, Vector2 corner, float alpha, Vector2 besideTheBar)
+    private void DrawWords(float alpha, Vector2 besideTheBar)
     {
         if (_fonts is null)
         {
             return;
-        }
-
-        // The text's line is centred on the height of `at`, a point of the stage, with its left end there, its
-        // middle (`anchor` 0.5) or its right end (1). Words `keptOnTheStage` are moved by as much as it takes to
-        // have the whole line on the stage.
-        void Write(float height, string text, Vector2 at, float anchor, Color color, bool keptOnTheStage = false)
-        {
-            // A whole number of pixels tall and on whole pixels: a glyph drawn between two pixels is smeared over
-            // both. A window too small for words still has a pixel's worth.
-            SpriteFontBase font = _fonts.GetFont(MathF.Max(1f, MathF.Round(height * scale)));
-            var size = new Vector2(font.MeasureString(text).X, font.LineHeight);
-            Vector2 topLeft = corner + (at * scale) - new Vector2(size.X * anchor, size.Y / 2f);
-            if (keptOnTheStage)
-            {
-                // The far corner first: a line wider than the stage starts at the stage's left edge.
-                topLeft = Vector2.Max(corner, Vector2.Min(topLeft, corner + (Tuning.StageSize * scale) - size));
-            }
-
-            _spriteBatch.DrawString(font, text, new Vector2(MathF.Round(topLeft.X), MathF.Round(topLeft.Y)), color);
         }
 
         // Halfway up the back wall, and on a stage with no wall just clear of the top edge.
@@ -662,12 +681,12 @@ internal sealed class UnderstudiesGame : Microsoft.Xna.Framework.Game
 
         // A second that has begun still shows: the time reads 0:00 only when the act is over.
         int seconds = (_simulation.ActTicksLeft + Simulation.TicksPerSecond - 1) / Simulation.TicksPerSecond;
-        int programSeconds = (_simulation.ProgramTicksLeft + Simulation.TicksPerSecond - 1) / Simulation.TicksPerSecond;
         string? said = _simulation.Phase switch
         {
-            Phase.Program => _simulation.Offer.Count == 1
-                ? $"Act {_simulation.Act} is over. Press 1 to take the card ({programSeconds} s)"
-                : $"Act {_simulation.Act} is over. Press 1 to {_simulation.Offer.Count} to take a card ({programSeconds} s)",
+            Phase.Program => _offered.Count == 1
+                ? $"Act {_simulation.Act} is over. The program has a card for you."
+                : $"Act {_simulation.Act} is over. Take a card from the program.",
+            Phase.BetweenActs when ProgramIsShown => $"{Describe(_offered[_taken]).Name} it is.",
             Phase.BetweenActs => $"Act {_simulation.Act} is over. Press Enter or Start to go on.",
             Phase.Ovation => "A standing ovation! R starts a new performance.",
             Phase.Closed => "The box office fell. R starts a new performance.",
@@ -692,16 +711,9 @@ internal sealed class UnderstudiesGame : Microsoft.Xna.Framework.Game
             Write(WordsHeight, said, new Vector2(Tuning.StageSize.X / 2f, line), 0.5f, Magician);
         }
 
-        // The program's offer, the leftmost card first: its place, which is its key, its name and what it changes.
-        for (int place = 0; place < _simulation.Offer.Count; place++)
+        if (_simulation.Phase is Phase.Program or Phase.BetweenActs)
         {
-            Card card = _simulation.Offer[place];
-            Write(
-                WordsHeight,
-                $"{place + 1}   {Describe(card)}",
-                new Vector2(Tuning.StageSize.X / 2f, Tuning.StageSize.Y - ProgramLift + (place * ProgramLineGap)),
-                0.5f,
-                card == Card.ChorusDamage ? ApplauseHeart : Words);
+            DrawProgramWords();
         }
 
         // The first understudy is told once what it is, as the act it first appears in begins (vision 13): the
@@ -725,21 +737,26 @@ internal sealed class UnderstudiesGame : Microsoft.Xna.Framework.Game
         _spriteBatch.End();
     }
 
-    /// <summary>A card's name and what one of it changes, in the numbers of now.</summary>
-    private string Describe(Card card)
+    /// <summary>
+    /// Words in screen pixels: the line is centred on the height of <paramref name="at"/>, a point of the stage,
+    /// with its left end there, its middle (<paramref name="anchor"/> 0.5) or its right end (1). Words
+    /// <paramref name="keptOnTheStage"/> are moved by as much as it takes to have the whole line on the stage.
+    /// Called between the Begin and the End of a batch with no transform, and only when there is a font.
+    /// </summary>
+    private void Write(float height, string text, Vector2 at, float anchor, Color color, bool keptOnTheStage = false)
     {
-        FormattableString words = card switch
+        // A whole number of pixels tall and on whole pixels: a glyph drawn between two pixels is smeared over
+        // both. A window too small for words still has a pixel's worth.
+        SpriteFontBase font = _fonts!.GetFont(MathF.Max(1f, MathF.Round(height * _scale)));
+        var size = new Vector2(font.MeasureString(text).X, font.LineHeight);
+        Vector2 topLeft = _corner + (at * _scale) - new Vector2(size.X * anchor, size.Y / 2f);
+        if (keptOnTheStage)
         {
-            Card.Damage => $"Sharper cards: your cards hurt {Tuning.CardDamage:0.##} more",
-            Card.AttackSpeed => $"Quicker hands: you throw {Tuning.CardAttackSpeed * 100f:0}% more often",
-            Card.Range => $"Longer arm: your throw reaches {Tuning.CardRange:0.##} further",
-            Card.VanishCooldown => $"Quicker Vanish: it comes back {Tuning.CardVanishCooldown * 100f:0}% sooner",
-            Card.OneMoreCard => $"One more card: each throw sends another, at the next nearest",
-            _ => $"Chorus: every understudy's cards hurt {Tuning.CardChorusDamage:0.##} more",
-        };
+            // The far corner first: a line wider than the stage starts at the stage's left edge.
+            topLeft = Vector2.Max(_corner, Vector2.Min(topLeft, _corner + (Tuning.StageSize * _scale) - size));
+        }
 
-        // A point and never a comma, whatever the machine's language.
-        return words.ToString(CultureInfo.InvariantCulture);
+        _spriteBatch.DrawString(font, text, new Vector2(MathF.Round(topLeft.X), MathF.Round(topLeft.Y)), color);
     }
 
     /// <summary>A bar that is <paramref name="share"/> full, from its left end.</summary>
