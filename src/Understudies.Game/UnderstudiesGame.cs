@@ -318,8 +318,7 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
         // game and the menu's frame have a night, the newest that is open.
         _night = captureThePoster ?? night ?? (capturePath is not null && !captureTheMenu ? null : Unlocked[^1]);
         Tuning played = _night is { } number ? Night.Compose(tuning, nights, number) : tuning;
-        _seed = capturePath is null ? (ulong)DateTime.UtcNow.Ticks : CaptureSeed;
-        _simulation = new Simulation(played, _seed);
+        _simulation = new Simulation(played, capturePath is null ? (ulong)DateTime.UtcNow.Ticks : CaptureSeed);
         _boxOfficeAtTheActsStart = _simulation.BoxOfficeHitPoints;
         _juice = new Juice(capturePath is null ? Random.Shared : new Random((int)CaptureSeed));
         _sound = new Sound(silent: capturePath is not null);
@@ -423,6 +422,9 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
                 _plain = plain;
                 _nights = nights;
                 ChooseTheNight(_night!.Value);
+
+                // On other numbers the last show's seed is another show: there is no "same show again" of it.
+                _played = null;
             }
             else
             {
@@ -454,10 +456,10 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
             GiveUp();
             ShowTheMenu();
         }
-        else if (Pressed(Keys.R) && _simulation.Phase is Phase.Ovation or Phase.Closed)
+        else if ((Pressed(Keys.R) || PadPressed(Buttons.Y)) && _simulation.Phase is Phase.Ovation or Phase.Closed)
         {
-            // R when the show is over is the way back to the poster (plan T55): of the night this show has just
-            // opened, or else of the night that was played.
+            // R, or the gamepad's Y, when the show is over is the way back to the poster (plan T55): of the night
+            // this show has just opened, or else of the night that was played. A pad has no key for R in a show.
             ShowThePoster(_opened ?? _night!.Value);
         }
         else if (Pressed(Keys.R))
@@ -567,8 +569,7 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
     {
         _onTheMenu = false;
         _onThePoster = false;
-        _seed = seed ?? (ulong)DateTime.UtcNow.Ticks;
-        _simulation = new Simulation(Tuning, _seed);
+        _simulation = new Simulation(Tuning, seed ?? (ulong)DateTime.UtcNow.Ticks);
         _juice = new Juice(Random.Shared);
         _clock = new SimulationClock();
         _walkClock = 0f;

@@ -92,9 +92,9 @@ internal sealed partial class UnderstudiesGame
     // The night that the show just ended has opened, for the line that says so; null when it opened none.
     private int? _opened;
 
-    // The night that is played, or whose poster is up (a shut night's too), or that "Perform" opens the poster of. Its tuning is the simulation's: StartAgain makes the next
-    // show from that, so R plays the same night again. Null for the capture of a show that asked for no night,
-    // which plays the plain tuning as it is.
+    // The night that is played, or whose poster is up (a shut night's too), or that "Perform" opens the poster
+    // of. Its tuning is the simulation's: StartAgain makes the next show from that, so R in a show plays the same
+    // night again. Null for the capture of a show that asked for no night, which plays the plain tuning as it is.
     private int? _night;
 
     /// <summary>The nights that are open: the one that was asked for, or those the progress has opened.</summary>
@@ -343,7 +343,7 @@ internal sealed partial class UnderstudiesGame
         Write(
             Face.Sentence,
             ControlsHeight,
-            "Move: WASD, the arrows or the stick  ·  Vanish: Space or A  ·  Go on: Enter or Start  ·  R starts the night again  ·  Esc or Back comes back here",
+            "Move: WASD, the arrows or the stick  ·  Vanish: Space or A  ·  Go on: Enter or Start  ·  R: the night again, or its poster when the show is over  ·  Esc or Back comes back here",
             new Vector2(stage.X / 2f, ControlsLine),
             0.5f,
             Words);

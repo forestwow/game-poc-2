@@ -48,9 +48,15 @@ if (night is { } wanted && nights.All(written => written.Number != wanted))
     return 1;
 }
 
-if (captureThePoster is { } poster && (nights.All(written => written.Number != poster) || (night ?? poster) != poster))
+if (captureThePoster is { } poster && nights.All(written => written.Number != poster))
 {
-    Console.Error.WriteLine($"No poster of night {poster}: nights.json has {string.Join(", ", nights.Select(written => written.Number))}, and under --night the one page is that night's");
+    Console.Error.WriteLine($"No poster of night {poster}: nights.json has {string.Join(", ", nights.Select(written => written.Number))}");
+    return 1;
+}
+
+if (captureThePoster is { } shown && night is { } alone && alone != shown)
+{
+    Console.Error.WriteLine($"No poster of night {shown} under --night {alone}: the one page there is that night's");
     return 1;
 }
 

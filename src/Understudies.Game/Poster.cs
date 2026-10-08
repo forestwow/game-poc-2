@@ -46,8 +46,11 @@ internal sealed partial class UnderstudiesGame
     private const float PosterFigureDrop = 0.25f;
 
     // What the game calls a kind and says of it, by the kind's place in enemyKinds, as FigureOf knows the kinds:
-    // the one place the game says in words what an enemy does. No number is in a sentence: the numbers are the
-    // tuning's, and the sentences are true of the kinds as the rules have them.
+    // the one place the game says in words what an enemy does. No number is in a sentence.
+    // ponytail: the sentences are true of the kinds as the committed tuning.json has them, and nothing holds
+    // them to it: a tuning that changes a kind's turnsOnTheMagician, its speed or its understudyDamageShare makes
+    // the poster say what is no longer so. A sentence made from the kind's own numbers, as a card's is in
+    // Describe, when the kinds' numbers are tuned again or a night overrides one.
     private static readonly (string Name, string Plural, string Does)[] KindsInWords =
     [
         ("The critic", "Critics", "Walks to the box office and strikes it. Come near, and it turns on you."),
@@ -58,10 +61,9 @@ internal sealed partial class UnderstudiesGame
 
     private bool _onThePoster;
 
-    // The seed of the simulation that stands, and the night and the seed of the show that was last played: what
-    // "the same show again" plays (the ladder's "a night can be replayed as it was"). Kept while the game runs and
-    // written nowhere.
-    private ulong _seed;
+    // The night and the seed of the show that was last played: what "the same show again" plays (the ladder's "a
+    // night can be replayed as it was"). Kept while the game runs, until F5 reads other numbers, and written
+    // nowhere. A show played again is a show: it is recorded in the progress as any other.
     private (int Night, ulong Seed)? _played;
 
     /// <summary>
@@ -88,8 +90,9 @@ internal sealed partial class UnderstudiesGame
     /// </summary>
     private void RaiseTheCurtain(ulong? seed = null)
     {
-        StartAgain(seed);
-        _played = (_night!.Value, _seed);
+        ulong its = seed ?? (ulong)DateTime.UtcNow.Ticks;
+        StartAgain(its);
+        _played = (_night!.Value, its);
     }
 
     /// <summary>The seed of the last show, when it was a show of the night whose page is up.</summary>
@@ -248,9 +251,10 @@ internal sealed partial class UnderstudiesGame
 
         // The doors that open in one of the night's acts, and in which.
         int[] doors = [.. tuning.StageDoors.Select(door => Math.Max(1, door.OpensInAct)).Where(act => act <= acts).Order()];
+        int[] opening = [.. doors.Distinct()];
         Row(
             "DOORS",
-            Broken($"{doors.Length} of {tuning.StageDoors.Count} open: from {(doors.Length == 1 ? "act" : "acts")} {Listed(doors)}"));
+            Broken($"{doors.Length} of {tuning.StageDoors.Count} open: from {(opening.Length == 1 ? "act" : "acts")} {Listed(opening)}"));
 
         int[] kinds = KindsOf(tuning);
         Row(
