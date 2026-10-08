@@ -81,7 +81,7 @@ internal sealed partial class UnderstudiesGame
     private const float HeldFootInAnOffer = 7.5f;
     private const string NothingHeld = "YOU HOLD NO CARD YET";
 
-    // While an encore is read the act's clock stands, and is greyed.
+    // While the stage stands, for an encore, the program or between two acts, the act's clock is greyed.
     private static readonly Color ClockStands = new(140, 130, 144);
 
     // The cast is a row of squares at the right, one for every understudy in its act's tint and one for the act
@@ -92,6 +92,7 @@ internal sealed partial class UnderstudiesGame
     private const float CastApart = 0.225f;
     private const float CastNumberHeight = 0.6f;
     private const float CastOffStage = 0.7f;
+    private const float CastKillsDrop = 0.7f;
     private static readonly Color CastRecording = new(58, 46, 62);
 
     /// <summary>A chip of what is held, as wide as its words make it.</summary>
@@ -194,8 +195,13 @@ internal sealed partial class UnderstudiesGame
             0f,
             Magician);
 
-        // Under the act, how many of its critics are still to enter: from the curtain on.
-        if (_simulation.Phase is Phase.Act or Phase.Encore or Phase.Curtain)
+        // Under the act, how many of its critics are still to enter: from the curtain on. When the act is over
+        // the line says so, and the program's panels have the rest.
+        if (_simulation.Phase is Phase.Program or Phase.BetweenActs)
+        {
+            Write(Face.Sentence, HudSmallHeight, "is over", new Vector2(HudSide, HudSecondLine), 0f, Words);
+        }
+        else if (_simulation.Phase is Phase.Act or Phase.Encore or Phase.Curtain)
         {
             int toCome = _simulation.ActEntries.Count - _simulation.ActEntriesMade;
             Write(
@@ -209,17 +215,22 @@ internal sealed partial class UnderstudiesGame
 
         // A second that has begun still shows: the time reads 0:00 only when the act is over.
         int seconds = (_simulation.ActTicksLeft + Simulation.TicksPerSecond - 1) / Simulation.TicksPerSecond;
-        bool encore = _simulation.Phase == Phase.Encore;
-        Write(Face.Sentence, ClockHeight, $"{seconds / 60}:{seconds % 60:00}", new Vector2(right, HudFirstLine), 1f, encore ? ClockStands : Words);
+        Write(Face.Sentence, ClockHeight, $"{seconds / 60}:{seconds % 60:00}", new Vector2(right, HudFirstLine), 1f, StageStands ? ClockStands : Words);
 
-        // Under the clock, the encores of the whole performance. While the stage stands for an offer or between
-        // two acts the encores' line under the curtain says it, with what the next costs, and in an encore the
-        // line under the clock says why the clock is grey.
-        if (encore)
+        // Under the clock, the encores of the whole performance. While the stage stands the clock is grey and the
+        // line under it says why: an encore has the count in its line under the curtain, and the program's panels
+        // have it on the act's books.
+        if (StageStands)
         {
-            Write(Face.Sentence, HudSmallHeight, "the clock stands", new Vector2(right, HudSecondLine), 1f, Words);
+            Write(
+                Face.Sentence,
+                HudSmallHeight,
+                _simulation.Phase == Phase.Encore ? "the clock stands" : "the stage stands",
+                new Vector2(right, HudSecondLine),
+                1f,
+                Words);
         }
-        else if (_simulation.Phase is not (Phase.Program or Phase.BetweenActs))
+        else
         {
             int encores = _simulation.EncoresTaken;
             Write(
@@ -254,11 +265,12 @@ internal sealed partial class UnderstudiesGame
                 Magician);
         }
 
-        // While cards are shown, what is held is a row over them (plan T48), and the cast is not drawn: the
-        // floor's front is the countdown's and the keys'.
+        // While the stage stands, what is held is a row over the cards (plan T48) or over where they were, and
+        // the cast is not drawn here: the floor's front is the countdown's and the keys', and between two acts
+        // the cast is on its panel (plan T50).
         // ponytail: one row, which all nine kinds of card are at 1280 wide. A second row, which a longer name or a
         // tenth card would make, goes up into the encores' line: the cards move down by a row when that is seen.
-        if (ProgramIsShown)
+        if (StageStands)
         {
             if (!DrawTheHeld(new Vector2(middle, HeldFootInAnOffer), 0.5f, Tuning.StageSize.X - 2f, ofTheLimit: true))
             {
@@ -358,9 +370,11 @@ internal sealed partial class UnderstudiesGame
     /// <summary>
     /// The cast, as a row of squares whose bottom right corner is at <paramref name="foot"/>, under its label:
     /// every understudy by its act's number on its act's tint, and last the act that is played, which is being
-    /// recorded.
+    /// recorded. <paramref name="atTheCurtain"/> it is the cast of the next act, on the program's panel (plan
+    /// T50), which has its own heading: every understudy is back, the act just over is one of them in its own
+    /// tint, and under each square is how many critics its cards felled in that act.
     /// </summary>
-    private void DrawTheCast(Vector2 foot)
+    private void DrawTheCast(Vector2 foot, bool atTheCurtain = false)
     {
         IReadOnlyList<Understudy> cast = _simulation.Understudies;
         var size = new Vector2(CastSquare);
@@ -370,13 +384,19 @@ internal sealed partial class UnderstudiesGame
         {
             var topLeft = new Vector2(left + (i * (CastSquare + CastApart)), top);
             bool recording = i == cast.Count;
-            if (recording)
+            Color tint = TintOfAct(recording ? _simulation.Act : cast[i].Act);
+            bool whole = atTheCurtain || (!recording && cast[i].IsOnStage);
+            if (whole)
+            {
+                Paper(topLeft, size, tint);
+            }
+            else if (recording)
             {
                 Paper(topLeft, size, CastRecording, broken: true);
             }
             else
             {
-                Paper(topLeft, size, cast[i].IsOnStage ? TintOf(cast[i]) : Color.Lerp(TintOf(cast[i]), CastRecording, CastOffStage));
+                Paper(topLeft, size, Color.Lerp(tint, CastRecording, CastOffStage));
             }
 
             Write(
@@ -385,11 +405,26 @@ internal sealed partial class UnderstudiesGame
                 $"{(recording ? _simulation.Act : cast[i].Act)}",
                 topLeft + (size / 2f),
                 0.5f,
-                recording ? Words : cast[i].IsOnStage ? OutlineInk : TintOf(cast[i]),
+                whole ? OutlineInk : recording ? Words : tint,
                 onPaper: true);
+            if (atTheCurtain)
+            {
+                // The act just over was the magician's own, and the others' are theirs by their places.
+                Write(
+                    Face.Sentence,
+                    CastNumberHeight,
+                    $"{KillsOf(recording ? TickEvent.TheMagician : i)}",
+                    topLeft + new Vector2(CastSquare / 2f, CastSquare + CastKillsDrop),
+                    0.5f,
+                    tint,
+                    onPaper: true);
+            }
         }
 
-        Write(Face.Sentence, LabelHeight, CastLabel, new Vector2(foot.X, top - LabelLift), 1f, Words, spacing: LabelSpacing);
+        if (!atTheCurtain)
+        {
+            Write(Face.Sentence, LabelHeight, CastLabel, new Vector2(foot.X, top - LabelLift), 1f, Words, spacing: LabelSpacing);
+        }
     }
 
     /// <summary>
