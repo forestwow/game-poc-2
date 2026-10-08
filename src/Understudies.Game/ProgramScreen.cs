@@ -182,10 +182,14 @@ internal sealed partial class UnderstudiesGame
     {
         float middle = Tuning.StageSize.X / 2f;
 
+        // While an encore is read its cost is still the one it was earned at: "the next" would be this very one.
         int encores = _simulation.EncoresTaken;
+        string soFar = $"{(encores == 1 ? "1 encore" : $"{encores} encores")} so far.";
         Write(
             SmallWordsHeight,
-            $"{(encores == 1 ? "1 encore" : $"{encores} encores")} so far. The next costs {_simulation.EncoreCost} pieces of applause in one act.",
+            _simulation.Phase == Phase.Encore
+                ? $"{soFar} This one was earned with {_simulation.EncoreCost} pieces of applause."
+                : $"{soFar} The next costs {_simulation.EncoreCost} pieces of applause in one act.",
             new Vector2(middle, Tuning.StageFloorTop + 0.9f),
             0.5f,
             ApplauseHeart);

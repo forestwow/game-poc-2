@@ -520,6 +520,10 @@ public sealed class Simulation(Tuning tuning, ulong seed, IReadOnlyList<IReadOnl
             hasher.AddInt(piece.TicksLeft);
         }
 
+        // No test tells EncoresTaken, ActEncores, the encore stream's state or the offer's cards apart from the rest
+        // of the hash: as the rule stands EncoresTaken is the number of the magician's self cards, the stream and
+        // the offer follow from the seed and that number, and ActEncores differs only where the recording's cards
+        // do. Whatever breaks one of those (plan T24 breaks the first) adds the test that isolates it.
         hasher.AddInt(ActApplause);
         hasher.AddInt(EncoreApplause);
         hasher.AddInt(EncoresTaken);

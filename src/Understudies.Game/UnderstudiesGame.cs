@@ -406,8 +406,8 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
         // The three acts go three ways, so that their understudies do not stand in one pile. The second act: out
         // to the first door, the only one open, to a place below the critics' way that has the door in range and
         // is out of their reach, and every critic that enters falls there. The third: up, across behind the box
-        // office and down its far side. In every later act the magician stands on its mark, and the performance
-        // is played to its ovation.
+        // office and down its far side. In every later act the magician stands on its mark. (That is what the script
+        // says; on the committed numbers the show closes in the second act, as said above.)
         // Every act opens with its curtain, whose ticks are counted here with the rest: the simulation takes no
         // input in them, and the script's own count, of an act's ticks, starts when the curtain is over.
         const int second = Simulation.TicksPerSecond;

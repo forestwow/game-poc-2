@@ -328,9 +328,9 @@ public class ScriptedPlayersTests
     /// <summary>
     /// The same table on another budget and nothing else changed, for whoever tunes to the guard.
     /// </summary>
-    [TestCase(45, 40)]
-    [TestCase(60, 60)]
-    [TestCase(40, 80)]
+    [TestCase(15, 160)]
+    [TestCase(15, 220)]
+    [TestCase(60, 120)]
     [Explicit("Prints the guard's table on the committed tuning with another budget: the first act's, and what every act has more than the one before")]
     public void PrintTheTableOnAnotherBudget(int firstActBudget, int budgetGrowthPerAct) =>
         PrintTheTable(Tuning with { FirstActBudget = firstActBudget, BudgetGrowthPerAct = budgetGrowthPerAct });
