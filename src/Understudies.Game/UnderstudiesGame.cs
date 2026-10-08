@@ -86,6 +86,16 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
         Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Fonts), "arial.ttf"),
     ];
 
+
+    // The floor about the box office where a fall earns no applause: a shade over the boards and a broken line,
+    // both quiet. The rows are an eighth of a unit tall, and the line is cut into this many stretches, every
+    // other one drawn.
+    private const float QuietFloorRow = 0.125f;
+    private const int QuietFloorStretches = 72;
+    private const float QuietFloorLine = 0.1f;
+    private static readonly Color QuietFloorShade = Color.Black * 0.12f;
+    private static readonly Color QuietFloorEdge = new Color(236, 228, 210) * 0.24f;
+
     private static readonly Color Surround = new(24, 18, 28);
     private static readonly Color BackWall = new(52, 40, 62);
     private static readonly Color HitPoints = new(132, 204, 110);
@@ -394,8 +404,8 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
     private void Capture(string path)
     {
         // The script was written on the numbers of before plan T20, and what follows says what it did on those.
-        // On the committed numbers it loses: the magician falls a third of a second after its Vanish and the
-        // show closes in the second act. The README has those ticks.
+        // On the committed numbers it loses in the first act: the magician falls two seconds before its Vanish
+        // is due, and the show closes with a third of the act to go. The README has those ticks.
         // The first act: two seconds right and down, out of every critic's range, and still there while critics
         // gather at the box office: more of them than the magician's cards can fell in time. Then two seconds back
         // to the mark, which is at the edge of the crowd by now, and three seconds still: the crowd turns on the
@@ -407,7 +417,7 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
         // to the first door, the only one open, to a place below the critics' way that has the door in range and
         // is out of their reach, and every critic that enters falls there. The third: up, across behind the box
         // office and down its far side. In every later act the magician stands on its mark. (That is what the script
-        // says; on the committed numbers the show closes in the second act, as said above.)
+        // says; on the committed numbers the show closes in the first act, as said above.)
         // Every act opens with its curtain, whose ticks are counted here with the rest: the simulation takes no
         // input in them, and the script's own count, of an act's ticks, starts when the curtain is over.
         const int second = Simulation.TicksPerSecond;
@@ -486,6 +496,7 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
         // What lies flat on the floor, and the doors, which are of the set and hide nobody: whoever stands at a
         // door is drawn over it.
         _spriteBatch.Begin(samplerState: SamplerState.PointClamp, transformMatrix: worldToScreen);
+        DrawTheQuietFloor();
         for (int i = 0; i < Tuning.StageDoors.Count; i++)
         {
             // A door's foot is half its width below where its critics enter, and kept within the stage's sides: a
@@ -1080,6 +1091,49 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
 
     /// <summary>Where in a sorted batch what stands on <paramref name="feet"/> is drawn: the lower, the later.</summary>
     private float Depth(Vector2 feet) => Math.Clamp(feet.Y / Tuning.StageSize.Y, 0f, 1f);
+
+    /// <summary>
+    /// Where a fall earns no applause (plan decision 27): the floor within the tuning's radius of the box office's
+    /// middle a shade darker, and a thin broken line round it. Only what is on the floor is drawn, and with no
+    /// radius nothing is.
+    /// </summary>
+    private void DrawTheQuietFloor()
+    {
+        float radius = Tuning.ApplauseBoxOfficeRadius;
+        if (radius <= 0f)
+        {
+            return;
+        }
+
+        // Rows that lie one below another and never on one another, each as wide as the circle is at its middle
+        // and no wider than the floor.
+        Vector2 middle = Tuning.BoxOfficePosition;
+        for (float top = MathF.Max(middle.Y - radius, Tuning.StageFloorTop);
+            top < MathF.Min(middle.Y + radius, Tuning.StageSize.Y);
+            top += QuietFloorRow)
+        {
+            float y = top + (QuietFloorRow / 2f) - middle.Y;
+            float halfWidth = MathF.Sqrt(MathF.Max(0f, (radius * radius) - (y * y)));
+            float left = MathF.Max(0f, middle.X - halfWidth);
+            float right = MathF.Min(Tuning.StageSize.X, middle.X + halfWidth);
+            if (right > left)
+            {
+                Fill(new Vector2(left, top), new Vector2(right - left, QuietFloorRow), QuietFloorShade);
+            }
+        }
+
+        // The line: every other of the short straight stretches the circle is cut into.
+        float stretch = MathF.Tau / QuietFloorStretches;
+        for (int i = 0; i < QuietFloorStretches; i += 2)
+        {
+            float turn = (i + 0.5f) * stretch;
+            Vector2 at = middle + (new Vector2(MathF.Cos(turn), MathF.Sin(turn)) * radius);
+            if (at.X >= 0f && at.X <= Tuning.StageSize.X && at.Y >= Tuning.StageFloorTop && at.Y <= Tuning.StageSize.Y)
+            {
+                FillTurned(at, new Vector2(radius * stretch, QuietFloorLine), turn + (MathF.PI / 2f), QuietFloorEdge);
+            }
+        }
+    }
 
     /// <summary>A filled circle in world units, flat on the floor.</summary>
     /// <param name="flat">How tall it is for its width: under 1 it is a shadow's oval.</param>

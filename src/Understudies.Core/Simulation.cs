@@ -785,7 +785,12 @@ public sealed class Simulation(Tuning tuning, ulong seed, IReadOnlyList<IReadOnl
                 // a card the magician itself threw, whoever hurt the critic before. A piece with no time is no
                 // piece.
                 int ticks = Ticks(Tuning.ApplauseTime);
-                if (fell && card.ThrownByMagician && ticks > 0)
+                // And none by the box office: a critic that falls within the radius of its middle leaves nothing,
+                // so that what is thrown from beside the box office at what has come to it earns no encore.
+                Vector2 fromBoxOffice = touched.Position - Tuning.BoxOfficePosition;
+                bool byTheBoxOffice = (fromBoxOffice.X * fromBoxOffice.X) + (fromBoxOffice.Y * fromBoxOffice.Y)
+                    < Tuning.ApplauseBoxOfficeRadius * Tuning.ApplauseBoxOfficeRadius;
+                if (fell && card.ThrownByMagician && ticks > 0 && !byTheBoxOffice)
                 {
                     _applause.Add(new Applause(touched.Position, ticks));
                     _events.Add(new TickEvent(TickEventKind.ApplauseDropped, touched.Position));

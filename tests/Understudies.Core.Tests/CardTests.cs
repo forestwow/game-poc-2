@@ -622,6 +622,10 @@ public class CardTests
             BoxOfficeSize = 4f,
             BoxOfficeHitPoints = 1f,
             CriticStrikeDamage = 1f,
+
+            // The box office has come to within the committed radius of where the scene's critic falls: the
+            // scene is about the act's last tick, and its encore is earned as everywhere else in these tests.
+            ApplauseBoxOfficeRadius = 0f,
         };
         var simulation = new Simulation(tuning, seed: 1, [[AtOnce, new PlannedEntry(ActTicks - 2, Door: 1, Kind: 0)], []]);
         PlayTheAct(simulation);

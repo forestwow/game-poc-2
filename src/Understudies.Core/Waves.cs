@@ -24,6 +24,7 @@ public static class Waves
 
         // Nobody enters in an act's last seconds: a critic that enters as the act ends is one nobody could meet.
         int window = Math.Max(1, Simulation.Ticks(tuning.ActLength - tuning.ActQuietEnd));
+        int burst = Simulation.Ticks(tuning.WaveBurstTime);
         var acts = new List<IReadOnlyList<PlannedEntry>>();
         for (int act = 1; act <= tuning.ActsInPerformance; act++)
         {
@@ -37,10 +38,24 @@ public static class Waves
             for (int i = 0; i < bought.Count; i++)
             {
                 int tick = Math.Min(window - 1, (int)((i + rng.NextFloat()) * window / bought.Count));
+
+                // A share of them, picked evenly down the list, do not wait for their own tick: each enters at
+                // the last moment of a crowd before it, so those of one stretch between two crowds come in
+                // together.
+                // ponytail: a crowd is all on one tick, and those of it at one door stand in the door's width on
+                // top of each other until the push-apart has spread them, one pass a tick: some thirty at a door
+                // three units wide by the tenth act. Entering a few ticks apart is what mends it when it shows.
+                if (burst > 0 && (int)((i + 1) * tuning.WaveBurstShare) > (int)(i * tuning.WaveBurstShare))
+                {
+                    tick -= tick % burst;
+                }
+
                 entries.Add(new PlannedEntry(tick, open[rng.NextInt(open.Length)], bought[i]));
             }
 
-            acts.Add(entries);
+            // A crowd's enemies were moved ahead of some that enter before them: the plan is in the order of
+            // the ticks again, and those of one tick in the order they were bought.
+            acts.Add([.. entries.OrderBy(entry => entry.Tick)]);
         }
 
         return acts;
@@ -52,7 +67,11 @@ public static class Waves
     /// </summary>
     private static List<int> Buy(Rng rng, Tuning tuning, int act)
     {
-        int left = tuning.FirstActBudget + ((act - 1) * tuning.BudgetGrowthPerAct);
+        // Every act has the step more than the one before it, and the step itself is bigger by the rise in every
+        // act after the second: the steps so far add up to this.
+        int left = tuning.FirstActBudget
+            + ((act - 1) * tuning.BudgetGrowthPerAct)
+            + (tuning.BudgetGrowthRise * (act - 1) * (act - 2) / 2);
         var bought = new List<int>();
         while (true)
         {

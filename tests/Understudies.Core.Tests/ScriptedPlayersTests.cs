@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Globalization;
 using System.Numerics;
+using System.Text.Json.Nodes;
 
 namespace Understudies.Core.Tests;
 
@@ -9,16 +10,17 @@ public class ScriptedPlayersTests
     private Tuning Tuning { get; } = CommittedTuning.Parse();
 
     /// <summary>
-    /// The committed numbers on another budget, with a first act four times as full and acts that grow by less: the tests that play it
-    /// assert what they play it for, a player that is crowded and vanishes and a box office that is struck.
+    /// The committed numbers on another budget, with a first act half as full again and acts that grow by the
+    /// same forty each: the tests that play it assert what they play it for, a player that is crowded and
+    /// vanishes and a box office that is struck.
     /// </summary>
-    private Tuning Crowded => Tuning with { FirstActBudget = 60, BudgetGrowthPerAct = 40 };
+    private Tuning Crowded => Tuning with { FirstActBudget = 60, BudgetGrowthPerAct = 40, BudgetGrowthRise = 0 };
 
     /// <summary>
     /// Plan decision 9's question, whether <c>float</c> gives one result on two machines: two scripted
     /// performances, each pinned at the end of its third act and at its end, here (macOS ARM) and in CI (Linux
     /// x64). The earlier pin says how early a disagreement starts. The first is the doors player on the committed
-    /// numbers, asserted to have an encore in it; the second, the orbit player with a fuller first act, is
+    /// numbers, asserted to have an encore in it; the second, the orbit player on a circle of nine with a fuller first act, is
     /// asserted to have the Vanish and its cloud, stunned critics and blows on the box office in it. A change to tuning.json, to a
     /// rule or to a player changes them: pin them again from the failure's message, and say so in the pull
     /// request. If the two machines ever disagree, that is a finding for the owner and not a test to make pass.
@@ -32,8 +34,8 @@ public class ScriptedPlayersTests
         {
             // An act that stood for an encore is in what is pinned.
             Assert.That(performance.Acts.Sum(act => act.Encores), Is.GreaterThan(0), "encores");
-            Assert.That(performance.Acts[2].StateHash, Is.EqualTo(16361164891260290646UL), "the end of act three");
-            Assert.That(performance.Acts[^1].StateHash, Is.EqualTo(5560979504958570215UL), "the end of the performance");
+            Assert.That(performance.Acts[2].StateHash, Is.EqualTo(10757404512325437534UL), "the end of act three");
+            Assert.That(performance.Acts[^1].StateHash, Is.EqualTo(12382511505745276393UL), "the end of the performance");
         });
     }
 
@@ -44,7 +46,11 @@ public class ScriptedPlayersTests
         int vanishes = 0;
         int blows = 0;
         int stunned = 0;
-        Func<Simulation, MagicianInput> orbit = ScriptedPlayers.Orbit(5f);
+
+        // On a circle of nine, wider than the guard's: on those no fall leaves applause (plan decision 27), and
+        // an orbit without an encore pins less. Its budget is its own and has no rise: the rise is pinned by the
+        // doors player's performance alone.
+        Func<Simulation, MagicianInput> orbit = ScriptedPlayers.Orbit(9f);
 
         Performance performance = ScriptedPlayers.Play(Crowded, seed: 1, simulation =>
         {
@@ -60,8 +66,9 @@ public class ScriptedPlayersTests
             Assert.That(vanishes, Is.GreaterThan(0), "Vanishes");
             Assert.That(blows, Is.GreaterThan(0), "blows on the box office");
             Assert.That(stunned, Is.GreaterThan(0), "stunned critics");
-            Assert.That(performance.Acts[2].StateHash, Is.EqualTo(1373897778386984640UL), "the end of act three");
-            Assert.That(performance.Acts[^1].StateHash, Is.EqualTo(3802173573116970682UL), "the end of the performance");
+            Assert.That(performance.Acts.Sum(act => act.Encores), Is.GreaterThan(0), "encores");
+            Assert.That(performance.Acts[2].StateHash, Is.EqualTo(4345378464534316888UL), "the end of act three");
+            Assert.That(performance.Acts[^1].StateHash, Is.EqualTo(6328738384288175142UL), "the end of the performance");
         });
     }
 
@@ -87,7 +94,9 @@ public class ScriptedPlayersTests
         // from the events.
         IReadOnlyList<IReadOnlyList<PlannedEntry>> plan = Waves.Plan(Crowded, seed: 2);
         var boxOfficeAtTheCurtain = new List<float>();
-        Func<Simulation, MagicianInput> orbit = ScriptedPlayers.Orbit(5f);
+
+        // A circle wide enough to earn encores: on the guard's own no fall leaves applause (plan decision 27).
+        Func<Simulation, MagicianInput> orbit = ScriptedPlayers.Orbit(13f);
         Performance performance = ScriptedPlayers.Play(Crowded, seed: 2, simulation =>
         {
             if (simulation.Act > boxOfficeAtTheCurtain.Count)
@@ -326,16 +335,111 @@ public class ScriptedPlayersTests
     public void PrintTheGuardsTable() => PrintTheTable(Tuning);
 
     /// <summary>
-    /// The same table on another budget and nothing else changed, for whoever tunes to the guard.
+    /// The guard's table in short, for whoever weighs one tuning against another: every variant on the seeds 1
+    /// to 20, which the committed numbers were tuned on, and on 101 to 120, which nothing was. A variant is the
+    /// committed tuning.json with some of its keys given other values. They are read from the file the
+    /// environment variable <c>UNDERSTUDIES_VARIANTS</c> names, a variant a line, a name and a JSON object of
+    /// the keys: <c>gentle | { "firstActBudget": 60, "budgetGrowthPerAct": 120 }</c>. A line that is empty or
+    /// starts with # is none. Without the variable it is the committed tuning alone. Beside the guard's players it
+    /// plays the doors player with no applause in the first act, and the orbit on two circles wider than the
+    /// guard's: none of the three counts for the guard.
     /// </summary>
-    [TestCase(15, 160)]
-    [TestCase(15, 220)]
-    [TestCase(60, 120)]
-    [Explicit("Prints the guard's table on the committed tuning with another budget: the first act's, and what every act has more than the one before")]
-    public void PrintTheTableOnAnotherBudget(int firstActBudget, int budgetGrowthPerAct) =>
-        PrintTheTable(Tuning with { FirstActBudget = firstActBudget, BudgetGrowthPerAct = budgetGrowthPerAct });
+    [Test]
+    [Explicit("Prints the guard in short for every variant of the tuning in the file UNDERSTUDIES_VARIANTS names, on the seeds 1 to 20 and 101 to 120 (a few seconds a variant)")]
+    public void PrintTheVariants()
+    {
+        string? file = Environment.GetEnvironmentVariable("UNDERSTUDIES_VARIANTS");
+        IEnumerable<string> lines = file is null ? ["committed | {}"] : File.ReadLines(file);
+        TextWriter table = TestContext.Out;
+        table.WriteLine(
+            "lost: the act a performance closed in and whether the magician stood (up) or had fallen (down) when the box office fell, and on how many seeds. "
+            + "By act: averages over the performances that played the act, but the most critics at once, which is the most on any seed.");
+        foreach (string line in lines.Select(line => line.Trim()).Where(line => line.Length > 0 && line[0] != '#'))
+        {
+            string[] parts = line.Split('|', 2);
+            var json = JsonNode.Parse(CommittedTuning.Json)!.AsObject();
+            foreach ((string key, JsonNode? value) in JsonNode.Parse(parts[1])!.AsObject())
+            {
+                // Tuning.Parse refuses a key it does not know, so a misspelt one is not played in silence.
+                json[key] = value?.DeepClone();
+            }
 
-    /// <summary>The seeds the guard is read over: 1 to this.</summary>
+            PrintAVariant(table, $"{parts[0].Trim()} {parts[1].Trim()}", Tuning.Parse(json.ToJsonString()));
+        }
+    }
+
+    private static void PrintAVariant(TextWriter table, string name, Tuning tuning)
+    {
+        // The doors player with no applause in the first act, and so no encore in it: whether a player with no
+        // card yet lives through the second act. The simulation takes new numbers between two ticks.
+        Tuning noApplause = tuning with { ApplauseTime = 0f };
+        (string Name, Func<Simulation, MagicianInput> Player)[] players =
+        [
+            .. GuardPlayers,
+            ("doors, no applause in act one", simulation =>
+            {
+                simulation.Tuning = simulation.Act == 1 ? noApplause : tuning;
+                return ScriptedPlayers.Doors(simulation);
+            }),
+
+            // Circles wider than the guard's: what a rule about the floor near the box office leaves to a player
+            // that walks round just outside it.
+            .. new[] { 9f, 13f }.Select(radius => ($"orbit {Number(radius)}, outside the guard", ScriptedPlayers.Orbit(radius))),
+        ];
+        int orbits = GuardPlayers.Length - 1;
+
+        table.WriteLine();
+        table.WriteLine($"== {name}");
+        table.WriteLine($"   enemies by act (seed 1): {string.Join(" ", Waves.Plan(tuning, seed: 1).Select(act => act.Count))}");
+        foreach (int firstSeed in new[] { 1, 101 })
+        {
+            var clock = Stopwatch.StartNew();
+            Performance[] performances = PlayTheGuard(tuning, firstSeed, players);
+            clock.Stop();
+            List<Performance> Of(int player) => [.. performances.Skip(player * Seeds).Take(Seeds)];
+
+            int hidingLost = Enumerable.Range(0, Seeds).Count(seed =>
+                Enumerable.Range(0, orbits).All(orbit => LostByActSix(performances[(orbit * Seeds) + seed])));
+            table.WriteLine(
+                $"   seeds {firstSeed}-{firstSeed + Seeds - 1}: the guard: orbit {hidingLost} ({string.Join(", ", Enumerable.Range(0, orbits).Select(orbit => Of(orbit).Count(LostByActSix)))}), "
+                + $"doors {Of(orbits).Count(played => played.Ended == Phase.Ovation)}   [{Number(clock.Elapsed.TotalSeconds)} s]");
+            for (int player = 0; player < players.Length; player++)
+            {
+                List<Performance> mine = Of(player);
+                string ByAct(Func<List<ActRecord>, string> of) => string.Join(" ", Enumerable.Range(0, mine.Max(played => played.Act))
+                    .Select(act => of([.. mine.Where(played => played.Act > act).Select(played => played.Acts[act])])));
+                table.WriteLine(
+                    $"     {players[player].Name}: lost {HowLost(mine)}; encores {Number(mine.Average(played => played.Acts.Sum(act => act.Encores)))}; "
+                    + $"box office at the end {Number(mine.Average(played => played.BoxOffice), "0")}, the worst {Number(mine.Min(played => played.BoxOffice), "0")}; "
+                    + $"past act two in {mine.Count(played => played.Act > 2)}");
+                if (players[player].Name.StartsWith("doors", StringComparison.Ordinal))
+                {
+                    table.WriteLine($"       encores by act      {ByAct(acts => Number(acts.Average(act => act.Encores)))}");
+                    table.WriteLine($"       picked up / dropped {ByAct(acts => $"{Number(acts.Average(act => act.Applause), "0")}/{Number(acts.Average(act => act.Dropped), "0")}")}");
+                    table.WriteLine($"       box office by act   {ByAct(acts => Number(acts.Average(act => act.BoxOffice), "0"))}");
+                    table.WriteLine($"       fell by act         {ByAct(acts => acts.Count(act => act.Fell).ToString(CultureInfo.InvariantCulture))}");
+                }
+
+                table.WriteLine($"       most critics by act {ByAct(acts => acts.Max(act => act.MostCritics).ToString(CultureInfo.InvariantCulture))}");
+            }
+        }
+    }
+
+    /// <summary>
+    /// How the lost of <paramref name="performances"/> were lost: the act the box office fell in, whether the
+    /// magician stood then, and how many were lost so, the earliest act first.
+    /// </summary>
+    private static string HowLost(IEnumerable<Performance> performances)
+    {
+        var lost = performances.Where(played => played.Ended == Phase.Closed)
+            .GroupBy(played => (played.Act, played.Acts[^1].Fell))
+            .OrderBy(group => group.Key)
+            .Select(group => $"act {group.Key.Act} {(group.Key.Fell ? "down" : "up")} x{group.Count()}")
+            .ToList();
+        return lost.Count == 0 ? "never" : string.Join(", ", lost);
+    }
+
+    /// <summary>How many seeds the guard is read over: 1 to this, where nothing says where they start.</summary>
     private const int Seeds = 20;
 
     /// <summary>Who plays the guard: the orbit on each of its circles, and the doors player last.</summary>
@@ -346,17 +450,20 @@ public class ScriptedPlayersTests
     ];
 
     /// <summary>
-    /// Every one of <see cref="GuardPlayers"/> over the seeds 1 to <see cref="Seeds"/>: a player's performances
-    /// side by side, a seed after a seed.
+    /// Every one of <paramref name="players"/> (<see cref="GuardPlayers"/> when none are named) over
+    /// <see cref="Seeds"/> seeds from <paramref name="firstSeed"/>: a player's performances side by side, a seed
+    /// after a seed.
     /// </summary>
-    private static Performance[] PlayTheGuard(Tuning tuning)
+    private static Performance[] PlayTheGuard(
+        Tuning tuning, int firstSeed = 1, (string Name, Func<Simulation, MagicianInput> Player)[]? players = null)
     {
-        var performances = new Performance[GuardPlayers.Length * Seeds];
+        players ??= GuardPlayers;
+        var performances = new Performance[players.Length * Seeds];
 
         // A lost performance fills the stage and is slow; each is its own simulation, so they are played side
         // by side.
         Parallel.For(0, performances.Length, i =>
-            performances[i] = ScriptedPlayers.Play(tuning, (ulong)(i % Seeds) + 1, GuardPlayers[i / Seeds].Player));
+            performances[i] = ScriptedPlayers.Play(tuning, (ulong)((i % Seeds) + firstSeed), players[i / Seeds].Player));
         return performances;
     }
 
@@ -370,7 +477,7 @@ public class ScriptedPlayersTests
 
         TextWriter table = TestContext.Out;
         table.WriteLine(
-            $"first act's budget {tuning.FirstActBudget}, {tuning.BudgetGrowthPerAct} more every act; how each performance ended, in which act, the box office left");
+            $"first act's budget {tuning.FirstActBudget}, {tuning.BudgetGrowthPerAct} more in the second and that step {tuning.BudgetGrowthRise} bigger in every act after; how each performance ended, in which act, the box office left");
         table.WriteLine("seed  " + string.Join("  ", players.Select(player => $"{player.Name,-15}")));
         for (int seed = 1; seed <= Seeds; seed++)
         {
