@@ -389,7 +389,7 @@ public class ThrownCardTests
         Assert.That(simulation.Events, Is.Empty);
 
         simulation.Step(default);
-        Assert.That(simulation.Events, Is.EqualTo(new[] { new TickEvent(TickEventKind.Hit, Door) }));
+        Assert.That(simulation.Events, Is.EqualTo(new[] { new TickEvent(TickEventKind.Hit, Door, CriticId: 0) }));
 
         simulation.Step(default);
         Assert.That(simulation.Events, Is.Empty);
@@ -404,12 +404,52 @@ public class ThrownCardTests
         // And the applause the magician's own kill leaves, which has tests of its own.
         Assert.That(simulation.Events, Is.EqualTo(new[]
         {
-            new TickEvent(TickEventKind.Kill, Door),
-            new TickEvent(TickEventKind.ApplauseDropped, Door),
+            new TickEvent(TickEventKind.Kill, Door, CriticId: 0),
+            new TickEvent(TickEventKind.ApplauseDropped, Door, CriticId: 0),
         }));
 
         simulation.Step(default);
         Assert.That(simulation.Events, Is.Empty);
+    }
+
+    [Test]
+    public void Step_CardsStrikeTwoCritics_EveryHitKillAndPieceOfApplauseNamesItsCriticAndTheMagicianThatThrew()
+    {
+        // Two hit points each and a throw every half second, at the first to enter until it has fallen: two cards
+        // for the one and two for the other, all of them the magician's own.
+        Simulation simulation = TwoCritics(
+            Scene.WithCritic(critic => critic with { HitPoints = 2f }) with { ThrowCooldown = 0.5f });
+        var events = new List<TickEvent>();
+        for (int tick = 0; tick < 3 * Simulation.TicksPerSecond; tick++)
+        {
+            simulation.Step(default);
+            events.AddRange(simulation.Events.Where(happened => happened.Kind != TickEventKind.Throw));
+        }
+
+        Assert.That(simulation.Critics, Is.Empty);
+        Assert.That(
+            events.Select(happened => (happened.Kind, happened.Thrower, happened.CriticId)),
+            Is.EqualTo(new[]
+            {
+                (TickEventKind.Hit, TickEvent.TheMagician, 0),
+                (TickEventKind.Kill, TickEvent.TheMagician, 0),
+                (TickEventKind.ApplauseDropped, TickEvent.TheMagician, 0),
+                (TickEventKind.Hit, TickEvent.TheMagician, 1),
+                (TickEventKind.Kill, TickEvent.TheMagician, 1),
+                (TickEventKind.ApplauseDropped, TickEvent.TheMagician, 1),
+            }));
+    }
+
+    [Test]
+    public void Step_TheMagicianThrowsACard_TheThrowNamesNoCritic()
+    {
+        // A throw is at nobody an event can name: the card is spent on the first critic it touches.
+        var simulation = Shows.WithOneCritic(Scene);
+        Run(simulation, ticks: 2);
+
+        Assert.That(
+            simulation.Events,
+            Is.EqualTo(new[] { new TickEvent(TickEventKind.Throw, Mark, TickEvent.TheMagician, TickEvent.NoCritic) }));
     }
 
     /// <summary>

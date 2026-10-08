@@ -646,10 +646,13 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
         {
             // The flick is a diamond of light that grows and goes out. A burst is a sheet played through once, and
             // the burst of a hit goes out as it plays: its picture does not fade by itself.
-            if (effect.Kind == Juice.Effect.Flick)
+            // An understudy's is smaller and dimmer, in the face of its card: the past throws beside the present.
+            if (effect.Kind is Juice.Effect.Flick or Juice.Effect.UnderstudyFlick)
             {
-                float wide = FlickSize * (0.4f + (0.6f * effect.Through));
-                FillTurned(effect.Middle, new Vector2(wide), MathF.PI / 4f, Color.White * (1f - effect.Through));
+                bool understudys = effect.Kind == Juice.Effect.UnderstudyFlick;
+                float wide = FlickSize * (0.4f + (0.6f * effect.Through)) * (understudys ? Juice.UnderstudyFlickSize : 1f);
+                Color light = understudys ? UnderstudysCardFace * Juice.UnderstudyFlickOpacity : Color.White;
+                FillTurned(effect.Middle, new Vector2(wide), MathF.PI / 4f, light * (1f - effect.Through));
                 continue;
             }
 

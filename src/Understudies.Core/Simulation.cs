@@ -330,15 +330,16 @@ public sealed class Simulation(Tuning tuning, ulong seed, IReadOnlyList<IReadOnl
         // magician that a blow of this tick has felled does not.
         if (!ShowClosed && !MagicianHasFallen)
         {
-            _ticksToNextThrow = ThrowACard(MagicianPosition, _ticksToNextThrow, MagicianCards, byTheMagician: true);
+            _ticksToNextThrow = ThrowACard(MagicianPosition, _ticksToNextThrow, MagicianCards, TickEvent.TheMagician);
         }
 
-        foreach (Understudy understudy in _understudies)
+        for (int i = 0; i < _understudies.Count; i++)
         {
+            Understudy understudy = _understudies[i];
             if (understudy.IsOnStage && !ShowClosed)
             {
                 understudy.TicksToNextThrow = ThrowACard(
-                    understudy.Position, understudy.TicksToNextThrow, understudy.Cards, byTheMagician: false);
+                    understudy.Position, understudy.TicksToNextThrow, understudy.Cards, thrower: i);
             }
         }
 
@@ -523,6 +524,9 @@ public sealed class Simulation(Tuning tuning, ulong seed, IReadOnlyList<IReadOnl
             AddPoint(card.Direction);
             hasher.AddFloat(card.RangeLeft);
             hasher.AddFloat(card.Damage);
+
+            // Whether the magician threw it decides the applause; which understudy did decides nothing and is
+            // only told in the events, so it stays out until a rule reads it.
             hasher.AddInt(card.ThrownByMagician ? 1 : 0);
         }
 
@@ -779,7 +783,8 @@ public sealed class Simulation(Tuning tuning, ulong seed, IReadOnlyList<IReadOnl
                     _critics.Remove(touched);
                 }
 
-                _events.Add(new TickEvent(fell ? TickEventKind.Kill : TickEventKind.Hit, touched.Position));
+                _events.Add(new TickEvent(
+                    fell ? TickEventKind.Kill : TickEventKind.Hit, touched.Position, card.Thrower, touched.Id));
 
                 // The audience cheers the star and never the cardboard: applause is left where a critic falls to
                 // a card the magician itself threw, whoever hurt the critic before. A piece with no time is no
@@ -793,7 +798,7 @@ public sealed class Simulation(Tuning tuning, ulong seed, IReadOnlyList<IReadOnl
                 if (fell && card.ThrownByMagician && ticks > 0 && !byTheBoxOffice)
                 {
                     _applause.Add(new Applause(touched.Position, ticks));
-                    _events.Add(new TickEvent(TickEventKind.ApplauseDropped, touched.Position));
+                    _events.Add(new TickEvent(TickEventKind.ApplauseDropped, touched.Position, CriticId: touched.Id));
                 }
             }
 
@@ -976,9 +981,10 @@ public sealed class Simulation(Tuning tuning, ulong seed, IReadOnlyList<IReadOnl
     /// The throw of whoever stands at <paramref name="from"/>, the magician or an understudy: one rule for both,
     /// on the tuning's numbers as the thrower's own <paramref name="cards"/> change them, and for an understudy
     /// the chorus cards too. It is given the thrower's countdown to its next throw and gives back what that is
-    /// after this tick.
+    /// after this tick. The <paramref name="thrower"/> is <see cref="TickEvent.TheMagician"/> or the understudy's
+    /// place among the understudies, and is told by the throw's event and by the card.
     /// </summary>
-    private int ThrowACard(Vector2 from, int ticksToNextThrow, SelfCards cards, bool byTheMagician)
+    private int ThrowACard(Vector2 from, int ticksToNextThrow, SelfCards cards, int thrower)
     {
         // The throw is ready a cooldown after the last one, and stays ready while there is nobody to throw at.
         if (ticksToNextThrow > 0)
@@ -994,7 +1000,7 @@ public sealed class Simulation(Tuning tuning, ulong seed, IReadOnlyList<IReadOnl
         float range = Tuning.ThrowRange + (cards.Range * Tuning.CardRange);
         float damage = Tuning.ThrownCardDamage
             + (cards.Damage * Tuning.CardDamage)
-            + (byTheMagician ? 0f : ChorusCards * Tuning.CardChorusDamage);
+            + (thrower == TickEvent.TheMagician ? 0f : ChorusCards * Tuning.CardChorusDamage);
 
         // One card, and one more for each card of that name, each at a critic of its own: the first at the nearest
         // whose centre is in range, the next at the nearest of the rest, and of two as near at the one that entered
@@ -1046,8 +1052,8 @@ public sealed class Simulation(Tuning tuning, ulong seed, IReadOnlyList<IReadOnl
                 ? (closing + MathF.Sqrt((closing * closing) + (faster * nearest * nearest))) / faster
                 : 0f;
             Vector2 direction = Direction(to + (step * ticks), out _);
-            _thrownCards.Add(new ThrownCard(from, direction, range, damage, byTheMagician));
-            _events.Add(new TickEvent(TickEventKind.Throw, from));
+            _thrownCards.Add(new ThrownCard(from, direction, range, damage, thrower));
+            _events.Add(new TickEvent(TickEventKind.Throw, from, thrower));
         }
 
         // An attack speed card adds its share to the rate of the throw: the time to the next is the cooldown over
