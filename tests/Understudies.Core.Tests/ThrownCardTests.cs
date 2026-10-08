@@ -274,6 +274,21 @@ public class ThrownCardTests
     }
 
     [Test]
+    public void Step_TheMagicianThrowsACard_AThrowIsReportedWhereItStandsForThatTickOnly()
+    {
+        // The critic enters on the first tick, after the throw has looked for somebody: nothing is thrown yet.
+        var simulation = new Simulation(Scene, seed: 1);
+        simulation.Step(default);
+        Assert.That(simulation.Events, Is.Empty);
+
+        simulation.Step(default);
+        Assert.That(simulation.Events, Is.EqualTo(new[] { new TickEvent(TickEventKind.Throw, Mark) }));
+
+        simulation.Step(default);
+        Assert.That(simulation.Events, Is.Empty);
+    }
+
+    [Test]
     public void Step_ACardHurtsACriticThatStillStands_AHitIsReportedThereForThatTickOnly()
     {
         var simulation = new Simulation(Scene, seed: 1);
