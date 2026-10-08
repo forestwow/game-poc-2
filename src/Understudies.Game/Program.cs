@@ -1,6 +1,16 @@
 string? capturePath = null;
 int captureTicks = 0;
 bool captureTheMenu = false;
+
+// The way round the gates (plan T54): "--night n" at the end plays that night, or captures it, whatever the
+// player's progress says, and no progress is read or written.
+int? night = null;
+if (args is [.. var before, "--night", var number] && int.TryParse(number, out int asked))
+{
+    night = asked;
+    args = before;
+}
+
 if (args is ["--capture", var path, "--ticks", var ticks] && int.TryParse(ticks, out captureTicks) && captureTicks >= 0)
 {
     capturePath = path;
@@ -14,15 +24,24 @@ else if (args is ["--capture", var menuPath, "--menu"])
 else if (args.Length > 0)
 {
     // Anything else is refused: a mistyped --capture must not leave the game open on the screen.
-    Console.Error.WriteLine("Usage: Understudies.Game [--capture <file.png> (--ticks <n> | --menu)]");
+    Console.Error.WriteLine("Usage: Understudies.Game [--capture <file.png> (--ticks <n> | --menu)] [--night <n>]");
     return 2;
 }
 
 // Without its numbers the game does not open a window: the reason is already on the console.
-if (Understudies.Game.TuningFile.Read() is not { } tuning)
+if (Understudies.Game.TuningFile.Read() is not var (tuning, nights))
 {
     return 1;
 }
+
+if (night is { } wanted && nights.All(written => written.Number != wanted))
+{
+    Console.Error.WriteLine($"No night {wanted}: nights.json has {string.Join(", ", nights.Select(written => written.Number))}");
+    return 1;
+}
+
+// A capture is the same on every machine, and a night that was asked for is nobody's progress: neither has the file.
+string? progress = capturePath is null && night is null ? Understudies.Game.TuningFile.ProgressPath() : null;
 
 // Found as tuning.json is: the repository's own when the game is run from its root, or else beside the executable.
 // A folder counts when it has every one of the files asked of it, so another fonts folder in the current directory
@@ -51,6 +70,6 @@ if (Found(Path.Combine("art", "ludo", "sprites"), "sprites") is not { } sprites
     return 1;
 }
 
-using var game = new Understudies.Game.UnderstudiesGame(tuning, capturePath, captureTicks, captureTheMenu, sprites, fonts, cards);
+using var game = new Understudies.Game.UnderstudiesGame(tuning, nights, night, progress, capturePath, captureTicks, captureTheMenu, sprites, fonts, cards);
 game.Run();
 return 0;
