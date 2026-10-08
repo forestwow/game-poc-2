@@ -29,7 +29,7 @@ internal sealed class Sound
     private const float StrikeLevel = 0.35f;
     private const float KillLevel = 0.9f;
     private const float VanishLevel = 0.7f;
-    private const float HurtLevel = 0.5f;
+    private const float HurtLevel = 0.25f;
 
     // A sound does not start again within this long of its own last start: a crowd strikes the box office many
     // times a second, and every blow of one tick would start at once.
