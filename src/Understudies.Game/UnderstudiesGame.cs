@@ -902,6 +902,20 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
                 VanishBar);
         }
 
+        // A headliner (plan T46) is the one enemy whose hit points the player counts: the magician's small bar
+        // under its feet, in its own red.
+        // ponytail: full is what one enters with in this act, so one left from the act before is never shown
+        // full. Keep what it entered with on the critic when that is seen.
+        foreach (Critic critic in _simulation.Critics.Where(critic => critic.Kind == 3))
+        {
+            EnemyKind headliner = Tuning.EnemyKinds[Math.Min(critic.Kind, Tuning.EnemyKinds.Count - 1)];
+            FillBar(
+                Vector2.Lerp(critic.PreviousPosition, critic.Position, alpha) + new Vector2(-smallBar.X / 2f, 0.3f),
+                smallBar,
+                critic.HitPoints / (headliner.HitPoints + (headliner.HitPointsPerAct * (_simulation.Act - headliner.FromAct))),
+                HeadlinerWash);
+        }
+
         // The way to the next encore: the act's applause that no encore was paid with, over what the next costs.
         FillBar(
             ApplauseBarTopLeft,
