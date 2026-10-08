@@ -28,6 +28,9 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
     // large; no footprint, range or radius is. Which of the two stays is the owner's to say (plan T42).
     internal const float FiguresMeasure = 1f;
 
+    /// <summary>How far below the line its critics enter on a door's picture has its foot, in units.</summary>
+    private const float DoorSill = 0.3f;
+
     // A figure's sprite pixel is made a whole number of screen pixels where its measure asks for one to within
     // this much of a screen pixel, and is the measure's own otherwise.
     private const float WholeWithin = 0.05f;
@@ -622,12 +625,12 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
         DrawTheQuietFloor();
         for (int i = 0; i < Tuning.StageDoors.Count; i++)
         {
-            // A door's foot is half its width below the line its critics enter on, which is as wide as the picture
-            // (plan T49; `Tuning.Parse` keeps it on the stage): whoever enters stands in the doorway. It is lit
-            // while it is open.
+            // A door's foot is on the line its critics enter on, a little below it (plan T49): whoever enters
+            // stands in the lit frame with its feet on the sill, and the door at the back wall stands up in the
+            // curtain. `Tuning.Parse` keeps a door's width on the stage. It is lit while it is open.
             DrawFigure(
                 _simulation.DoorIsOpen(i) ? Figure.OpenDoor : Figure.ShutDoor,
-                Tuning.StageDoors[i].Position + new Vector2(0f, Tuning.StageDoorWidth / 2f));
+                Tuning.StageDoors[i].Position + new Vector2(0f, DoorSill));
         }
 
         foreach (Understudy understudy in _simulation.Understudies)

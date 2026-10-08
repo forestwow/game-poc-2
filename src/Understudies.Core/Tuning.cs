@@ -220,8 +220,9 @@ public sealed record Tuning(
 
     /// <summary>Reads the text of a tuning.json.</summary>
     /// <exception cref="JsonException">
-    /// The text is not a tuning. For an unknown key, a missing one, no stage door, a door above the floor's top or past a side, no
-    /// door open in the first act, no kind of enemy and a kind that costs nothing the message names the key.
+    /// The text is not a tuning. For an unknown key, a missing one, no stage door, a door above the floor's top or
+    /// past a side, no door open in the first act, no kind of enemy and a kind that costs nothing the message names
+    /// the key.
     /// </exception>
     public static Tuning Parse(string json)
     {
@@ -265,7 +266,8 @@ public sealed record Tuning(
         if (tuning.StageDoors.Any(door => door.Position.X < half || door.Position.X > tuning.StageSize.X - half))
         {
             throw new JsonException(
-                "'stageDoors' has a door nearer than half of 'stageDoorWidth' to a side of the stage: its critics would enter outside it.");
+                "'stageDoors' has a door nearer than half of 'stageDoorWidth' to a side of the stage: "
+                + "its critics would enter outside it.");
         }
 
         return tuning;

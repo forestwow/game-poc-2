@@ -73,8 +73,43 @@ public class CriticTests
                         MathF.Abs(entered.X - at.X) + radius,
                         Is.LessThanOrEqualTo(Tuning.StageDoorWidth / 2f),
                         $"door {door}, kind {kind}, seed {seed}");
-                    Assert.That(entered.X - radius, Is.GreaterThanOrEqualTo(0f));
-                    Assert.That(entered.X + radius, Is.LessThanOrEqualTo(Tuning.StageSize.X));
+                    Assert.That(entered.X - radius, Is.GreaterThanOrEqualTo(0f), $"door {door}, kind {kind}, seed {seed}");
+                    Assert.That(
+                        entered.X + radius,
+                        Is.LessThanOrEqualTo(Tuning.StageSize.X),
+                        $"door {door}, kind {kind}, seed {seed}");
+                }
+            }
+        }
+    }
+
+    [Test]
+    public void Step_ACrowdOfTenEntersOnOneTickAtEveryCommittedDoor_NobodyIsPushedOutOfTheStagesSidesOrUpTheBackWall()
+    {
+        // Plan T49, after its review: ten that enter on one tick overlap and are pushed apart, half the overlap
+        // each, and the outermost went out of the stage's side at a side door and up the back wall at the door
+        // there. Rivals among them, the widest. For five seconds every circle is within the stage's two sides
+        // and every middle on the floor.
+        for (int door = 0; door < Tuning.StageDoors.Count; door++)
+        {
+            var simulation = new Simulation(
+                Tuning,
+                seed: 1,
+                [[.. Enumerable.Range(0, 10).Select(i => new PlannedEntry(Tick: 0, Door: door, Kind: i % 3 == 0 ? 2 : 0))]]);
+
+            for (int tick = 0; tick < 5 * Simulation.TicksPerSecond; tick++)
+            {
+                simulation.Step(default);
+
+                Assert.That(simulation.Critics, Has.Count.EqualTo(10));
+                foreach (Critic critic in simulation.Critics)
+                {
+                    float radius = Tuning.EnemyKinds[critic.Kind].Radius;
+                    string where = $"door {door}, tick {tick}, critic {critic.Id} at {critic.Position}";
+                    Assert.That(critic.Position.X, Is.GreaterThanOrEqualTo(radius), where);
+                    Assert.That(critic.Position.X, Is.LessThanOrEqualTo(Tuning.StageSize.X - radius), where);
+                    Assert.That(critic.Position.Y, Is.GreaterThanOrEqualTo(Tuning.StageFloorTop), where);
+                    Assert.That(critic.Position.Y, Is.LessThanOrEqualTo(Tuning.StageSize.Y), where);
                 }
             }
         }
@@ -317,9 +352,15 @@ public class CriticTests
     {
         // The push-apart knows no weight. Both stand still and enter on one tick at a door of no width, on one
         // point: the next tick parts them until their circles touch, each by half of that, the wide one too.
+        // The door is in the middle of the stage, where no side keeps anybody in.
         EnemyKind critic = Tuning.Critic() with { Speed = 0f };
         EnemyKind rival = Tuning.Rival() with { Speed = 0f };
-        Tuning tuning = Tuning with { StageDoorWidth = 0f, EnemyKinds = [critic, rival] };
+        Tuning tuning = Tuning with
+        {
+            StageDoors = [new StageDoor(new Vector2(20f, 15f), 1)],
+            StageDoorWidth = 0f,
+            EnemyKinds = [critic, rival],
+        };
         var simulation = new Simulation(
             tuning, seed: 1, [[new PlannedEntry(Tick: 0, Door: 0, Kind: 1), new PlannedEntry(Tick: 0, Door: 0, Kind: 0)]]);
         Vector2 door = tuning.StageDoors[0].Position;

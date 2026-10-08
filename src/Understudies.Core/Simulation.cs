@@ -1063,6 +1063,14 @@ public sealed class Simulation(Tuning tuning, ulong seed, IReadOnlyList<IReadOnl
             float walk = MathF.Min(gap, step);
             critic.Position += toTarget * (turned ? MathF.Max(0f, walk) : walk);
 
+            // And it is kept on the stage (plan T49), here where its place is last changed in a tick: its whole
+            // circle within the two sides, and its middle on the floor, no higher than the foot of the back wall
+            // (where the door there lets it in) and no lower than the stage's bottom edge. What the push-apart
+            // threw out of a crowd at a door stands against the edge.
+            critic.Position = new Vector2(
+                MathF.Max(kind.Radius, MathF.Min(Tuning.StageSize.X - kind.Radius, critic.Position.X)),
+                MathF.Max(Tuning.StageFloorTop, MathF.Min(Tuning.StageSize.Y, critic.Position.Y)));
+
             // Nor does it deal a blow, and its time to the next blow stands still.
             if (critic.IsStunned)
             {
