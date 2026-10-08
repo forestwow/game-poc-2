@@ -34,6 +34,10 @@ A figure is an ordinary theatre person or thing with one part that is something 
 - The curtain: `--image-type sprite-tiling-horizontal`, "seen flat from the front ... repeating seamlessly left to right". It goes round left to right; its own pixel is twelve file pixels and it is drawn three times that size to be as tall as the back wall.
 - A door or a lamp is a still like a building (see above). The lit door is `ludo image edit` of the shut one ("keep the exact same door frame, size, position and pixel art style ..."): the edit keeps the shape and loses the pixel grid inside the doorway, which is seen only close up.
 
+## An effect
+
+`ludo image create --image-type sprite-vfx --art-style "16-Bit" --aspect-ratio ar_1_1 --n 2`, the effect "captured at its peak, centred, seen flat, no character, no text, no ground", then `ludo sprite animate --image-type sprite-vfx --model forge-pixel --duration 1 --frames 9 --no-loop --frame-size <32 or 64>` with a motion like "bursts outward ... and everything fades away to nothing". A burst that flies apart comes back well; a still shape (a star) hardly moves and does not fade, so the game fades it.
+
 ## Into the game
 
-The file goes to `art/ludo/sprites/` under the name `ReadSheet` is given in `UnderstudiesGame.LoadContent`, and the stills that were returned to `art/ludo/sprites/raw/` (the set's to `art/ludo/set/raw/`).
+The file goes to `art/ludo/sprites/` under the name `ReadSheet` is given in `UnderstudiesGame.LoadContent`, and the stills that were returned to `art/ludo/sprites/raw/` (the set's to `art/ludo/set/raw/`, an effect's to `art/ludo/effects/raw/`).

@@ -44,6 +44,13 @@ internal sealed class Juice(Random random)
     private const float ScrapTime = 0.7f;
     private const float ScrapLift = 1f;
 
+    // What a card does is seen where it does it: a flick of light at the hand that throws it, a burst of its suits
+    // where it strikes and a splash of ink and newsprint where its critic falls, each this long. They are at a
+    // critic's chest, as the scraps are.
+    private const float FlickTime = 0.1f;
+    private const float HitBurstTime = 0.25f;
+    private const float KillBurstTime = 0.5f;
+
     // A fallen critic lies there this long, fading all the while.
     private const float BodyTime = 1.5f;
 
@@ -73,6 +80,7 @@ internal sealed class Juice(Random random)
     private readonly Dictionary<int, (float HitPoints, float FlashedAt)> _critics = [];
     private readonly List<(Vector2 Position, float FellAt)> _bodies = [];
     private readonly List<Scrap> _scraps = [];
+    private readonly List<(Effect Kind, Vector2 Middle, float At)> _effects = [];
 
     // The juice's own time: what Advance has been given so far.
     // ponytail: a float, which stops telling one sixtieth of a second from the next when a show has been left open
@@ -111,6 +119,10 @@ internal sealed class Juice(Random random)
         return (scrap.From + flown, scrap.Turn, MathF.Min(1f, 2f * (1f - (age / ScrapTime))));
     });
 
+    /// <summary>The cards' effects that are on the stage now, each with how far through its time it is, from 0 to 1.</summary>
+    public IEnumerable<(Effect Kind, Vector2 Middle, float Through)> Effects =>
+        _effects.Select(effect => (effect.Kind, effect.Middle, (_now - effect.At) / Lasts(effect.Kind)));
+
     /// <summary>Takes in what the last tick did. Called after every tick: a frame may run several.</summary>
     public void Feed(Simulation simulation)
     {
@@ -132,9 +144,18 @@ internal sealed class Juice(Random random)
         {
             switch (happened.Kind)
             {
+                case TickEventKind.Throw:
+                    Show(Effect.Flick, happened.Position);
+                    break;
+
+                case TickEventKind.Hit:
+                    Show(Effect.HitBurst, happened.Position);
+                    break;
+
                 case TickEventKind.Kill:
                     _bodies.Add((happened.Position, _now));
                     Burst(happened.Position, KillScraps);
+                    Show(Effect.KillBurst, happened.Position);
                     break;
 
                 // A puff where the magician left and one where it arrives, and a held breath: a vanish, not a glitch.
@@ -167,6 +188,7 @@ internal sealed class Juice(Random random)
         _now += seconds;
         _bodies.RemoveAll(body => _now - body.FellAt >= BodyTime);
         _scraps.RemoveAll(scrap => _now - scrap.BurstAt >= ScrapTime);
+        _effects.RemoveAll(effect => _now - effect.At >= Lasts(effect.Kind));
         _trauma = MathF.Max(0f, _trauma - (TraumaFade * seconds));
         Shake = new Vector2(Sway(), Sway()) * (ShakeReach * _trauma * _trauma);
     }
@@ -185,6 +207,15 @@ internal sealed class Juice(Random random)
         _hitStopLeft -= frameSeconds;
         return true;
     }
+
+    private static float Lasts(Effect kind) => kind switch
+    {
+        Effect.Flick => FlickTime,
+        Effect.HitBurst => HitBurstTime,
+        _ => KillBurstTime,
+    };
+
+    private void Show(Effect kind, Vector2 floor) => _effects.Add((kind, floor - new Vector2(0f, ScrapLift), _now));
 
     private float White(float flashedAt) => _now - flashedAt < FlashTime ? 1f : 0f;
 
@@ -210,6 +241,14 @@ internal sealed class Juice(Random random)
 
     /// <summary>From -1 to 1.</summary>
     private float Sway() => (random.NextSingle() * 2f) - 1f;
+
+    /// <summary>What a card is seen to do.</summary>
+    public enum Effect
+    {
+        Flick,
+        HitBurst,
+        KillBurst,
+    }
 
     private readonly record struct Scrap(Vector2 From, Vector2 Velocity, float BurstAt, float Turn);
 }

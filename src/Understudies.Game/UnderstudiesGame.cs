@@ -26,8 +26,15 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
     private const float WalkFramesPerSecond = 12f;
     private const float ShadowOpacity = 0.3f;
     private const float FootlightGap = 4f;
-    private const float ThrownCardWidth = 0.5f;
-    private const float ThrownCardHeight = 0.35f;
+
+    // A thrown card spins as it flies, this many turns for a unit flown, with a dark edge this wide about its face.
+    private const float ThrownCardWidth = 0.7f;
+    private const float ThrownCardHeight = 0.5f;
+    private const float ThrownCardSpin = 0.11f;
+    private const float ThrownCardEdge = 0.1f;
+
+    // The flick of light at a throwing hand grows to this wide as it goes out.
+    private const float FlickSize = 1.1f;
 
     // A card flies at the height of a critic's chest.
     private const float ThrownCardLift = 1f;
@@ -99,6 +106,7 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
 
     // An understudy's card is a card, a little duller than the magician's own.
     private static readonly Color UnderstudysCardFace = new(190, 184, 172);
+    private static readonly Color CardEdge = new(28, 20, 30);
 
     // What an understudy is tinted by, the first for the first act's: nine dusty colours told apart at a glance,
     // none of them the magician's yellow or a critic's blue, and neighbours far apart.
@@ -127,6 +135,10 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
     // The set's two pictures that are laid side by side: the boards of the floor and the curtain of the back wall.
     private Sheet _floor = null!;
     private Sheet _curtain = null!;
+
+    // What a card is seen to do where it strikes and where its critic falls: each a sheet played through once.
+    private Sheet _hitBurst = null!;
+    private Sheet _killBurst = null!;
 
     // The view's own time, in seconds: what a walk's frames are counted by.
     private float _walkClock;
@@ -203,6 +215,8 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
         _sheets[(int)Figure.Footlight] = [ReadSheet("footlight.png", 1, block: 12f)];
         _floor = ReadSheet("floor.png", 1, block: 16f);
         _curtain = ReadSheet("curtain.png", 1, block: 4f);
+        _hitBurst = ReadSheet("hit-burst.png", 3);
+        _killBurst = ReadSheet("kill-burst.png", 3);
 
         if (FontFiles.FirstOrDefault(File.Exists) is { } fontFile)
         {
@@ -592,7 +606,13 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
             // The card's position is the point of the floor it is over.
             Vector2 below = Vector2.Lerp(card.PreviousPosition, card.Position, alpha);
             Color face = card.ThrownByMagician ? ThrownCardFace : UnderstudysCardFace;
-            DrawUpright(below, ThrownCardWidth, ThrownCardHeight, face, lift: ThrownCardLift);
+            Vector2 heart = below - new Vector2(0f, ThrownCardLift + (ThrownCardHeight / 2f));
+
+            // Its turn is told by how far it has flown, so a card left in the air when the world stands hangs still.
+            float turn = Vector2.Distance(below, card.ThrownFrom) * ThrownCardSpin * MathF.Tau;
+            var size = new Vector2(ThrownCardWidth, ThrownCardHeight);
+            FillTurned(heart, size + new Vector2(2f * ThrownCardEdge), turn, CardEdge, Depth(below));
+            FillTurned(heart, size, turn, face, MathF.Min(1f, Depth(below) + 0.0001f));
 
             // A card thrown on this tick has not flown yet and has no way to trail along.
             Vector2 flown = card.Position - card.PreviousPosition;
@@ -603,11 +623,10 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
 
             // The trail: a streak from the middle of the card back along its flight, so that a card that is in the
             // air for an eighth of a second is seen. It never reaches back past where the card was thrown from.
-            Vector2 middle = below - new Vector2(0f, ThrownCardLift + (ThrownCardHeight / 2f));
             Vector2 back = -Vector2.Normalize(flown)
                 * MathF.Min(Juice.TrailLength, Vector2.Distance(below, card.ThrownFrom));
             FillTurned(
-                middle + (back / 2f),
+                heart + (back / 2f),
                 new Vector2(back.Length(), Juice.TrailWidth),
                 MathF.Atan2(back.Y, back.X),
                 face * Juice.TrailOpacity,
@@ -619,7 +638,41 @@ internal sealed partial class UnderstudiesGame : Microsoft.Xna.Framework.Game
         // Over everything: the scraps in the air, then a performance that is over goes dark, and the box office's
         // hit points are a bar above it, a critic's height above, clear of the heads of the critics who stand
         // behind the box.
-        _spriteBatch.Begin(transformMatrix: worldToScreen);
+        _spriteBatch.Begin(samplerState: SamplerState.PointClamp, transformMatrix: worldToScreen);
+
+        // The cards' effects go under the applause: a splash of ink must not hide the piece its kill drops.
+        foreach (var effect in _juice.Effects)
+        {
+            // The flick is a diamond of light that grows and goes out. A burst is a sheet played through once, and
+            // the burst of a hit goes out as it plays: its picture does not fade by itself.
+            if (effect.Kind == Juice.Effect.Flick)
+            {
+                float wide = FlickSize * (0.4f + (0.6f * effect.Through));
+                FillTurned(effect.Middle, new Vector2(wide), MathF.PI / 4f, Color.White * (1f - effect.Through));
+                continue;
+            }
+
+            bool hit = effect.Kind == Juice.Effect.HitBurst;
+            Sheet sheet = hit ? _hitBurst : _killBurst;
+            int frames = sheet.Columns * sheet.Columns;
+            int frame = Math.Min(frames - 1, (int)(effect.Through * frames));
+            var source = new Rectangle(
+                sheet.First.X + (frame % sheet.Columns * sheet.First.Width),
+                sheet.First.Y + (frame / sheet.Columns * sheet.First.Height),
+                sheet.First.Width,
+                sheet.First.Height);
+            _spriteBatch.Draw(
+                sheet.Image,
+                effect.Middle,
+                source,
+                Color.White * (hit ? 1f - effect.Through : 1f),
+                0f,
+                new Microsoft.Xna.Framework.Vector2(source.Width / 2f, source.Height / 2f),
+                SpritePixel,
+                SpriteEffects.None,
+                0f);
+        }
+
         foreach (Applause piece in _simulation.ApplauseOnTheFloor)
         {
             // Over every figure, so that a crowd does not hide what is there to be fetched, and the dimmer the

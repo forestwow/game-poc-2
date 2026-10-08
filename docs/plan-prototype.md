@@ -208,6 +208,10 @@ The owner's report from play: a piece is picked up only by walking onto it exact
 - The guard still holds on the new number (orbit 19 of 20, doors 17 of 20), and the two pinned hashes are pinned again.
 - **What it costs, for the owner to weigh.** A critic that touches the magician stands 1.1 from its middle: the old reach of 1.0 left its piece on the floor, and any reach that answers the report takes it without a step. Standing on the box office still earns nothing, but a player that circles near it earns more than before. The review measured 1.4 first (reach 2.0): the orbit on its outer circle went from 0.6 to 1.5 cards a performance and one seed of the middle circle ended in the ovation, so the smaller number was taken. The guard is jumpy here: a reach of 1.0 past the circle gives the orbit 16 of 20, the floor itself.
 
+**T22 The cards' effects.**
+The owner misses effects when the cards are thrown. A thrown card spins as it flies, with a dark edge about its face; a flick of light at the hand that throws it; a burst of the card's suits where it strikes; a splash of ink and torn newsprint where its critic falls, beside the scraps and the fading body there already. They change only the view (`Juice.cs` and the drawing), driven by the events `Throw`, `Hit` and `Kill`. The two bursts are sheets from the tool; at most six pictures and four animations.
+- A captured frame of a fight shows a burst. No test; the owner judges the rest by playing, since a frame does not show a spin or a flick.
+
 ## 6. Stops
 
 | Stop | After | The question the owner answers by playing |
