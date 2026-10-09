@@ -6,8 +6,8 @@ using Understudies.Core;
 namespace Understudies.Game;
 
 /// <summary>
-/// What a blow sounds like, and a piece of applause picked up: seven short sounds, each played when a tick
-/// reports what it is for, and all of them worked out in code when the game starts. There is no sound file. Like
+/// What a blow sounds like, and a piece of applause picked up or eaten: eight short sounds, each played when a
+/// tick reports what it is for, and all of them worked out in code when the game starts. There is no sound file. Like
 /// the juice it is the view's own state and decides no rule, so it may use what the rules may not
 /// (<see cref="Random"/>, a dictionary, trigonometry, a clock), and like the juice it is fed the simulation after
 /// every tick (<see cref="Feed"/>: a tick's events are gone on the next).
@@ -22,8 +22,9 @@ internal sealed class Sound
 
     // How loud each sound is, from 0 to 1. What comes many times a second (a throw, a hit, a crowd's strikes) is
     // quiet, and what comes now and then (a kill, a Vanish) or is bad news (the magician is hurt) is not. A level
-    // is of a sound's loudest sample, which is the same in all seven (Peak), so one level is not one loudness: a
-    // buzz that holds is louder than a tap at the same level.
+    // is of a sound's loudest sample, which is the same in all eight (Peak), so one level is not one loudness: a
+    // buzz that holds is louder than a tap at the same level. A piece eaten is the quietest thing that is not a
+    // throw: it is a scalper's doing, dozens of times in a late act, and it must never be louder than the chime.
     private const float ThrowLevel = 0.15f;
     private const float HitLevel = 0.4f;
     private const float StrikeLevel = 0.35f;
@@ -31,6 +32,7 @@ internal sealed class Sound
     private const float VanishLevel = 0.7f;
     private const float HurtLevel = 0.25f;
     private const float PickUpLevel = 0.5f;
+    private const float EatenLevel = 0.2f;
 
     // What an understudy does is heard apart from what the magician does: its throw, its hit and its kill are
     // this much of the magician's in loudness, and this far lower, in octaves.
@@ -40,9 +42,15 @@ internal sealed class Sound
     // A sound does not start again within this long of its own last start: a crowd strikes the box office many
     // times a second, and every blow of one tick would start at once. A throw, a hit and a kill may start twice in
     // that time and no more: an understudy's, and then the magician's own, which a quieter one must not silence.
-    // ponytail: one gap for all seven, so a sound longer than the gap still lies on itself under a crowd, the buzz
-    // of a hurt magician four deep. A gap of its own for each sound, near its length, when that is too much.
+    // ponytail: one gap for seven of the eight, so a sound longer than the gap still lies on itself under a crowd,
+    // the buzz of a hurt magician four deep. A gap of its own for each sound, near its length, when that is too
+    // much.
     private const float RepeatGap = 0.05f;
+
+    // A piece eaten has a gap of its own, longer than the sound: scalpers eat a few pieces a second where the
+    // applause lies thick (the kiter's tenth act: 342 in its 75 seconds), and five of these a second is all a
+    // stage should hear of it.
+    private const float EatenGap = 0.2f;
 
     // Each time a sound is played it is this far higher or lower at most, in octaves, by chance: the same sound
     // twice in a row is not the same sound twice.
@@ -121,7 +129,7 @@ internal sealed class Sound
     private const float HurtBelow = 2500f;
     private const float HurtFade = 0.08f;
 
-    // A piece of applause is picked up: a chime, short and bright, and the one good news among the seven. A tone
+    // A piece of applause is picked up: a chime, short and bright, and the one good news among the eight. A tone
     // at PickUpPitch that jumps to PickUpJump times as high when PickUpJumpAt of its time has gone by, with its
     // octave PickUpOctave as loud over it, a third as loud after every PickUpDecay.
     private const float PickUpTime = 0.14f;
@@ -130,6 +138,23 @@ internal sealed class Sound
     private const float PickUpJumpAt = 0.35f;
     private const float PickUpOctave = 0.3f;
     private const float PickUpDecay = 0.05f;
+
+    // A scalper eats a piece of applause: the chime taken back, and a ticket torn. The pick-up's two notes an
+    // octave lower and the other way round: a tone at EatenPitch that drops to EatenDrop times as high when
+    // EatenDropAt of its time has gone by, a third as loud after every EatenDecay, and with no octave over it, so
+    // it is duller than the chime and stays under what the chime has. And the tear, EatenTear as loud: noise
+    // between EatenTearAbove and EatenTearBelow whose loudness jumps by chance every EatenTearGrain, a third as
+    // loud after every EatenTearDecay: the kill's tear, shorter.
+    private const float EatenTime = 0.12f;
+    private const float EatenPitch = 990f;
+    private const float EatenDrop = 2f / 3f;
+    private const float EatenDropAt = 0.4f;
+    private const float EatenDecay = 0.04f;
+    private const float EatenTear = 3f;
+    private const float EatenTearAbove = 2000f;
+    private const float EatenTearBelow = 6000f;
+    private const float EatenTearGrain = 0.004f;
+    private const float EatenTearDecay = 0.025f;
 
     // No sound begins or ends with a jump, which would be heard as a click: each rises from nothing over Attack
     // and is brought down to nothing over Release. And each is made as loud as it can be told to play: its
@@ -143,10 +168,10 @@ internal sealed class Sound
     private const int SampleRate = 44100;
     private const int NoiseSeed = 1;
 
-    // What plays for each kind of event, how loud, when it last started by the stopwatch's count (0 before its
-    // first start, which is long ago to a stopwatch that counts from the machine's own start), and whether that
-    // start was an understudy's.
-    private readonly Dictionary<TickEventKind, (SoundEffect Effect, float Level, long StartedAt, bool Understudys)> _sounds = [];
+    // What plays for each kind of event, how loud, how long after its own last start it may start again, when it
+    // last started by the stopwatch's count (0 before its first start, which is long ago to a stopwatch that
+    // counts from the machine's own start), and whether that start was an understudy's.
+    private readonly Dictionary<TickEventKind, (SoundEffect Effect, float Level, float Gap, long StartedAt, bool Understudys)> _sounds = [];
 
     /// <param name="silent">A capture only draws a frame: it asks for no audio device and plays nothing.</param>
     public Sound(bool silent)
@@ -160,9 +185,9 @@ internal sealed class Sound
         // closes the audio device under them when the game is disposed.
         try
         {
-            foreach (var (kind, level, samples) in Synthesise())
+            foreach (var (kind, level, gap, samples) in Synthesise())
             {
-                _sounds[kind] = (new SoundEffect(samples, SampleRate, AudioChannels.Mono), level, 0, false);
+                _sounds[kind] = (new SoundEffect(samples, SampleRate, AudioChannels.Mono), level, gap, 0, false);
             }
         }
         catch (NoAudioHardwareException)
@@ -204,7 +229,7 @@ internal sealed class Sound
         // and the present must not be silenced by the past.
         if (Muted
             || !_sounds.TryGetValue(kind, out var sound)
-            || (Stopwatch.GetElapsedTime(sound.StartedAt).TotalSeconds < RepeatGap
+            || (Stopwatch.GetElapsedTime(sound.StartedAt).TotalSeconds < sound.Gap
                 && (byAnUnderstudy || !sound.Understudys)))
         {
             return;
@@ -218,18 +243,20 @@ internal sealed class Sound
     }
 
     /// <summary>
-    /// The seven sounds as they are played: the kind of event each is for, how loud it plays, and its samples, 16
-    /// bits each and one channel, <see cref="SampleRate"/> of them a second.
+    /// The eight sounds as they are played: the kind of event each is for, how loud it plays, how long after its
+    /// own last start it may start again, and its samples, 16 bits each and one channel,
+    /// <see cref="SampleRate"/> of them a second.
     /// </summary>
-    private static (TickEventKind Kind, float Level, byte[] Samples)[] Synthesise() =>
+    private static (TickEventKind Kind, float Level, float Gap, byte[] Samples)[] Synthesise() =>
     [
-        (TickEventKind.Throw, ThrowLevel, Throw()),
-        (TickEventKind.Hit, HitLevel, Hit()),
-        (TickEventKind.Kill, KillLevel, Kill()),
-        (TickEventKind.Vanish, VanishLevel, Vanish()),
-        (TickEventKind.BoxOfficeStruck, StrikeLevel, Strike()),
-        (TickEventKind.MagicianHurt, HurtLevel, Hurt()),
-        (TickEventKind.ApplausePickedUp, PickUpLevel, PickUp()),
+        (TickEventKind.Throw, ThrowLevel, RepeatGap, Throw()),
+        (TickEventKind.Hit, HitLevel, RepeatGap, Hit()),
+        (TickEventKind.Kill, KillLevel, RepeatGap, Kill()),
+        (TickEventKind.Vanish, VanishLevel, RepeatGap, Vanish()),
+        (TickEventKind.BoxOfficeStruck, StrikeLevel, RepeatGap, Strike()),
+        (TickEventKind.MagicianHurt, HurtLevel, RepeatGap, Hurt()),
+        (TickEventKind.ApplausePickedUp, PickUpLevel, RepeatGap, PickUp()),
+        (TickEventKind.ApplauseEaten, EatenLevel, EatenGap, Eaten()),
     ];
 
     private static byte[] Throw()
@@ -319,6 +346,28 @@ internal sealed class Sound
         Func<float, float> tone = Sine(Pitch);
         Func<float, float> octave = Sine(t => 2f * Pitch(t));
         return Render(PickUpTime, t => (tone(t) + (PickUpOctave * octave(t))) * Decay(t, PickUpDecay));
+    }
+
+    private static byte[] Eaten()
+    {
+        Func<float, float> tone = Sine(t => t < EatenDropAt * EatenTime ? EatenPitch : EatenPitch * EatenDrop);
+        Func<float, float> above = HighPass(EatenTearAbove);
+        Func<float, float> below = LowPass(EatenTearBelow);
+        Func<float> noise = Noise();
+        float grain = 0f;
+        int grainLeft = 0;
+        return Render(EatenTime, t =>
+        {
+            // Ragged as the kill's tear is: a new loudness every grain, more often small than great.
+            if (grainLeft-- <= 0)
+            {
+                grainLeft = (int)(EatenTearGrain * SampleRate);
+                grain = noise() * noise();
+            }
+
+            return (tone(t) * Decay(t, EatenDecay))
+                + (EatenTear * grain * below(above(noise())) * Decay(t, EatenTearDecay));
+        });
     }
 
     /// <summary>
