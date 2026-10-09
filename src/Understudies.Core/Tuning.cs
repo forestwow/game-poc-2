@@ -320,6 +320,10 @@ public readonly record struct StageDoor(Vector2 Position, int OpensInAct);
 /// Whether the kind goes for the applause on the floor (plan T57): while a piece lies anywhere it walks to the
 /// nearest and not to the box office, and eats the piece it reaches.
 /// </param>
+/// <param name="LeavesApplause">
+/// Whether one that falls to the magician's own card outside the quiet floor leaves a piece of applause (plan
+/// T58): false of the scalper alone, whose fall earns nothing.
+/// </param>
 public readonly record struct EnemyKind(
     string Name,
     float Speed,
@@ -333,4 +337,5 @@ public readonly record struct EnemyKind(
     bool TurnsOnTheMagician,
     float UnderstudyDamageShare,
     int InAnAct,
-    bool EatsApplause);
+    bool EatsApplause,
+    bool LeavesApplause);

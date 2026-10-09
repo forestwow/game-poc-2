@@ -10,13 +10,14 @@ public class NightTests
 
     private const int Critic = 0;
     private const int Stagehand = 1;
+    private const int Scalper = 4;
 
     [Test]
-    public void Parse_TheCommittedFile_HasNightsOneTwoAndTenAsTheLadderHasThem()
+    public void Parse_TheCommittedFile_HasNightsOneTwoThreeAndTenAsTheLadderHasThem()
     {
         IReadOnlyList<Night> nights = CommittedNights.Parse();
 
-        Assert.That(nights.Select(night => night.Number), Is.EqualTo(new[] { 1, 2, 10 }));
+        Assert.That(nights.Select(night => night.Number), Is.EqualTo(new[] { 1, 2, 3, 10 }));
 
         Assert.That(nights[0].ActsInPerformance, Is.EqualTo(5));
         Assert.That(nights[0].BudgetScale, Is.EqualTo(0.6m));
@@ -28,9 +29,19 @@ public class NightTests
         Assert.That(nights[1].KindsAllowed, Is.EqualTo(new[] { "critic", "stagehand" }));
         Assert.That(nights[1].WaveBurstShare, Is.Zero);
 
+        // Night 3 (plan T58): the document's row, and the one night whose poster has a note.
+        Assert.That(nights[2].ActsInPerformance, Is.EqualTo(7));
+        Assert.That(nights[2].BudgetScale, Is.EqualTo(0.75m));
+        Assert.That(nights[2].KindsAllowed, Is.EqualTo(new[] { "critic", "stagehand", "scalper" }));
+        Assert.That(nights[2].WaveBurstShare, Is.Zero);
+        Assert.That(nights[2].Note, Does.StartWith("The quiet floor: "));
+        Assert.That(nights.Where(night => night.Number != 3).Select(night => night.Note), Is.All.Null);
+
         // The plain night overrides nothing: it has its name, which no rule reads.
-        Assert.That(nights[2], Is.EqualTo(new Night(10, null, null, null, null, "Opening night", null)));
-        Assert.That(nights.Select(night => night.Name), Is.EqualTo(new[] { "A quiet Tuesday", "The crew arrives", "Opening night" }));
+        Assert.That(nights[3], Is.EqualTo(new Night(10, null, null, null, null, "Opening night", null, null)));
+        Assert.That(
+            nights.Select(night => night.Name),
+            Is.EqualTo(new[] { "A quiet Tuesday", "The crew arrives", "Touts outside", "Opening night" }));
 
         // No committed night has a house rule yet (plan T56): the spotlight night is the document's night 8.
         Assert.That(nights.Select(night => night.Rules), Is.All.Null);
@@ -40,7 +51,7 @@ public class NightTests
     public void Parse_EveryKeyANightMayHave_IsRead()
     {
         Night night = Night.Parse(
-            """[{ "night": 3, "actsInPerformance": 4, "budgetScale": 1.25, "kindsAllowed": ["rival"], "waveBurstShare": 0.5, "name": "The tout", "rules": ["spotlight"] }]""")
+            """[{ "night": 3, "actsInPerformance": 4, "budgetScale": 1.25, "kindsAllowed": ["rival"], "waveBurstShare": 0.5, "name": "The tout", "rules": ["spotlight"], "note": "Mind the floor." }]""")
             .Single();
 
         Assert.That(night.Number, Is.EqualTo(3));
@@ -50,6 +61,7 @@ public class NightTests
         Assert.That(night.WaveBurstShare, Is.EqualTo(0.5f));
         Assert.That(night.Name, Is.EqualTo("The tout"));
         Assert.That(night.Rules, Is.EqualTo(new[] { Night.Spotlight }));
+        Assert.That(night.Note, Is.EqualTo("Mind the floor."));
     }
 
     [Test]
@@ -81,6 +93,18 @@ public class NightTests
         Assert.That(Night.Compose(plain, nights, 2), Is.EqualTo(plain));
     }
 
+    [Test]
+    public void ANightsNote_MayBeLeftOut_AndChangesNoNumber()
+    {
+        // The note is the poster's (plan T58), as the name is: words of the night's own that no rule reads.
+        Tuning plain = CommittedTuning.Parse();
+        IReadOnlyList<Night> nights = Night.Parse("""[{ "night": 1 }, { "night": 3, "note": "The quiet floor is quiet." }]""");
+
+        Assert.That(nights[0].Note, Is.Null);
+        Assert.That(nights[1].Note, Is.EqualTo("The quiet floor is quiet."));
+        Assert.That(Night.Compose(plain, nights, 3), Is.EqualTo(plain));
+    }
+
     [TestCase("""[{ "night": 1, "doors": 2 }]""", "'doors'", TestName = "an unknown key")]
     [TestCase("""[{ "actsInPerformance": 5 }]""", "missing required properties including: 'night'", TestName = "a night with no number")]
     [TestCase("""[{ "night": 1, "kindsAllowed": [] }]""", "'kindsAllowed' of night 1", TestName = "a night that allows no kind")]
@@ -92,6 +116,8 @@ public class NightTests
     [TestCase("""[{ "night": 1, "actsInPerformance": 5.5 }]""", "actsInPerformance", TestName = "a number of acts that is not whole")]
     [TestCase("""[{ "night": 1, "name": 1 }]""", "name", TestName = "a name that is not words")]
     [TestCase("""[{ "night": 1, "name": " " }]""", "'name' of night 1", TestName = "a name of no words")]
+    [TestCase("""[{ "night": 1, "note": 1 }]""", "note", TestName = "a note that is not words")]
+    [TestCase("""[{ "night": 1 }, { "night": 3, "note": "" }]""", "'note' of night 3", TestName = "a note of no words")]
     [TestCase("""[{ "night": 1 }, { "night": 2, "rules": ["spotlight", "limelight"] }]""", "'rules' of night 2 names 'limelight'", TestName = "a rule nobody knows")]
     [TestCase("""[{ "night": 1, "rules": [null] }]""", "'rules' of night 1", TestName = "a rule that says null")]
     [TestCase("""[{ "night": 1, "rules": ["spotlight", "spotlight"] }]""", "'rules' of night 1 names 'spotlight' twice", TestName = "a rule twice")]
@@ -106,10 +132,10 @@ public class NightTests
     [Test]
     public void Compose_ANightTheFileDoesNotHave_IsRefusedWithItsNumber()
     {
-        // Nights 3 to 9 wait for kinds, stages and rules: nobody plays the plain night under their names.
+        // Nights 4 to 9 wait for kinds, stages and rules: nobody plays the plain night under their names.
         Assert.That(
-            () => Night.Compose(CommittedTuning.Parse(), CommittedNights.Parse(), 3),
-            Throws.TypeOf<ArgumentOutOfRangeException>().With.Message.Contains("night 3"));
+            () => Night.Compose(CommittedTuning.Parse(), CommittedNights.Parse(), 4),
+            Throws.TypeOf<ArgumentOutOfRangeException>().With.Message.Contains("night 4"));
     }
 
     [Test]
@@ -173,13 +199,13 @@ public class NightTests
         Tuning plain = CommittedTuning.Parse() with { FirstActBudget = 40, BudgetGrowthPerAct = 5, BudgetGrowthRise = 3 };
 
         // 40 × 0.7 is 28 and not the 27 a float's 27.999998 would be cut to; 3.5 is 4 and 2.1 is 2.
-        Tuning scaled = Night.Compose(plain, [new Night(1, null, 0.7m, null, null, null, null)], 1);
+        Tuning scaled = Night.Compose(plain, [new Night(1, null, 0.7m, null, null, null, null, null)], 1);
         Assert.That(
             (scaled.FirstActBudget, scaled.BudgetGrowthPerAct, scaled.BudgetGrowthRise),
             Is.EqualTo((28, 4, 2)));
 
         // 2.5 is 3 and 1.5 is 2: a half goes up, never to the even number.
-        Tuning halved = Night.Compose(plain, [new Night(1, null, 0.5m, null, null, null, null)], 1);
+        Tuning halved = Night.Compose(plain, [new Night(1, null, 0.5m, null, null, null, null, null)], 1);
         Assert.That(
             (halved.FirstActBudget, halved.BudgetGrowthPerAct, halved.BudgetGrowthRise),
             Is.EqualTo((20, 3, 2)));
@@ -272,6 +298,36 @@ public class NightTests
             }
 
             // Seven acts open the third door, in act six.
+            Assert.That(show.Plan[6].Select(entry => entry.Door), Does.Contain(2), $"seed {seed}");
+        }
+    }
+
+    [Test]
+    public void NightThree_IsSevenActs_TheScalperFromActThree_TheStagehandFromActFour_ThreeQuartersAsManyInEveryAct()
+    {
+        Tuning night = CommittedNights.Tuning(3);
+
+        Assert.That(night.ActsInPerformance, Is.EqualTo(7));
+        Assert.That(night.WaveBurstShare, Is.Zero);
+
+        // The plain night's 40, 80, 180, 340, 560, 840 and 1180, three quarters of each.
+        int[] budgets = [30, 60, 135, 255, 420, 630, 885];
+        foreach (ulong seed in Seeds)
+        {
+            var show = new Simulation(night, seed);
+
+            Assert.That(show.Plan.Select(act => act.Count), Is.EqualTo(budgets), $"seed {seed}");
+            for (int act = 1; act <= 7; act++)
+            {
+                IEnumerable<int> kinds = show.Plan[act - 1].Select(entry => entry.Kind).Distinct().Order();
+
+                // No rival's understudy and no headliner: the night names its kinds.
+                Assert.That(
+                    kinds,
+                    Is.EqualTo(act < 3 ? [Critic] : act < 4 ? [Critic, Scalper] : new[] { Critic, Stagehand, Scalper }),
+                    $"seed {seed}, act {act}");
+            }
+
             Assert.That(show.Plan[6].Select(entry => entry.Door), Does.Contain(2), $"seed {seed}");
         }
     }

@@ -93,9 +93,24 @@ public class ProgressTests
         Progress lostNightOne = Progress.None.With(1, 1, won: false);
         Assert.That(lostNightOne.Unlocked(nights), Is.EqualTo(new[] { 1, 2 }));
 
-        // Only the nights in the file are offered: after night 2 the next is night 10, and night 2's gate is its
+        // Only the nights in the file are offered: after night 3 the next is night 10, and night 3's gate is its
         // own number's, which is "played".
-        Assert.That(lostNightOne.With(2, 1, won: false).Unlocked(nights), Is.EqualTo(new[] { 1, 2, 10 }));
+        Progress lostNightTwo = lostNightOne.With(2, 1, won: false);
+        Assert.That(lostNightTwo.Unlocked(nights), Is.EqualTo(new[] { 1, 2, 3 }));
+        Assert.That(lostNightTwo.With(3, 1, won: false).Unlocked(nights), Is.EqualTo(new[] { 1, 2, 3, 10 }));
+    }
+
+    [Test]
+    public void Unlocked_ANightWrittenIntoTheFileLater_IsOpenAndShutsNoNightThatWasPlayed()
+    {
+        // Plan T58: night 3 came into the file after players had gone from night 2 to night 10. Whoever played
+        // night 10 keeps it, with night 3 open before it (its gate is night 2's, which was passed); whoever had
+        // night 10 open and never played it finds it shut until night 3 is played.
+        IReadOnlyList<Night> nights = CommittedNights.Parse();
+        Progress oneAndTwo = Progress.None.With(1, 5, won: true).With(2, 7, won: true);
+
+        Assert.That(oneAndTwo.With(10, 4, won: false).Unlocked(nights), Is.EqualTo(new[] { 1, 2, 3, 10 }));
+        Assert.That(oneAndTwo.Unlocked(nights), Is.EqualTo(new[] { 1, 2, 3 }));
     }
 
     [Test]

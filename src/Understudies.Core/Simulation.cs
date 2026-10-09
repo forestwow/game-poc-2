@@ -904,7 +904,7 @@ public sealed class Simulation(Tuning tuning, ulong seed, IReadOnlyList<IReadOnl
 
         // The audience cheers the star and never the cardboard: applause is left where a critic falls to
         // a card the magician itself threw, whoever hurt the critic before. A piece with no time is no
-        // piece.
+        // piece, and a kind that leaves none (plan T58: the scalper) leaves none.
         int ticks = Ticks(Tuning.ApplauseTime);
 
         // And none by the box office: a critic that falls within the radius of its middle leaves nothing,
@@ -912,7 +912,7 @@ public sealed class Simulation(Tuning tuning, ulong seed, IReadOnlyList<IReadOnl
         Vector2 fromBoxOffice = critic.Position - Tuning.BoxOfficePosition;
         bool byTheBoxOffice = (fromBoxOffice.X * fromBoxOffice.X) + (fromBoxOffice.Y * fromBoxOffice.Y)
             < Tuning.ApplauseBoxOfficeRadius * Tuning.ApplauseBoxOfficeRadius;
-        if (fell && card.ThrownByMagician && ticks > 0 && !byTheBoxOffice)
+        if (fell && card.ThrownByMagician && ticks > 0 && !byTheBoxOffice && KindOf(critic).LeavesApplause)
         {
             _applause.Add(new Applause(critic.Position, ticks));
             _events.Add(new TickEvent(TickEventKind.ApplauseDropped, critic.Position, CriticId: critic.Id));
